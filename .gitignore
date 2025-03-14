@@ -1,0 +1,22 @@
+# Ignore __pycache__ directories
+__pycache__/
+
+# Ignore Python virtual environment
+venv/
+.env/
+.venv*
+
+
+# Ignore editor-specific files
+.vscode/
+.idea/
+
+# Ignore large or temporary files
+*.csv
+*.pkl
+
+# temporary ignore for now
+Dockerfile
+docker-compose.yml
+chromedriver
+
