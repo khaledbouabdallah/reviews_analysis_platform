@@ -20,3 +20,7 @@ Dockerfile
 docker-compose.yml
 chromedriver
 
+# Ignore compiled files
+*.pyc
+*.bin
+
