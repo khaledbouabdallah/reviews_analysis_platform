@@ -2,10 +2,9 @@
 __pycache__/
 
 # Ignore Python virtual environment
-venv/
 .env/
 .venv*
-
+venv*/
 
 # Ignore editor-specific files
 .vscode/
@@ -23,4 +22,7 @@ chromedriver
 # Ignore compiled files
 *.pyc
 *.bin
+
+# Ignore development files
+src/complaint_management_platform.egg-info
 
