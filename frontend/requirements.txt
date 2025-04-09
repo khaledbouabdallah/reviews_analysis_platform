@@ -1,0 +1,10 @@
+streamlit>=1.22.0
+pandas>=1.5.3
+plotly>=5.14.1
+matplotlib>=3.7.1
+seaborn>=0.12.2
+altair>=4.2.2
+httpx>=0.24.0
+numpy>=1.24.3
+python-dotenv>=1.0.0
+wordcloud>=1.8.2.2
