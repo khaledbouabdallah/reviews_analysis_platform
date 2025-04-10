@@ -29,6 +29,31 @@ NOW = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 MAPS_LINK = "https://maps.google.com/"
 
 
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+scraper_dir = os.path.dirname(script_dir)
+chromedriver_path = os.path.join(scraper_dir, "Driver", "chromedriver")
+
+
+def convert_to_google_com(url):
+    """
+    Convert any Google Maps URL to use google.com domain.
+    
+    Args:
+        url (str): The original Google Maps URL with any domain
+        
+    Returns:
+        str: The same URL but with google.com domain
+    """
+    # Pattern to match google.XX or maps.google.XX in the URL
+    pattern = r'(https?://)(?:www\.)?(google\.|maps\.google\.)[a-z]{2,}(\.[a-z]{2,})?(\/)'
+    
+    # Replace with google.com
+    converted_url = re.sub(pattern, r'\1\2com\4', url)
+    
+    return converted_url
+
+
 def get_arguments():
     def str2bool(v):
         if isinstance(v, bool):
@@ -45,7 +70,7 @@ def get_arguments():
     parser.add_argument(
         "--driver",
         type=str,
-        default="./Driver/chromedriver.exe",
+        default=chromedriver_path,
         help="Path to the Chrome driver",
     )
     parser.add_argument("--url", type=str, help="URL of the Google Maps reviews")
@@ -128,6 +153,8 @@ class GoogleMapsReviewScraper:
         log_file=None,
         extra_headers=[],
     ):
+        
+        
         # todo: make sure the URL is a valid Google Maps reviews link
         options = webdriver.ChromeOptions()
         self.now = NOW
@@ -167,6 +194,7 @@ class GoogleMapsReviewScraper:
         # connect to google maps and accept the cookies
         try:
             self.driver.get(MAPS_LINK)
+            logging.info(f"Connected to {MAPS_LINK}")
             self.accept_cookies()
         except Exception as e:
             logging.error(f"Error connecting to {MAPS_LINK}")
@@ -178,33 +206,70 @@ class GoogleMapsReviewScraper:
             "//*[@id='yDmH0d']/c-wiz/div/div/div/div[2]/div[1]/div[3]/div[1]/div[1]/form[2]/div/div/button",
             type_=By.XPATH,
         )
+        
+        # Add wait time
+        time.sleep(0.5)
         accept_button.click()
-        logging.info("Cookies accepted")
+        time.sleep(0.5)
+    
+        # check if the cookie banner is still visible
+        try:
+            cookie_banner = self.driver.find_element(By.XPATH, "//*[@id='yDmH0d']/c-wiz/div/div/div/div[2]/div[1]")
+            if cookie_banner.is_displayed():
+                time.sleep(2)
+                # If still visible, try clicking again
+                logging.info("Cookie banner still visible, trying again")
+                accept_button = self._get_element_(
+                    "//*[@id='yDmH0d']/c-wiz/div/div/div/div[2]/div[1]/div[3]/div[1]/div[1]/form[2]/div/div/button",
+                    type_=By.XPATH,
+                )
+                accept_button.click()
+                
+        except:
+            logging.info("Cookies accepted")
+            self.cookies_accepted = True
+
+        
+          
+  
+        
+        
 
     def connect(self, url):
+        
+        
+        url = f"{url}&hl={self.language}"
+        url = convert_to_google_com(url)
+        # connect to the URL and wait for the page to load
+        
+        # ww.google.anything => ww.google.com
+        
+        
         try:
-            url = f"{url}&hl={self.language}"
-            # connect to the URL and wait for the page to load
-            self.driver.get(url)
+            self.driver.get(url)   
+            logging.info(f"Connected! ")
             
             if not self.cookies_accepted:
-                self.accept_cookies()
-                self.cookies_accepted = True
-            
+                self.accept_cookies()         
+                   
+            logging.info("just test 1")
             try:
                 _ = self._get_element_('A1zNzb',By.CLASS_NAME)
                 hotel = True
             except:
                 hotel = False
                 
+            logging.info(f"is hotel: {hotel}")
+                
             if hotel:
                 path = '//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[4]/div[1]/div/div[2]/div[3]'
             else:
                 path = '//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]/div[1]/div/div[2]/div[3]'
 
-
+            logging.info(f"getting total reviews ... ")
             total_reviews = self._get_element_(path, type_=By.XPATH).text
             total_reviews = int(re.sub(r"\D", "", total_reviews))
+            logging.info(f"Total reviews: {total_reviews}")
             return total_reviews
 
 
@@ -433,7 +498,7 @@ class GoogleMapsReviewScraper:
 
 if __name__ == "__main__":
     args = get_arguments()
-
+    
     try:
         scrapper = GoogleMapsReviewScraper(
             driver_path=args.driver,
@@ -449,5 +514,7 @@ if __name__ == "__main__":
         scrapper.save_data(
             data=data, path=args.path, name=args.name, timestamp=args.timestamp
         )
+    except Exception as e:
+        logging.error(f"Error: {e}")
     finally:
         scrapper.exit(force=True)

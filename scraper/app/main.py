@@ -1,11 +1,13 @@
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict, Any
 import os
 import logging
 import time
 from datetime import datetime
+import re
+
 
 # Import the scraper class
 from .google_reviews_scrapper import GoogleMapsReviewScraper
@@ -45,20 +47,48 @@ class ScraperConfig(BaseModel):
     path: str = "data"
     name: str = "reviews"
     timestamp: bool = True
+    
+    @field_validator('url')
+    def validate_google_maps_url(cls, v):
+        # Pattern to match Google Maps URLs
+        
+        
+        google_maps_pattern = r'^https?://(www\.)?(google\.[a-z]{2,3}(/maps)?|maps\.google\.[a-z]{2,3})/.+$'
+        
+        if not re.match(google_maps_pattern, v):
+            raise ValueError("URL must be a valid Google Maps link")
+        
+        # Method 1: Check for !4m18 or !4m8 parameter (most reliable)
+        if re.search(r'!4m(18|8)\!', v):
+            return v
+
+        # Method 2: Check for !3m7 parameter (also reliable)
+        if re.search(r'!3m7!', v):
+            return v
+
+        # Method 3: Count !9m1!1b1 occurrences (less reliable but can be used as backup)
+        if v.count('!9m1!1b1') >= 2:
+            return v
+
+        raise ValueError("URL must contain a valid Google Maps reviews section")
+
 
 class JobStatus(BaseModel):
     job_id: str
     status: str
-    start_time: str
+    start_time: Optional[str] = None
     end_time: Optional[str] = None
     total_reviews: Optional[int] = None
     reviews_scraped: Optional[int] = None
-    file_path: Optional[str] = None
+    file_path: Optional[str] = None 
     error: Optional[str] = None
 
+# Helper function to get the path of the chromedriver TODO: use environment variable
 def get_driver_path():
-    # In Docker, use the path where chromedriver is installed
-    return "/app/Driver/chromedriver"
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    scraper_dir = os.path.dirname(script_dir)
+    chromedriver_path = os.path.join(scraper_dir, "Driver", "chromedriver")
+    return chromedriver_path
 
 def run_scraper_job(job_id: str, config: ScraperConfig):
     jobs[job_id]["status"] = "running"
@@ -75,6 +105,7 @@ def run_scraper_job(job_id: str, config: ScraperConfig):
             language=config.language,
             concat_extra=config.concat_extra,
             log_file=f"job_{job_id}",
+            extra_headers= ["--no-sandbox", "--disable-dev-shm-usage"]
         )
         
         # Connect to URL and get review count

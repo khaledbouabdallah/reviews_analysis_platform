@@ -26,3 +26,23 @@ chromedriver
 # Ignore development files
 src/complaint_management_platform.egg-info
 
+# Ignore scripts for development
+scripts/
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore logs
+*.log
+*.out
+*.err
+
+# Ignore coverage reports
+*.coverage
+.coverage.*
+
+# Ignore playground notebooks
+playground/
+
+# Ignore data files
+data/
