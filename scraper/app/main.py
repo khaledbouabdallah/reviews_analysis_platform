@@ -7,6 +7,7 @@ import logging
 import time
 from datetime import datetime
 import re
+from pymongo import MongoClient
 
 
 # Import the scraper class
@@ -28,6 +29,8 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
+
+
 logger = logging.getLogger(__name__)
 
 # Create data directory if it doesn't exist
@@ -183,6 +186,34 @@ async def get_job_status(job_id: str):
 @app.get("/jobs", response_model=List[JobStatus])
 async def list_jobs():
     return [JobStatus(**job) for job in jobs.values()]
+
+
+def save_reviews_to_mongodb(reviews_data, mongodb_uri, job_id, place_url):
+    """
+    Save reviews to MongoDB
+    
+    Args:
+        reviews_data (list): List of review dictionaries
+        mongodb_uri (str): MongoDB connection string
+        job_id (str): ID of the scraping job
+        place_url (str): URL of the place being scraped
+        
+    Returns:
+        int: Number of reviews saved
+    """
+    client = MongoClient(mongodb_uri)
+    db = client.reviews_db
+    reviews_collection = db.reviews
+    
+    # Add metadata to each review
+    for review in reviews_data:
+        review['job_id'] = job_id
+        review['place_url'] = place_url
+        review['scraped_at'] = datetime.now()
+    
+    # Insert all reviews at once
+    result = reviews_collection.insert_many(reviews_data)
+    return len(result.inserted_ids)
 
 if __name__ == "__main__":
     import uvicorn
