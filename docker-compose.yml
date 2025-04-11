@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # MongoDB service
+  mongodb:
+    image: mongo:latest
+    container_name: reviews_mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    networks:
+      - reviews_network
+
+  # Scraper service - API mode
+  scraper:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+    container_name: reviews_scraper_api
+    restart: always
+    ports:
+      - "8001:8001"  # API port
+    depends_on:
+      - mongodb
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./scraper/app:/app/app  # Map your code directory (for development)
+    environment:
+      - MONGODB_URI=mongodb://admin:password@mongodb:27017/reviews_db
+      - PYTHONUNBUFFERED=1
+    networks:
+      - reviews_network
+    command: api  # Run in API mode
+
+  # Backend API service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: reviews_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongodb
+      - scraper
+    environment:
+      - MONGODB_URI=mongodb://admin:password@mongodb:27017/reviews_db
+      - SCRAPER_SERVICE_URL=http://scraper:8001
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+    networks:
+      - reviews_network
+
+  # Frontend (Streamlit) service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: reviews_frontend
+    restart: always
+    ports:
+      - "8501:8501"
+    depends_on:
+      - backend
+    environment:
+      - BACKEND_API_URL=http://backend:8000
+    volumes:
+      - ./data:/app/data
+    networks:
+      - reviews_network
+
+networks:
+  reviews_network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local
