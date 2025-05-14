@@ -1,0 +1,11 @@
+meta {
+  name: delete all jobs
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{base_url}}/jobs
+  body: none
+  auth: inherit
+}

@@ -44,3 +44,6 @@ playground/
 
 # Ignore data files
 data/
+
+# Ignore bruno environments
+/bruno/*/environments/*
