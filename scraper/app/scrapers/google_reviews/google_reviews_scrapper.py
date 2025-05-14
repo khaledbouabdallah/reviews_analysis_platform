@@ -35,6 +35,11 @@ scraper_dir = os.path.dirname(script_dir)
 chromedriver_path = os.path.join(scraper_dir, "Driver", "chromedriver")
 
 
+
+# go to parent directory
+os.chdir(os.path.dirname(os.getcwd()))
+
+
 def convert_to_google_com(url):
     """
     Convert any Google Maps URL to use google.com domain.
@@ -154,7 +159,10 @@ class GoogleMapsReviewScraper:
         extra_headers=[],
     ):
         
-        
+        logging.info("Initializing Google Maps Review Scraper")
+        logging.info(f"chromedriver intial path: {chromedriver_path}")
+        logging.info(f"Driver path: {driver_path}")
+        logging.info(f"current working directory: {os.getcwd()}")
         # todo: make sure the URL is a valid Google Maps reviews link
         options = webdriver.ChromeOptions()
         self.now = NOW

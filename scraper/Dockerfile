@@ -13,6 +13,26 @@ RUN apt-get update && apt-get install -y \
     curl \
     sudo \
     xvfb \
+    fonts-liberation \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libatspi2.0-0 \
+    libcups2 \
+    libdbus-1-3 \
+    libdrm2 \
+    libgbm1 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libx11-xcb1 \
+    libxcb-dri3-0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    xdg-utils \
+    libvulkan1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy ChromeDriver installation script and requirements
@@ -35,8 +55,6 @@ RUN pip install --no-cache-dir -r requirements.txt \
 # Copy application code
 COPY app/ ./app/
 
-# Create necessary directories
-RUN mkdir -p data logs
 
 # Add ChromeDriver to PATH
 ENV PATH="/app/Driver:${PATH}"
@@ -53,15 +71,11 @@ RUN echo '#!/bin/bash\n\
 # Start virtual display for headless Chrome\n\
 Xvfb :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &\n\
 \n\
-# Default to API server if no arguments are provided\n\
-if [ "$1" = "api" ] || [ $# -eq 0 ]; then\n\
-  echo "Starting API server..."\n\
-  exec uvicorn app.main:app --reload --host 0.0.0.0 --port 8001\n\
-else\n\
-  echo "Running scraper with provided arguments..."\n\
-  exec python -m app.google_reviews_scrapper "$@"\n\
+echo "Starting API server..."\n\
+cd /app/app \n\
+exec uvicorn main:app --reload --host 0.0.0.0 --port 8001\n\
 fi\n'\
 > entrypoint.sh && chmod +x entrypoint.sh
 
 # Set entrypoint
-ENTRYPOINT ["entrypoint.sh"]
+ENTRYPOINT ["/app/entrypoint.sh"]

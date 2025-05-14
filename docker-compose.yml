@@ -11,8 +11,8 @@ services:
     volumes:
       - mongodb_data:/data/db
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=password
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
     networks:
       - reviews_network
 
@@ -32,7 +32,7 @@ services:
       - ./logs:/app/logs
       - ./scraper/app:/app/app  # Map your code directory (for development)
     environment:
-      - MONGODB_URI=mongodb://admin:password@mongodb:27017/reviews_db
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/reviews_db
       - PYTHONUNBUFFERED=1
     networks:
       - reviews_network
