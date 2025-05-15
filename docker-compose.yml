@@ -28,8 +28,6 @@ services:
     depends_on:
       - mongodb
     volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
       - ./scraper/app:/app/app  # Map your code directory (for development)
     environment:
       - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/reviews_db
@@ -51,11 +49,11 @@ services:
       - mongodb
       - scraper
     environment:
-      - MONGODB_URI=mongodb://admin:password@mongodb:27017/reviews_db
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/reviews_db
       - SCRAPER_SERVICE_URL=http://scraper:8001
       - PYTHONUNBUFFERED=1
     volumes:
-      - ./data:/app/data
+      - ./backend/app:/app/app 
     networks:
       - reviews_network
 

@@ -1,0 +1,18 @@
+meta {
+  name: update user
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{base_url}}/api/users/6825fc63b8fa551537550e40
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "username": "khaled_2025",
+    "fullname": "khaled bouabdallah"
+  }
+}

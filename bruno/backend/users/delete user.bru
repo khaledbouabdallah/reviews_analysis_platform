@@ -1,0 +1,17 @@
+meta {
+  name: delete user
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{base_url}}/api/users/6825fc63b8fa551537550e40
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "username": "khaled_2026"
+  }
+}
