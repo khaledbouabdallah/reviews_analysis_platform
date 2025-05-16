@@ -1,4 +1,8 @@
 from pydantic_settings import BaseSettings # type: ignore
+import logging
+
+
+logger = logging.getLogger("uvicorn")
 
 class Settings(BaseSettings):
     

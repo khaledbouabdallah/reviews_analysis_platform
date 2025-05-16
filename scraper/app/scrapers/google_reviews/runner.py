@@ -1,6 +1,5 @@
 
 from datetime import datetime, timezone
-from models.core import JobStatus, ScraperConfig
 from db.mongodb import db, jobs_collection
 from services.db_utils import save_reviews_to_mongodb
 from scrapers.google_reviews.google_reviews_scrapper import GoogleMapsReviewScraper
@@ -8,12 +7,18 @@ from anyio import to_thread
 from core.config import settings
 import logging
 logging.basicConfig(level=logging.INFO)
+from models.job import JobCreate, JobUpdateInternal
+from db.repositories.jobs import JobRepository
 
+job_repo  = JobRepository()
 
-async def run_scraper_job(job_id: str, config: ScraperConfig):
+async def run_scraper_job(job_id: str, job: JobCreate):
     
-    logging.info(f"Starting scraping job {job_id} with config: {config}")
-    await jobs_collection.update_one({"job_id": job_id}, {"$set": {"status": "running", "started_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}})
+    update_data = JobUpdateInternal(
+        status="running",
+        started_at=datetime.now(timezone.utc))
+    
+    await job_repo.update_internal(job_id, update_data)
     
     total_reviews = 0
     reviews_scraped = 0
@@ -23,28 +28,26 @@ async def run_scraper_job(job_id: str, config: ScraperConfig):
         # Initialize scraper
         scraper = GoogleMapsReviewScraper(
             driver_path=settings.CHROMEDRIVER_PATH,
-            headless=config.headless,
+            headless=True,
             verbose=True,
-            timeout=config.timeout,
-            original=config.original,
-            language=config.language,
-            concat_extra=config.concat_extra,
+            timeout=10,
+            original=True,
+            language="en",
+            concat_extra=False,
             log_file=f"job_{job_id}",
             extra_headers= ["--no-sandbox", "--disable-dev-shm-usage"]
         )
         
         # Connect to URL and get review count 
-        total_reviews = await to_thread.run_sync(scraper.connect, config.url)
+        total_reviews = await to_thread.run_sync(scraper.connect, job.url)
         logging.info(f"Total reviews found: {total_reviews}")    
         # Extract data
         if total_reviews > 0:
             data = await  to_thread.run_sync(scraper.extract_data,total_reviews)
             reviews_scraped = len(data)    
-            # Save to MongoDB
-            await save_reviews_to_mongodb(data, job_id, config.url)
-            reviews_scraped = len(data)            
+         
         else:
-            # No revie
+            # No reviews found
             reviews_scraped= 0
         
         status = "completed"
@@ -53,12 +56,18 @@ async def run_scraper_job(job_id: str, config: ScraperConfig):
         status = "failed"
         error = str(e)
     finally:
-        end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        await jobs_collection.update_one({"job_id": job_id},
-                                         {"$set": 
-                                             {"status": status, "total_reviews": total_reviews, 
-                                              "reviews_scraped": reviews_scraped if status == "completed" else None ,
-                                              "end_time": end_time, "error": error if status == "failed" else None}})
+        
+        update_data = JobUpdateInternal(
+            status=status,
+            end_time=datetime.now(timezone.utc),
+            total_reviews=total_reviews,
+            reviews_scraped=reviews_scraped,
+            error=error if status == "failed" else None,
+            reviews=data if status == "completed" else [],
+
+        )
+        
+        await job_repo.update_internal(job_id, update_data)
         
         logging.info(f"Job {job_id} finished with status: {status}, error: {error if status == 'failed' else None}")
         
