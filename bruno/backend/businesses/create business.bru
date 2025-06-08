@@ -1,0 +1,17 @@
+meta {
+  name: create business
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/businesses
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "user_id": "682614410fb6b6146e939042"
+  }
+}

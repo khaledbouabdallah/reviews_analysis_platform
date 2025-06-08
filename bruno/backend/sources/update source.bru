@@ -1,0 +1,17 @@
+meta {
+  name: update source
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{base_url}}/api/businesses/6828f674e633c3ce216d5482
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "la dirtybouche" 
+  }
+}

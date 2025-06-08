@@ -1,0 +1,19 @@
+meta {
+  name: create source
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/sources
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "user_id": "682614410fb6b6146e939042",
+    "business_id": "68320ac7f7bee0be658cbe31",
+    "name": "Basic Fit Savigny Le Temple"
+  }
+}

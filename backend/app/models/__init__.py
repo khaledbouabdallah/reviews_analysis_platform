@@ -1,4 +1,6 @@
 from bson import ObjectId
+from fastapi import HTTPException
+
 
 class PyObjectId(ObjectId):
     
@@ -9,7 +11,7 @@ class PyObjectId(ObjectId):
     @classmethod
     def validate(cls, v, field):
         if not ObjectId.is_valid(v):
-            raise ValueError(f"Invalid ObjectId: {v}")
+            raise ValueError(f"Invalid Id format: {v}")
         return ObjectId(v)
 
     @classmethod

@@ -1,0 +1,11 @@
+meta {
+  name: list jobs
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/api/jobs
+  body: none
+  auth: inherit
+}
