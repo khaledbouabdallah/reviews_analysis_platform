@@ -34,11 +34,12 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
             oid = ObjectId(job_id)
         except Exception:
             raise ValueError("Invalid job_id format")
+        
 
         try:
             updated_job = await self.collection.find_one_and_update(
                 {"_id": oid},
-                {"$set": update_data.dict(exclude_unset=True)},
+                {"$set": update_data.model_dump(by_alias=True, exclude_unset=True)},
                 return_document=ReturnDocument.AFTER
             )
 

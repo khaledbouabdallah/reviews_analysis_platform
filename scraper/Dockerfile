@@ -74,7 +74,7 @@ Xvfb :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &\n\
 echo "Starting API server..."\n\
 cd /app/app \n\
 exec uvicorn main:app --reload --host 0.0.0.0 --port 8001\n\
-fi\n'\
+'\
 > entrypoint.sh && chmod +x entrypoint.sh
 
 # Set entrypoint

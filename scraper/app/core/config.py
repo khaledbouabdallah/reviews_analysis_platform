@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     MONGODB_URL: str 
     MONGODB_DB_NAME: str
     CHROMEDRIVER_PATH: str
+    ALLOWED_SOURCE_TYPES: list[str] = ["google", "csv"]
+    ALLOWED_JOB_STATUSES: list[str] = ["pending", "running", "completed", "failed"]
     
     class Config:
         env_file = ".env"
