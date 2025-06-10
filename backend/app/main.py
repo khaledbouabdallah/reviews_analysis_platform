@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings, logger
-from api.routers import users, businesses, sources, jobs
+from api.routers import users, businesses, sources, jobs, reviews
 from db.mongodb import init_indexes
 from contextlib import asynccontextmanager
 
@@ -51,6 +51,7 @@ app.include_router(users.router, prefix="/api")
 app.include_router(businesses.router, prefix="/api")
 app.include_router(sources.router, prefix="/api")
 app.include_router(jobs.router, prefix="/api")
+app.include_router(reviews.router, prefix="/api")
 
 # Define API endpoints
 @app.get("/")
