@@ -72,8 +72,10 @@ services:
       - backend
     environment:
       - BACKEND_API_URL=http://backend:8000
+      - PYTHONUNBUFFERED=1
+      - PYTHONIOENCODING=UTF-8
     volumes:
-      - ./data:/app/data
+      - ./frontend:/app
     networks:
       - reviews_network
 
