@@ -1,12 +1,12 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Dict, Optional
 from datetime import datetime
 from models import PyObjectId
-from core import settings
+from core.config import settings
 
 
 def validate_google_review(data):
-    required_fields = ['text', 'rating', 'author', 'review_id']
+    required_fields = ['comment', 'rating', 'username']
     missing = [f for f in required_fields if f not in data]
     if missing:
         raise ValueError(f"Google review is missing required fields: {missing}")
@@ -29,19 +29,19 @@ class ReviewBase(BaseModel):
     business_id: PyObjectId
     source_id: PyObjectId
     job_id: PyObjectId
-    review_id: str
     data: Dict
     source_type: str
     created_at: datetime = Field(default_factory=lambda: datetime.now())
 
-    @field_validator('data')
-    def validate_data_based_on_source(cls, v, values):
-        source_type = values.get('source_type')
-        if not source_type or source_type not in SOURCE_VALIDATORS:
-            raise ValueError(f"Unsupported or missing source_type: {source_type}")
+    @model_validator(mode='after')
+    def validate_data_based_on_source(self):
+        
+        if not self.source_type or self.source_type not in SOURCE_VALIDATORS:
+            raise ValueError(f"Unsupported or missing source_type: {self.source_type}")
 
-        validator = SOURCE_VALIDATORS[source_type]
-        return validator(v)
+        validator = SOURCE_VALIDATORS[self.source_type]
+        data = validator(self.data)
+        return self
 
     class Config:
         arbitrary_types_allowed = True
@@ -61,6 +61,14 @@ class ReviewInDB(ReviewBase):
     
 class ReviewCreate(ReviewBase):
     pass
-    
 
+class ReviewUpdate(BaseModel):
+    data: Optional[Dict] = None
+    source_type: Optional[str] = None
+
+    @model_validator(mode='after')
+    def validate_data_based_on_source(self):
+        if self.data and self.source_type:
+            return SOURCE_VALIDATORS[self.source_type](self.data)
+        return self
     

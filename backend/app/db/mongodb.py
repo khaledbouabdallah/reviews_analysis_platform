@@ -29,17 +29,17 @@ async def init_indexes():
 
     # Jobs: ensure (user_id, business_id, source_id, name) is unique
     await jobs_collection.create_index(
-        [("user_id", 1), ("business_id", 1), ("source_id", 1), ("name", 1)],
-        unique=True,
-        name="user_business_source_job_name_unique_idx"
+        [("user_id", 1), ("business_id", 1), ("source_id", 1)],
+        unique=False,  # Allow multiple jobs for the same source
+        name="user_business_source_job_idx"
     )
     
 
     # Reviews: ensure (user_id, business_id, source_id,job_id, external_review_id) is unique
     await reviews_collection.create_index(
-        [("user_id", 1), ("business_id", 1), ("source_id", 1), ("job_id", 1), ("external_review_id", 1)],
-        unique=True,
-        name="user_business_source_job_review_unique_idx"
+        [("user_id", 1), ("business_id", 1), ("source_id", 1), ("job_id", 1)],
+        unique=False,
+        name="user_business_source_job_review_idx"
     )
 
     # Optional fast retrievals:

@@ -1,20 +1,26 @@
 
 from datetime import datetime, timezone
-from db.mongodb import db, jobs_collection
-from services.db_utils import save_reviews_to_mongodb
+from db.mongodb import db, jobs_collection, reviews_collection
 from scrapers.google_reviews.google_reviews_scrapper import GoogleMapsReviewScraper
 from anyio import to_thread
 from core.config import settings
 import logging
 logging.basicConfig(level=logging.INFO)
 from models.job import JobCreate, JobUpdateInternal
+from models.review import ReviewCreate, ReviewUpdate
 from db.repositories.jobs import JobRepository
+from db.repositories.reviews import ReviewRepository
+import tempfile
 
 job_repo  = JobRepository()
+review_repo = ReviewRepository()
 
 async def run_scraper_job(job_id: str, job: JobCreate):
     
-    update_data = JobUpdateInternal(
+    
+    print(f"Starting job {job_id}") 
+    
+    update_data = JobUpdateInternal( 
         status="running",
         started_at=datetime.now(timezone.utc))
     
@@ -28,15 +34,17 @@ async def run_scraper_job(job_id: str, job: JobCreate):
         # Initialize scraper
         scraper = GoogleMapsReviewScraper(
             driver_path=settings.CHROMEDRIVER_PATH,
-            headless=True,
+            headless=False,
             verbose=True,
             timeout=10,
             original=True,
             language="en",
             concat_extra=False,
             log_file=f"job_{job_id}",
-            extra_headers= ["--no-sandbox", "--disable-dev-shm-usage"]
+            extra_headers= ["--no-sandbox", "--disable-dev-shm-usage", f"--user-data-dir={tempfile.mkdtemp()}"]
         )
+        
+        print("conntection established to google maps reviews link")
         
         # Connect to URL and get review count 
         total_reviews = await to_thread.run_sync(scraper.connect, job.url)
@@ -44,6 +52,7 @@ async def run_scraper_job(job_id: str, job: JobCreate):
         # Extract data
         if total_reviews > 0:
             data = await  to_thread.run_sync(scraper.extract_data,total_reviews)
+            logging.info(f"Extracted {len(data)} reviews")
             reviews_scraped = len(data)    
          
         else:
@@ -59,7 +68,7 @@ async def run_scraper_job(job_id: str, job: JobCreate):
         
         update_data = JobUpdateInternal(
             status=status,
-            end_time=datetime.now(timezone.utc),
+            ended_at=datetime.now(timezone.utc),
             total_reviews=total_reviews,
             reviews_scraped=reviews_scraped,
             error=error if status == "failed" else None,
@@ -68,10 +77,28 @@ async def run_scraper_job(job_id: str, job: JobCreate):
         )
         
         await job_repo.update_internal(job_id, update_data)
-        
         logging.info(f"Job {job_id} finished with status: {status}, error: {error if status == 'failed' else None}")
+        
+        
+        # save reviews to database
+        i = 0
+        if status == "completed":
+            for review in data:
+                review_data = ReviewCreate(
+                    user_id=job.user_id,
+                    business_id=job.business_id,
+                    source_id=job.source_id,
+                    job_id=job.job_id,
+                    data=review,
+                    source_type=job.source_type
+                )
+                await review_repo.create(review_data)
+                i += 1
+        logging.info(f"Saved {i} reviews to database")
+        
         
         try:
             scraper.exit(force=True)
+            logging.info("Scraper exited successfully")
         except:
-            pass
+            passkk

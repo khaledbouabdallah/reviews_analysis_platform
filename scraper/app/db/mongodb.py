@@ -7,4 +7,5 @@ db = client[settings.MONGODB_DB_NAME]
 
 users_collection = db['users']
 reviews_collection = db['reviews']
+sources_collection = db['sources']
 jobs_collection = db['jobs']

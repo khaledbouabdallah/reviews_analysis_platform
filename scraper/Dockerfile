@@ -1,81 +1,72 @@
-FROM python:3.9-slim
+FROM ubuntu:latest
 
-# Set working directory
-WORKDIR /app
+EXPOSE 5900
 
-# Install system dependencies
+COPY ./requirements.txt /tmp/requirements.txt
+COPY ./app /app
+COPY ./scripts /scripts
+
 RUN apt-get update && apt-get install -y \
+    xvfb \
+    x11vnc \
+    fluxbox \
     wget \
     unzip \
     gnupg \
-    apt-transport-https \
-    ca-certificates \
-    curl \
-    sudo \
-    xvfb \
-    fonts-liberation \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libatspi2.0-0 \
-    libcups2 \
-    libdbus-1-3 \
-    libdrm2 \
-    libgbm1 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libx11-xcb1 \
-    libxcb-dri3-0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxfixes3 \
-    libxrandr2 \
-    xdg-utils \
-    libvulkan1 \
+    --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy ChromeDriver installation script and requirements
-COPY install_chromedriver.sh .
-COPY requirements.txt .
+# Install xterm
+RUN apt-get update && apt-get install -y xterm
 
-# Make install script executable
-RUN chmod +x install_chromedriver.sh
+# Install Google Chrome from .deb (it's works only on x86 docker host machine, not ARM or Apple Silicon)
+RUN apt-get update && apt-get install -y wget gnupg2 apt-utils --no-install-recommends \
+    && wget --no-check-certificate https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+    && dpkg -i google-chrome-stable_current_amd64.deb || true \
+    && apt-get install -fy \
+    && rm -rf /var/lib/apt/lists/* google-chrome-stable_current_amd64.deb \
+    && which google-chrome-stable || (echo 'Google Chrome was not installed' && exit 1)
 
-# Install Chrome and ChromeDriver
+# Install x11vnc
+RUN mkdir ~/.vnc
+RUN x11vnc -storepasswd 1234 ~/.vnc/passwd
 
+# Install packages for python
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        curl \
+        libffi-dev \
+        libssl-dev \
+        zlib1g-dev \
+        liblzma-dev \
+        libbz2-dev \
+        libreadline-dev \
+        libsqlite3-dev
 
-# check if Chrome is already installed
-RUN ./install_chromedriver.sh
+# Download and install Python 3.10
+WORKDIR /tmp2
+RUN wget https://www.python.org/ftp/python/3.10.0/Python-3.10.0.tgz \
+    && tar -xvf Python-3.10.0.tgz \
+    && cd Python-3.10.0 \
+    && ./configure --enable-optimizations \
+    && make altinstall
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-cache-dir fastapi uvicorn pydantic
+# Download and install PIP manager for the Python 3.10
+RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
+    && python3.10 get-pip.py
 
-# Copy application code
-COPY app/ ./app/
+# Make venv and install python dependencies
+RUN python3.10 -m venv /py && \
+  /py/bin/pip install --upgrade pip && \
+  /py/bin/pip install --no-cache-dir -r /tmp/requirements.txt && \
+  rm /tmp/requirements.txt
 
+WORKDIR /app
 
-# Add ChromeDriver to PATH
-ENV PATH="/app/Driver:${PATH}"
+RUN chmod -R +x /scripts
 
-# Set environment variables for Chrome to run in headless mode
-ENV DISPLAY=:99
-ENV PYTHONUNBUFFERED=1
+ENV PATH="/scripts:/py/bin:$PATH"
+ENV DISPLAY=:0
 
-# Expose the API port
-EXPOSE 8001
-
-# Add entry script
-RUN echo '#!/bin/bash\n\
-# Start virtual display for headless Chrome\n\
-Xvfb :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &\n\
-\n\
-echo "Starting API server..."\n\
-cd /app/app \n\
-exec uvicorn main:app --reload --host 0.0.0.0 --port 8001\n\
-'\
-> entrypoint.sh && chmod +x entrypoint.sh
-
-# Set entrypoint
-ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["/scripts/startup.sh"]

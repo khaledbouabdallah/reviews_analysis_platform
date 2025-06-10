@@ -24,7 +24,13 @@ async def scrap_endpoint(job: JobCreate):
     else:
         raise HTTPException(status_code=400, detail="Unsupported source")
     
-    created_job = await job_repo.create(job)
+    
+    try:
+        created_job = await job_repo.create(job)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create job: {str(e)}")
     
     async with httpx.AsyncClient() as client:
         response = await client.post(request_url, json=created_job.model_dump(mode="json", by_alias=True))

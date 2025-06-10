@@ -1,5 +1,5 @@
 from db.repositories.base_repository import BaseRepository
-from db.mongodb import sources_collection, users_collection, busniesses_collection, reviews_collection
+from db.mongodb import reviews_collection, jobs_collection
 from models.review import ReviewCreate, ReviewUpdate, ReviewInDB
 from models import PyObjectId
 from pymongo import ReturnDocument
@@ -15,8 +15,8 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
 
     async def create(self, review_create: ReviewCreate) -> ReviewInDB:
         try:
-            await ValidatorHelper.get_source_or_raise(
-                sources_collection, review_create.user_id, review_create.business_id, review_create.source_id
+            await ValidatorHelper.get_job_or_raise(
+                jobs_collection, review_create.user_id, review_create.business_id, review_create.source_id, review_create.job_id
             )
 
             result = await self.collection.insert_one(review_create.model_dump(by_alias=True))
@@ -90,7 +90,6 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
         except PyMongoError as e:
             raise RuntimeError("Database error")
         
-        
     async def get_by_source(self, source_id: str, skip: int = 0, limit: int = 100) -> List[ReviewInDB]:
         """Get all reviews from a specific source."""
         try:
@@ -119,4 +118,3 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
         except PyMongoError as e:
             logger.error(f"Database error while fetching reviews by job: {str(e)}")
             raise RuntimeError("Database error")
-    

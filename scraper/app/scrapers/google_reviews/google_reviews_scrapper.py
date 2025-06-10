@@ -7,6 +7,7 @@ from selenium.common.exceptions import (
     TimeoutException,
     StaleElementReferenceException,
 )
+import random
 import re
 import datetime
 import time
@@ -15,6 +16,7 @@ import os
 import json
 import logging
 import argparse
+import undetected_chromedriver as uc
 
 # import types for type hinting
 from selenium.webdriver.remote.webelement import WebElement
@@ -26,7 +28,7 @@ ignored_exceptions = (
 
 NOW = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 # DATA_PATH = "data"
-MAPS_LINK = "https://maps.google.com/"
+MAPS_LINK = "https://www.google.com/maps"
 
 
 
@@ -159,10 +161,7 @@ class GoogleMapsReviewScraper:
         extra_headers=[],
     ):
         
-        logging.info("Initializing Google Maps Review Scraper")
-        logging.info(f"chromedriver intial path: {chromedriver_path}")
-        logging.info(f"Driver path: {driver_path}")
-        logging.info(f"current working directory: {os.getcwd()}")
+
         # todo: make sure the URL is a valid Google Maps reviews link
         options = webdriver.ChromeOptions()
         self.now = NOW
@@ -184,25 +183,23 @@ class GoogleMapsReviewScraper:
         else:
             logging.basicConfig(level=level)
 
-        if self.headless:
-            options.add_argument("--headless")
-            options.add_argument("--window-size=1920,1080")
-            options.add_argument("–disable-gpu")
+        options = uc.ChromeOptions()
+        options.arguments.extend(["--no-sandbox", "--disable-setuid-sandbox"]) 
+        self.driver = uc.Chrome(headless=False, use_subprocess=False, options=options)
+        logging.info("driver started")
 
-        for header in extra_headers:
-            options.add_argument(header)
-
-        # create an instance of the Chrome driver
-        self.driver = webdriver.Chrome(executable_path=driver_path, options=options)
         # set the delay for the driver
         self.wait = WebDriverWait(
             driver=self.driver, ignored_exceptions=ignored_exceptions, timeout=timeout
         )
-
+        
         # connect to google maps and accept the cookies
         try:
+
             self.driver.get(MAPS_LINK)
-            logging.info(f"Connected to {MAPS_LINK}")
+            time.sleep(random.uniform(8, 10))
+            # take a screenshot of the page
+            
             self.accept_cookies()
         except Exception as e:
             logging.error(f"Error connecting to {MAPS_LINK}")
@@ -214,11 +211,14 @@ class GoogleMapsReviewScraper:
             "//*[@id='yDmH0d']/c-wiz/div/div/div/div[2]/div[1]/div[3]/div[1]/div[1]/form[2]/div/div/button",
             type_=By.XPATH,
         )
-        
         # Add wait time
         time.sleep(0.5)
         accept_button.click()
         time.sleep(0.5)
+        
+        logging.info("Clicked on accept cookies button")
+        self.driver.save_screenshot(f"cookies_accepted_check.png")
+        logging.info("Clicked on accept cookies button")
     
         # check if the cookie banner is still visible
         try:
@@ -236,36 +236,45 @@ class GoogleMapsReviewScraper:
         except:
             logging.info("Cookies accepted")
             self.cookies_accepted = True
+            
+        # take a screenshot of the page after accepting cookies
+        self.driver.save_screenshot(f"cookies_accepted.png")
 
-        
-          
-  
-        
         
 
     def connect(self, url):
         
         
         url = f"{url}&hl={self.language}"
-        url = convert_to_google_com(url)
-        # connect to the URL and wait for the page to load
-        
         # ww.google.anything => ww.google.com
+        url = convert_to_google_com(url)
+        # remove spaces and new lines from the URL
+        #url = re.sub(r"\s+", "", url)
+        
+        
+        logging.info(f"Connecting to target url")
+        self.driver.save_screenshot(f"main_google.png")
+        logging.info(f"Connecting to target url 2")
+        
+        
         
         
         try:
+            link = "https://www.google.com/maps/place/VERY+PAD+THA%C3%8F/@48.9028028,2.4870341,17.5z/data=!4m8!3m7!1s0x47e613ce08f07a7d:0x48019cd4636487ab!8m2!3d48.902039!4d2.4850475!9m1!1b1!16s%2Fg%2F11h53ggbsl?entry=ttu&g_ep=EgoyMDI1MDYwNC4wIKXMDSoASAFQAw%3D%3D"
             self.driver.get(url)   
-            logging.info(f"Connected! ")
-            
-            if not self.cookies_accepted:
+            logging.info(f"Connected to target page! ")
+            self.driver.save_screenshot(f"target_page_.png")
+            logging.info(f"Connected to target page! 2 ")
+            if not self.cookies_accepted:                     
                 self.accept_cookies()         
                    
-            logging.info("just test 1")
             try:
                 _ = self._get_element_('A1zNzb',By.CLASS_NAME)
                 hotel = True
-            except:
+            except Exception as e:
                 hotel = False
+                logging.error(f"Error checking if hotel: {e}")
+
                 
             logging.info(f"is hotel: {hotel}")
                 
@@ -282,16 +291,20 @@ class GoogleMapsReviewScraper:
 
 
         except Exception as e:
-            logging.error(f"Error connecting to {url}")
+            logging.error(f"Error in connect method: {e}")
             raise e
 
     def extract_data(self, total_reviews):
+        
+        time.sleep(2)
         # sort reviews by newest
         _ = self._get_element_(
             '//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]/div[8]/div[2]/button',
             By.XPATH,
         ).click()
         _ = self._get_element_('//*[@id="action-menu"]/div[2]', By.XPATH).click()
+        
+        time.sleep(2)
 
         # get scroll element
         scrollable_div = self._get_element_(
@@ -402,7 +415,16 @@ class GoogleMapsReviewScraper:
                 elements = self.wait.until(condition((type_, target)))
             return elements
         except TimeoutException as e:
-            print(f"Error: Unable to locate element with {type} : {target}")
+            logging.error(f"TimeoutException: Unable to locate element with {type_} : {target}")
+            raise e
+        except NoSuchElementException as e:
+            logging.error(f"NoSuchElementException: Unable to locate element with {type_} : {target}")
+            raise e
+        except StaleElementReferenceException as e:
+            logging.error(f"StaleElementReferenceException: Unable to locate element with {type_} : {target}")
+            raise e
+        except Exception as e:
+            logging.error(f"Exception: No defined exception for {type_} : {target}")
             raise e
 
     def exit(self, force=False):
@@ -420,80 +442,69 @@ class GoogleMapsReviewScraper:
     ) -> dict:
         review = {}
         # get username
-        review["username"] = review_container.find_element_by_class_name("d4r55").text
+        review["username"] = review_container.find_element(By.CLASS_NAME, "d4r55").text
+
         # get rating
-        
         try:
             stars = review_container.find_elements(
                 By.XPATH,
                 ".//span[contains(@class, 'hCCjke') and contains(@class, 'elGi1d')]",
             )
             review["rating"] = len(stars)
-        except NoSuchElementException as _:
-            review["rating"] = int(review_container.find_element_by_class_name("fzvQIb").text.split("/")[0])
-            print("name ", review["username"]," rating: ", review["rating"])
+        except NoSuchElementException:
+            review["rating"] = int(review_container.find_element(By.CLASS_NAME, "fzvQIb").text.split("/")[0])
+            print("name ", review["username"], " rating: ", review["rating"])
+
         # get date
-        review["date"] = review_container.find_element_by_class_name("rsqaWe").text
+        review["date"] = review_container.find_element(By.CLASS_NAME, "rsqaWe").text
+
         # check if has likes
         try:
-            review["likes"] = review_container.find_element_by_class_name("pkWtMe").text
-        except NoSuchElementException as _:
+            review["likes"] = review_container.find_element(By.CLASS_NAME, "pkWtMe").text
+        except NoSuchElementException:
             review["likes"] = 0
 
         # get comment text
         try:
-            comment_section = review_container.find_element_by_class_name("MyEned")
-            #  check if comment can be expanded
+            comment_section = review_container.find_element(By.CLASS_NAME, "MyEned")
             try:
-                _ = comment_section.find_element_by_tag_name("button").click()
-            except NoSuchElementException as _:  # do nothing if the button is not found
+                comment_section.find_element(By.TAG_NAME, "button").click()
+            except NoSuchElementException:
                 pass
-            review["comment"] = comment_section.find_element_by_class_name(
-                "wiI7pd"
-            ).text
-        except NoSuchElementException as _:
+            review["comment"] = comment_section.find_element(By.CLASS_NAME, "wiI7pd").text
+        except NoSuchElementException:
             review["comment"] = None
 
         # check for extra attributes
-
         if concat_extra:
             review["extra"] = ""
         try:
-            extra = review_container.find_element_by_css_selector("div[jslog='127691']")   
-            extras = extra.find_elements_by_class_name("PBK6be")
-            #print("name: ", review["username"], "extras len: ", len(extras))
+            extra = review_container.find_element(By.CSS_SELECTOR, "div[jslog='127691']")
+            extras = extra.find_elements(By.CLASS_NAME, "PBK6be")
             for i in range(len(extras)):
-                #print(f"extra : {i}")
-                spans = extras[i].find_elements_by_class_name("RfDO5c")
-                
+                spans = extras[i].find_elements(By.CLASS_NAME, "RfDO5c")
                 if len(spans) == 2:
                     key = spans[0].text
                     value = spans[1].text
                 else:
                     txt = spans[0].text.replace('<b>', '').replace('</b>', '').replace('"', '').replace(' ', '')
-                    key, value = txt.split(':')
-                
-                #print(f"key : {key}", f"value : {value}")
+                    try:    
+                        key, value = txt.split(':')
+                    except ValueError:
+                        logging.warning(f"Unable to split extra attribute: '{txt}'")
+                        continue
                 if not concat_extra:
                     review[key] = value
                 else:
                     review["extra"] += "," + f"{key}:{value}"
-        except NoSuchElementException as _:  # no extra attributes, do nothing
+        except NoSuchElementException:
             pass
 
-        if self.original:  # get the original comment
+        if self.original:
             try:
-                _ = (
-                    review_container.find_element_by_class_name("oqftme")
-                    .find_element_by_tag_name("button")
-                    .click()
-                )
-                review["original"] = comment_section.find_element_by_class_name(
-                    "wiI7pd"
-                ).text
-            except (
-                NoSuchElementException
-            ) as _:  # no translation, original comment is the same as the comment
+                review_container.find_element(By.CLASS_NAME, "oqftme").find_element(By.TAG_NAME, "button").click()
+                review["original"] = comment_section.find_element(By.CLASS_NAME, "wiI7pd").text
+            except NoSuchElementException:
                 review["original"] = review["comment"]
 
         return review
@@ -507,6 +518,8 @@ class GoogleMapsReviewScraper:
 if __name__ == "__main__":
     args = get_arguments()
     
+    print("starting scrapper")
+    
     try:
         scrapper = GoogleMapsReviewScraper(
             driver_path=args.driver,
@@ -518,6 +531,7 @@ if __name__ == "__main__":
             concat_extra=args.concat_extra,
             log_file=args.log_file,
         )
+        print(args.url)
         data = scrapper.scrap(args.url)
         scrapper.save_data(
             data=data, path=args.path, name=args.name, timestamp=args.timestamp
@@ -525,4 +539,7 @@ if __name__ == "__main__":
     except Exception as e:
         logging.error(f"Error: {e}")
     finally:
-        scrapper.exit(force=True)
+        
+        if 'scrapper' in locals():
+            logging.info("Exiting the scraper")
+            scrapper.exit(force=False)

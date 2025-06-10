@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Dict, Optional
 from datetime import datetime
 from models import PyObjectId
@@ -34,14 +34,14 @@ class ReviewBase(BaseModel):
     source_type: str
     created_at: datetime = Field(default_factory=lambda: datetime.now())
 
-    @field_validator('data')
-    def validate_data_based_on_source(cls, v, values):
-        source_type = values.get('source_type')
-        if not source_type or source_type not in SOURCE_VALIDATORS:
-            raise ValueError(f"Unsupported or missing source_type: {source_type}")
+    @model_validator(mode='after')
+    def validate_data_based_on_source(self):
+        
+        if not self.source_type or self.source_type not in SOURCE_VALIDATORS:
+            raise ValueError(f"Unsupported or missing source_type: {self.source_type}")
 
-        validator = SOURCE_VALIDATORS[source_type]
-        return validator(v)
+        validator = SOURCE_VALIDATORS[self.source_type]
+        return validator(self.data)
 
     class Config:
         arbitrary_types_allowed = True
@@ -61,6 +61,20 @@ class ReviewInDB(ReviewBase):
     
 class ReviewCreate(ReviewBase):
     pass
+
+class ReviewUpdate(BaseModel):
+    data: Optional[Dict] = None
+    review_id: Optional[str] = None
+    source_type: Optional[str] = None
+
+    @model_validator(mode='after')
+    def validate_data_based_on_source(self):
+        if self.data and self.source_type:
+            return SOURCE_VALIDATORS[self.source_type](self.data)
+        return self
     
+    
+
+
 
     

@@ -1,13 +1,14 @@
-selenium==3.141.0
+selenium==4.33.0
 pandas==2.2.1
-urllib3==1.26.16
+urllib3==2.4.0
 fastapi>=0.95.0
 uvicorn>=0.21.1
 pydantic>=1.10.7
-webdriver-manager>=3.8.6
+webdriver-manager>=4.0.2
 python-multipart>=0.0.6
 pydantic-settings>=2.8.1
 python-dotenv>=1.0.0
+undetected-chromedriver==3.5.5
 
 # Database libraries
 motor>=3.1.1

@@ -16,8 +16,7 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
     
     async def create(self, job_create: JobCreate) -> JobInDB:
         try:
-            # await ValidatorHelper.get_user_or_raise(users_collection, job_create.user_id)
-            # await ValidatorHelper.get_business_or_raise(busniesses_collection, job_create.user_id, job_create.business_id)
+
             await ValidatorHelper.get_source_or_raise(sources_collection, job_create.user_id, job_create.business_id, job_create.source_id)
 
             # Insert Job
