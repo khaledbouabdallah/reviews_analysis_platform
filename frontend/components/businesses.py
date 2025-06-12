@@ -62,6 +62,8 @@ def business_management_page():
 
 def business_context_page():
     """Main page when a business is selected"""
+    from components.sources import sources_page
+    
     business = st.session_state.selected_business
     st.title(f"📊 {business.get('name', 'Business Dashboard')}")
     
@@ -82,18 +84,16 @@ def business_context_page():
     tab1, tab2, tab3 = st.tabs(["📁 Sources", "🔄 Jobs", "⭐ Reviews"])
     
     with tab1:
-        st.header("Sources")
-        st.info("Source management will be implemented in the next step")
-        st.write(f"Sources for **{business.get('name')}** will appear here")
+        sources_page()
     
     with tab2:
         st.header("Jobs")
-        st.info("Job management will be implemented in the next step")
+        st.info("Job management will be implemented in Step 4")
         st.write(f"Scraping jobs for **{business.get('name')}** will appear here")
     
     with tab3:
         st.header("Reviews")
-        st.info("Review visualization will be implemented in the next step")
+        st.info("Review visualization will be implemented in Step 5")
         st.write(f"Reviews for **{business.get('name')}** will appear here")
 
 

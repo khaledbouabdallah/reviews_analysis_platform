@@ -84,7 +84,7 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
         
         
             
-    async def get_by_busnisse(self, business_id: str, skip: int = 0, limit: int = 100) -> List[JobInDB]:
+    async def get_by_business(self, business_id: str, skip: int = 0, limit: int = 100) -> List[JobInDB]:
         """Get all jobs of a business."""
         try:
             oid = PyObjectId(business_id)

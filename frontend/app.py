@@ -1,5 +1,5 @@
 import streamlit as st
-from config import APP_TITLE, APP_ICON, LAYOUT, DEVELOPER
+from config import APP_TITLE, APP_ICON, LAYOUT, DEVELOPER, LOGGER
 from utils import init_session_state
 
 from components import (
@@ -18,6 +18,8 @@ def main():
         page_icon=APP_ICON,
         layout=LAYOUT
     )
+    
+    LOGGER.info("Starting application: %s", APP_TITLE)
     
     # Initialize session state
     init_session_state()

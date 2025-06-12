@@ -58,15 +58,15 @@ class SourceRepository(BaseRepository[SourceCreate, SourceUpdate, SourceInDB]):
         
         
             
-    async def get_by_busnisse(self, business_id: str, skip: int = 0, limit: int = 100) -> List[SourceInDB]:
+    async def get_by_business(self, business_id: str, skip: int = 0, limit: int = 100) -> List[SourceInDB]:
         """Get all jobs of a business."""
         try:
             oid = PyObjectId(business_id)
         except Exception:
-            raise ValueError("Invalid user_id format")
+            raise ValueError("Invalid business_id format")
 
         try:
-            jobs_data = await self.collection.find({"user_id": oid}).skip(skip).to_list(length=limit)
+            jobs_data = await self.collection.find({"business_id": oid}).skip(skip).to_list(length=limit)
             return [self.db_model.model_validate(job) for job in jobs_data]
         except PyMongoError as e:
             raise RuntimeError("Database error")

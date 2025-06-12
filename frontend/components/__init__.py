@@ -7,5 +7,6 @@ __all__ = [
     'register_form', 
     'sidebar_navigation',
     'business_management_page',
-    'business_context_page'
+    'business_context_page',
+    'sources_page'
 ]
