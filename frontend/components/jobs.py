@@ -205,7 +205,7 @@ def _render_job_card(job):
             st.error(f"**Error:** {job.get('error')}")
         
         # Action buttons
-        button_col1, button_col2, button_col3, button_col4 = st.columns(4)
+        button_col1, button_col2, button_col3, button_col4, button_col5 = st.columns(5)
         
         with button_col1:
             if st.button("📊 Details", key=f"details_{job_id}"):
@@ -220,14 +220,25 @@ def _render_job_card(job):
                     st.rerun()
         
         with button_col3:
+            # New Analysis button
+            if status in ['completed'] and reviews_scraped > 0:
+                if st.button("🔬 Analyze", key=f"analyze_{job_id}"):
+                    st.session_state[f"show_analysis_{job_id}"] = True
+                    st.rerun()
+        
+        with button_col4:
             if status in ['failed']:
                 if st.button("🔄 Retry", key=f"retry_{job_id}"):
                     st.info("Job retry functionality coming soon")
         
-        with button_col4:
+        with button_col5:
             if st.button("🗑️ Delete", key=f"delete_{job_id}"):
                 st.session_state[f"confirm_delete_{job_id}"] = True
                 st.rerun()
+        
+        # Show analysis options if toggled
+        if st.session_state.get(f"show_analysis_{job_id}", False):
+            _render_analysis_options(job, job_id, api_client)
         
         # Show detailed job info if toggled
         if st.session_state.get(f"show_details_{job_id}", False):
@@ -238,6 +249,59 @@ def _render_job_card(job):
             _render_delete_job_confirmation(job, job_id, api_client)
         
         st.markdown("---")
+
+
+def _render_analysis_options(job, job_id, api_client):
+    """Render analysis options for a job"""
+    st.markdown("#### 🔬 Analysis Options")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("🧪 Run Basic Analysis", key=f"run_analysis_{job_id}"):
+            with st.spinner("Running sentiment and language analysis..."):
+                try:
+                    response = api_client.analyze_job_reviews(job_id)
+                    if response.get('count'):
+                        st.success(f"✅ Successfully analyzed {response['count']} reviews!")
+                        st.info("Analysis results have been saved. View them in the Reviews tab.")
+                    else:
+                        st.warning("Some reviews could not be analyzed.")
+                except Exception as e:
+                    st.error(f"Failed to analyze reviews: {str(e)}")
+    
+    with col2:
+        if st.button("📝 Generate Summary", key=f"generate_summary_{job_id}"):
+            with st.spinner("Generating review summary..."):
+                try:
+                    response = api_client.summarize_job_reviews(job_id)
+                    if response.get('summary'):
+                        st.session_state[f"job_summary_{job_id}"] = response['summary']
+                        st.success("✅ Summary generated successfully!")
+                    else:
+                        st.error("Failed to generate summary")
+                except Exception as e:
+                    st.error(f"Failed to generate summary: {str(e)}")
+    
+    with col3:
+        if st.button("❌ Close", key=f"close_analysis_{job_id}"):
+            st.session_state[f"show_analysis_{job_id}"] = False
+            st.session_state.pop(f"job_summary_{job_id}", None)
+            st.rerun()
+    
+    # Display summary if available
+    if st.session_state.get(f"job_summary_{job_id}"):
+        st.markdown("#### 📋 Review Summary")
+        st.info(st.session_state[f"job_summary_{job_id}"])
+        
+        # Download button for summary
+        st.download_button(
+            label="📥 Download Summary",
+            data=st.session_state[f"job_summary_{job_id}"],
+            file_name=f"summary_{job.get('name', job_id)}.txt",
+            mime="text/plain",
+            key=f"download_summary_{job_id}"
+        )
 
 
 def _render_job_details(job):

@@ -11,6 +11,7 @@ from services.language import detect_language
 from services.sentiment import SentimentAnalyzer
 from core.config import logger
 from datetime import datetime, timezone
+from core.config import logger
 
 
 class BasicAnalyzer:
@@ -32,12 +33,13 @@ class BasicAnalyzer:
         """
         results = []
         for review in reviews:
-            if not self._is_review_processed(review):
-                result = await self.simple_analyze(review)
+            #if not self._is_review_processed(review):
+            result = await self.simple_analyze(review) 
+            if result: 
                 results.append(result)
-            else:
-                logger.debug(f"Review {review.id} already processed, skipping.")
-                results.append(review)
+            #else:
+            #    logger.debug(f"Review {review.id} already processed, skipping.")
+            #    results.append(review)
         return results
     
     
@@ -57,15 +59,22 @@ class BasicAnalyzer:
                 await self._mark_processing_failed(review.id, "No original text found")
                 return review
             
+            
+            logger.info("cleaning and processing review text")
             # Clean the text
             cleaned_text = preprocess_comment(text)
             
+            
+            logger.info("detecting language")
             # translate to English if necessary
             detected_language = detect_language(cleaned_text)
             # workaround for now, use google maps transaltion
+            logger.info("translating review text to English")
             translated_text = review.data.get('comment', None)
             translated_text = preprocess_comment(translated_text)
                         
+                        
+            logger.info(f"doing sentiment analysis")
             # Analyze sentiment of english text
             sentiment_result = self.sentiment_analyzer.analyze(translated_text, "en")
             
@@ -81,6 +90,8 @@ class BasicAnalyzer:
                 "processed_at": datetime.now(timezone.utc)
             }
             
+            logger.info(f"updating review")
+            
             # Update review with processed data
             updated_review = await self.review_repo.update_processed_data(str(review.id), processed_data)
             logger.debug(f"Successfully processed review {review.id}")
@@ -89,6 +100,7 @@ class BasicAnalyzer:
         except Exception as e:
             logger.error(f"Error processing review {review.id}: {str(e)}")
             await self._mark_processing_failed(review.id, str(e))
+            return None
     
     async def _mark_processing_failed(self, review_id: str, error_message: str) -> None:
         """Mark a review as failed processing."""

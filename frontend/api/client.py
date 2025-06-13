@@ -148,6 +148,19 @@ class APIClient:
         response = requests.get(url)
         return self._handle_response(response)
     
+    # Analysis API methods
+    def analyze_job_reviews(self, job_id: str) -> Dict[str, Any]:
+        """Run basic analysis on all reviews for a job"""
+        url = f"{self.base_url}/api/analyzer/simple/batch/job/{job_id}"
+        response = requests.get(url)
+        return self._handle_response(response)
+    
+    def summarize_job_reviews(self, job_id: str) -> Dict[str, Any]:
+        """Generate a summary of all reviews for a job"""
+        url = f"{self.base_url}/api/analyzer/summary/job/{job_id}"
+        response = requests.get(url)
+        return self._handle_response(response)
+    
     def _handle_response(self, response: requests.Response) -> Dict[str, Any]:
         """Handle API response and return JSON data or raise error"""
         if response.status_code >= 400:

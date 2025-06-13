@@ -6,6 +6,7 @@ from models.business import BusinessCreate, BusinessUpdate, BusinessInDB, Busine
 from core.config import logger
 from services.basic_analysis import BasicAnalyzer
 from services.summary import summarize_reviews
+from core.config import logger
 
 
 
@@ -23,8 +24,7 @@ async def simple_analyzer_on_job_reviews(job_id: str):
     try:
         
         basic_analyzer = BasicAnalyzer()
-        reviews = review_repo.get_by_job(job_id)
-        
+        reviews = await review_repo.get_by_job(job_id)
         reviews_analyzed = await basic_analyzer.batch_simple_analyze(reviews)
         if len(reviews_analyzed) == len(reviews):
             # return success 200 
@@ -48,18 +48,17 @@ async def summarize_job_reviews(job_id: str):
     - **job_id**: ID of the scraping job whose reviews will be summarized
     """
     try:
-        reviews = review_repo.get_by_job(job_id)
+        reviews = await review_repo.get_by_job(job_id)
         
         if not reviews:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"No reviews found for job {job_id}"
             )
-            
-        # remove empty comments and small comments
-        reviews = [review.data.get('comment') for review in reviews if len(review.data.get('comment', '')) > 20]
+                        
+        comments = [review.data.get('comment', '') for review in reviews if review.data.get('comment')]
+        summary = await summarize_reviews(comments)
         
-        summary = await summarize_reviews(reviews)
         return {"job_id": job_id, "summary": summary}
     
     except Exception as e:

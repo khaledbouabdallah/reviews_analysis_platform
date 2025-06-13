@@ -12,7 +12,7 @@ review_repo = ReviewRepository()
 
 
 @router.get("/", response_model=List[ReviewResponse])
-async def list_reviews(skip: int = 0, limit: int = 100):
+async def list_reviews(skip: int = 0, limit: int = 5000):
     """ Endpoint to list all reviews.
     This endpoint retrieves a list of reviews from the database.
     """
@@ -56,36 +56,36 @@ async def update_review(review_id: str, review_data: ReviewUpdate):
     
     
 @router.get("/user/{user_id}", response_model=List[ReviewResponse])
-async def get_reviews_by_user(user_id: str, skip: int = 0, limit: int = 100):
+async def get_reviews_by_user(user_id: str, skip: int = 0):
     """ Endpoint to retrieve all reviews of a user.
     This endpoint fetches reviews associated with a specific user ID.
     """
     try:
-        reviews = await review_repo.get_by_user(user_id, skip=skip, limit=limit)
+        reviews = await review_repo.get_by_user(user_id, skip=skip)
         return [ReviewResponse.model_validate(review.model_dump(by_alias=True)) for review in reviews]
     
     except Exception as e:
         logger.error(f"Failed to retrieve user's reviews: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to retrieve user's reviews: {str(e)}")
 @router.get("/business/{business_id}", response_model=List[ReviewResponse])
-async def get_reviews_by_business(business_id: str, skip: int = 0, limit: int = 500):
+async def get_reviews_by_business(business_id: str, skip: int = 0):
     """ Endpoint to retrieve all reviews of a business.
     This endpoint fetches reviews associated with a specific business ID.
     """
     try:
-        reviews = await review_repo.get_by_business(business_id, skip=skip, limit=limit)
+        reviews = await review_repo.get_by_business(business_id, skip=skip)
         return [ReviewResponse.model_validate(review.model_dump(by_alias=True)) for review in reviews]
     
     except Exception as e:
         logger.error(f"Failed to retrieve business's reviews: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to retrieve business's reviews: {str(e)}")
 @router.get("/source/{source_id}", response_model=List[ReviewResponse])
-async def get_reviews_by_source(source_id: str, skip: int = 0, limit: int = 500):
+async def get_reviews_by_source(source_id: str, skip: int = 0):
     """ Endpoint to retrieve all reviews of a source.
     This endpoint fetches reviews associated with a specific source ID.
     """
     try:
-        reviews = await review_repo.get_by_source(source_id, skip=skip, limit=limit)
+        reviews = await review_repo.get_by_source(source_id, skip=skip)
         return [ReviewResponse.model_validate(review.model_dump(by_alias=True)) for review in reviews]
     
     except Exception as e:
@@ -93,12 +93,12 @@ async def get_reviews_by_source(source_id: str, skip: int = 0, limit: int = 500)
         raise HTTPException(status_code=500, detail=f"Failed to retrieve source's reviews: {str(e)}")
     
 @router.get("/job/{job_id}", response_model=List[ReviewResponse])
-async def get_reviews_by_job(job_id: str, skip: int = 0, limit: int = 500):
+async def get_reviews_by_job(job_id: str, skip: int = 0):
     """ Endpoint to retrieve all reviews of a job.
     This endpoint fetches reviews associated with a specific job ID.
     """
     try:
-        reviews = await review_repo.get_by_job(job_id, skip=skip, limit=limit)
+        reviews = await review_repo.get_by_job(job_id, skip=skip)
         return [ReviewResponse.model_validate(review.model_dump(by_alias=True)) for review in reviews]
     
     except Exception as e:

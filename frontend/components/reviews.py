@@ -88,8 +88,12 @@ def _display_review_analytics(reviews):
     """Display review analytics and charts"""
     st.subheader("📊 Review Analytics")
     
+    # Count processed vs unprocessed reviews
+    processed_count = sum(1 for r in reviews if _has_processed_data(r))
+    sentiment_data = _extract_sentiment_data(reviews)
+    
     # Basic metrics
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
         st.metric("Total Reviews", len(reviews))
@@ -101,14 +105,23 @@ def _display_review_analytics(reviews):
         st.metric("Average Rating", f"{avg_rating:.1f} ⭐")
     
     with col3:
-        # Count unique sources
-        sources = set(review.get('source_id') for review in reviews)
-        st.metric("Sources", len(sources))
+        # Show processed reviews count
+        st.metric("Analyzed", f"{processed_count}/{len(reviews)}", 
+                  help="Reviews with sentiment analysis")
     
     with col4:
-        # Count unique jobs
-        jobs = set(review.get('job_id') for review in reviews)
-        st.metric("Jobs", len(jobs))
+        # Average sentiment score
+        avg_sentiment = sentiment_data['avg_sentiment']
+        sentiment_emoji = "😊" if avg_sentiment > 0.05 else "😐" if avg_sentiment > -0.05 else "😞"
+        st.metric("Avg Sentiment", f"{avg_sentiment:.2f} {sentiment_emoji}",
+                  help="Average compound sentiment score (-1 to 1)")
+    
+    with col5:
+        # Language diversity
+        languages = _extract_languages(reviews)
+        unique_langs = len(set(languages))
+        st.metric("Languages", unique_langs,
+                  help="Number of different languages detected")
     
     # Charts
     col1, col2 = st.columns(2)
@@ -117,7 +130,82 @@ def _display_review_analytics(reviews):
         _display_rating_distribution(reviews)
     
     with col2:
+        _display_sentiment_distribution(sentiment_data)
+    
+    # Additional analytics row
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        _display_language_distribution(reviews)
+    
+    with col2:
         _display_reviews_by_source(reviews)
+
+
+def _display_sentiment_distribution(sentiment_data):
+    """Display sentiment distribution chart"""
+    st.markdown("#### 😊 Sentiment Distribution")
+    
+    if not sentiment_data['sentiments']:
+        st.info("No sentiment analysis data available. Run analysis on jobs to see sentiment distribution.")
+        return
+    
+    # Create pie chart for sentiment categories
+    fig = go.Figure(data=[go.Pie(
+        labels=['Positive', 'Neutral', 'Negative'],
+        values=[
+            sentiment_data['positive_count'],
+            sentiment_data['neutral_count'],
+            sentiment_data['negative_count']
+        ],
+        marker_colors=['#28A745', '#FFC107', '#DC3545'],
+        hole=0.3
+    )])
+    
+    fig.update_layout(height=300)
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def _display_language_distribution(reviews):
+    """Display language distribution chart"""
+    st.markdown("#### 🌐 Language Distribution")
+    
+    languages = _extract_languages(reviews)
+    if not languages:
+        st.info("No language detection data available. Run analysis to see language distribution.")
+        return
+    
+    # Count languages
+    lang_counts = Counter(languages)
+    
+    # Map language codes to names (basic mapping)
+    lang_names = {
+        'en': 'English',
+        'es': 'Spanish',
+        'fr': 'French',
+        'de': 'German',
+        'it': 'Italian',
+        'pt': 'Portuguese',
+        'ar': 'Arabic',
+        'zh': 'Chinese',
+        'ja': 'Japanese',
+        'ko': 'Korean',
+        'ru': 'Russian',
+        'hi': 'Hindi'
+    }
+    
+    # Create bar chart
+    labels = [lang_names.get(lang, lang) for lang in lang_counts.keys()]
+    values = list(lang_counts.values())
+    
+    fig = go.Figure(data=[go.Bar(x=labels, y=values)])
+    fig.update_layout(
+        xaxis_title="Language",
+        yaxis_title="Number of Reviews",
+        height=300
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def _display_rating_distribution(reviews):
@@ -184,13 +272,14 @@ def _display_reviews_list(reviews):
     """Display list of individual reviews"""
     st.subheader("📝 Individual Reviews")
     
-    # Sort options
-    col1, col2, col3 = st.columns([2, 2, 2])
+    # Filter options
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         sort_by = st.selectbox(
             "Sort by:",
-            ["Newest First", "Oldest First", "Highest Rating", "Lowest Rating"],
+            ["Newest First", "Oldest First", "Highest Rating", "Lowest Rating", 
+             "Most Positive", "Most Negative"],
             key="review_sort"
         )
     
@@ -202,8 +291,19 @@ def _display_reviews_list(reviews):
         )
     
     with col3:
+        filter_sentiment = st.selectbox(
+            "Filter by sentiment:",
+            ["All", "Positive", "Neutral", "Negative", "Not Analyzed"],
+            key="sentiment_filter"
+        )
+    
+    with col4:
         if st.button("📥 Export Reviews"):
             _export_reviews(reviews)
+    
+    # Apply sentiment filter
+    if filter_sentiment != "All":
+        reviews = _filter_by_sentiment(reviews, filter_sentiment)
     
     # Sort reviews
     sorted_reviews = _sort_reviews(reviews, sort_by)
@@ -212,13 +312,17 @@ def _display_reviews_list(reviews):
     if show_count != "All":
         sorted_reviews = sorted_reviews[:show_count]
     
+    # Display count after filtering
+    if len(sorted_reviews) < len(reviews):
+        st.write(f"Showing {len(sorted_reviews)} of {len(reviews)} reviews")
+    
     # Display reviews
     for idx, review in enumerate(sorted_reviews, 1):
         _render_review_card(review, idx)
 
 
 def _render_review_card(review, index):
-    """Render a single review card"""
+    """Render a single review card with analysis data"""
     with st.container():
         # Review header
         col1, col2, col3 = st.columns([2, 1, 1])
@@ -238,27 +342,67 @@ def _render_review_card(review, index):
             created_date = format_date(review.get('created_at'))
             st.write(f"**Date:** {created_date}")
         
-        # Review content
+        # Check if review has been analyzed
+        processed_data = review.get('processed_data', {})
+        has_analysis = bool(processed_data) and processed_data.get('processing_status') == 'completed'
+        
+        # Review content section
         review_data = review.get('data', {})
         
         # Username (if available)
         username = review_data.get('username') or review_data.get('user') or "Anonymous"
         st.write(f"**Reviewer:** {username}")
         
+        # Analysis badges (if available)
+        if has_analysis:
+            badge_cols = st.columns(6)
+            
+            # Sentiment badge
+            sentiment = processed_data.get('sentiment', {}).get('sentiment', 'unknown')
+            sentiment_score = processed_data.get('sentiment', {}).get('compound', 0)
+            sentiment_colors = {
+                'positive': '🟢',
+                'neutral': '🟡', 
+                'negative': '🔴'
+            }
+            with badge_cols[0]:
+                st.write(f"{sentiment_colors.get(sentiment, '⚪')} **{sentiment.title()}**")
+            
+            # Sentiment score
+            with badge_cols[1]:
+                st.write(f"**Score:** {sentiment_score:.2f}")
+            
+            # Language badge
+            language = processed_data.get('detected_language', 'unknown')
+            with badge_cols[2]:
+                st.write(f"**Lang:** {language.upper()}")
+            
+            # Processing status
+            with badge_cols[3]:
+                st.write("✅ **Analyzed**")
+        else:
+            st.write("⚠️ *Not analyzed yet*")
+        
         # Comment/text
-        comment = review_data.get('comment') or review_data.get('text') or review_data.get('review')
+        comment = review_data.get('original') or review_data.get('text') or review_data.get('review')
         if comment:
-            # Limit comment length for display
-            if len(comment) > 300:
-                with st.expander(f"📄 Show full review ({len(comment)} characters)"):
-                    st.write(comment)
-                st.write(f"*{comment[:300]}...*")
+            # Show translated text if available and different from original
+            if has_analysis and processed_data.get('translated_text'):
+                translated = processed_data['translated_text']
+                if translated != comment:
+                    tab1, tab2 = st.tabs(["Original", "Translated"])
+                    with tab1:
+                        _display_comment_text(comment)
+                    with tab2:
+                        _display_comment_text(translated)
+                else:
+                    _display_comment_text(comment)
             else:
-                st.write(f"*{comment}*")
+                _display_comment_text(comment)
         else:
             st.write("*No comment text available*")
         
-        # Additional data (if available)
+        # Additional review data
         additional_info = []
         if review_data.get('likes'):
             additional_info.append(f"👍 {review_data['likes']} likes")
@@ -267,6 +411,11 @@ def _render_review_card(review, index):
         
         if additional_info:
             st.write(" • ".join(additional_info))
+        
+        # Show detailed analysis if available
+        if has_analysis and st.button(f"🔍 View Analysis Details", key=f"details_{index}_{get_item_id(review)}"):
+            with st.expander("Analysis Details", expanded=True):
+                _display_analysis_details(processed_data)
         
         # Source and job info
         col1, col2 = st.columns(2)
@@ -280,6 +429,45 @@ def _render_review_card(review, index):
         st.markdown("---")
 
 
+def _display_comment_text(text):
+    """Display comment text with proper formatting"""
+    if len(text) > 300:
+        with st.expander(f"📄 Show full review ({len(text)} characters)"):
+            st.write(text)
+        st.write(f"*{text[:300]}...*")
+    else:
+        st.write(f"*{text}*")
+
+
+def _display_analysis_details(processed_data):
+    """Display detailed analysis information"""
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write("**Sentiment Analysis:**")
+        sentiment_data = processed_data.get('sentiment', {})
+        st.write(f"- Overall: {sentiment_data.get('sentiment', 'N/A')}")
+        st.write(f"- Compound Score: {sentiment_data.get('compound', 0):.3f}")
+        st.write(f"- Confidence: {sentiment_data.get('confidence', 0):.3f}")
+        
+        scores = sentiment_data.get('scores', {})
+        if scores:
+            st.write("**Detailed Scores:**")
+            st.write(f"- Positive: {scores.get('pos', 0):.3f}")
+            st.write(f"- Neutral: {scores.get('neu', 0):.3f}")
+            st.write(f"- Negative: {scores.get('neg', 0):.3f}")
+    
+    with col2:
+        st.write("**Language Processing:**")
+        st.write(f"- Detected Language: {processed_data.get('detected_language', 'N/A')}")
+        st.write(f"- Processed At: {format_date(processed_data.get('processed_at', ''))}")
+        
+        if processed_data.get('cleaned_text'):
+            st.write("**Cleaned Text Preview:**")
+            cleaned = processed_data['cleaned_text']
+            st.write(f"*{cleaned[:100]}...*" if len(cleaned) > 100 else f"*{cleaned}*")
+
+
 def _sort_reviews(reviews, sort_by):
     """Sort reviews based on selected criteria"""
     if sort_by == "Newest First":
@@ -290,6 +478,10 @@ def _sort_reviews(reviews, sort_by):
         return sorted(reviews, key=lambda x: _extract_rating_from_review(x), reverse=True)
     elif sort_by == "Lowest Rating":
         return sorted(reviews, key=lambda x: _extract_rating_from_review(x))
+    elif sort_by == "Most Positive":
+        return sorted(reviews, key=lambda x: _get_sentiment_score(x), reverse=True)
+    elif sort_by == "Most Negative":
+        return sorted(reviews, key=lambda x: _get_sentiment_score(x))
     else:
         return reviews
 
@@ -303,6 +495,22 @@ def _filter_reviews(reviews, selected_job_id, selected_source_id):
     
     if selected_source_id:
         filtered = [r for r in filtered if r.get('source_id') == selected_source_id]
+    
+    return filtered
+
+
+def _filter_by_sentiment(reviews, sentiment_filter):
+    """Filter reviews by sentiment category"""
+    if sentiment_filter == "Not Analyzed":
+        return [r for r in reviews if not _has_processed_data(r)]
+    
+    filtered = []
+    for review in reviews:
+        processed_data = review.get('processed_data', {})
+        if processed_data and processed_data.get('processing_status') == 'completed':
+            review_sentiment = processed_data.get('sentiment', {}).get('sentiment', '')
+            if sentiment_filter.lower() == review_sentiment:
+                filtered.append(review)
     
     return filtered
 
@@ -333,6 +541,66 @@ def _extract_rating_from_review(review):
     return 0
 
 
+def _extract_sentiment_data(reviews):
+    """Extract sentiment analysis data from reviews"""
+    sentiments = []
+    positive_count = 0
+    neutral_count = 0
+    negative_count = 0
+    
+    for review in reviews:
+        processed_data = review.get('processed_data', {})
+        if processed_data and processed_data.get('processing_status') == 'completed':
+            sentiment_info = processed_data.get('sentiment', {})
+            if sentiment_info:
+                compound_score = sentiment_info.get('compound', 0)
+                sentiments.append(compound_score)
+                
+                sentiment_cat = sentiment_info.get('sentiment', '')
+                if sentiment_cat == 'positive':
+                    positive_count += 1
+                elif sentiment_cat == 'neutral':
+                    neutral_count += 1
+                elif sentiment_cat == 'negative':
+                    negative_count += 1
+    
+    avg_sentiment = sum(sentiments) / len(sentiments) if sentiments else 0
+    
+    return {
+        'sentiments': sentiments,
+        'avg_sentiment': avg_sentiment,
+        'positive_count': positive_count,
+        'neutral_count': neutral_count,
+        'negative_count': negative_count
+    }
+
+
+def _extract_languages(reviews):
+    """Extract detected languages from reviews"""
+    languages = []
+    for review in reviews:
+        processed_data = review.get('processed_data', {})
+        if processed_data and processed_data.get('processing_status') == 'completed':
+            lang = processed_data.get('detected_language')
+            if lang:
+                languages.append(lang)
+    return languages
+
+
+def _has_processed_data(review):
+    """Check if review has been processed for analysis"""
+    processed_data = review.get('processed_data', {})
+    return bool(processed_data) and processed_data.get('processing_status') == 'completed'
+
+
+def _get_sentiment_score(review):
+    """Get sentiment compound score from review"""
+    processed_data = review.get('processed_data', {})
+    if processed_data and processed_data.get('processing_status') == 'completed':
+        return processed_data.get('sentiment', {}).get('compound', 0)
+    return 0
+
+
 def _get_source_name(source_id):
     """Get source name by ID"""
     for source in st.session_state.get('sources', []):
@@ -350,7 +618,7 @@ def _get_job_name(job_id):
 
 
 def _export_reviews(reviews):
-    """Export reviews as CSV"""
+    """Export reviews as CSV with analysis data"""
     if not reviews:
         st.warning("No reviews to export")
         return
@@ -359,6 +627,10 @@ def _export_reviews(reviews):
     export_data = []
     for review in reviews:
         review_data = review.get('data', {})
+        processed_data = review.get('processed_data', {})
+        
+        # Extract sentiment info
+        sentiment_info = processed_data.get('sentiment', {}) if processed_data else {}
         
         export_row = {
             'Review ID': get_item_id(review),
@@ -370,6 +642,11 @@ def _export_reviews(reviews):
             'Comment': review_data.get('comment') or review_data.get('text', ''),
             'Likes': review_data.get('likes', ''),
             'Review Date': review_data.get('date', ''),
+            'Analyzed': 'Yes' if _has_processed_data(review) else 'No',
+            'Sentiment': sentiment_info.get('sentiment', ''),
+            'Sentiment Score': sentiment_info.get('compound', ''),
+            'Detected Language': processed_data.get('detected_language', '') if processed_data else '',
+            'Translated Text': processed_data.get('translated_text', '') if processed_data else '',
         }
         export_data.append(export_row)
     

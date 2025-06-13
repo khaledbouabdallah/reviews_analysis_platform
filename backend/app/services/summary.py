@@ -3,6 +3,7 @@ from langchain_ollama import OllamaLLM
 from langchain.prompts import PromptTemplate
 from langchain.chains.llm import LLMChain
 from langsmith import traceable
+from core.config import logger
 
 QWEN2_5_MODEL = "qwen2.5:3b-instruct"
 GEMMA3_27B_MODEL = "gemma3:27b"
@@ -16,7 +17,7 @@ os.environ["LANGCHAIN_PROJECT"] = "reviews-analysis"
 # Initialize model with optimizations
 model = OllamaLLM(
     model=QWEN2_5_MODEL,
-    base_url="http://localhost:11434",  # Explicit URL
+    base_url='http://host.docker.internal:11434',  # Explicit URL
     temperature=0.0,                    # Control randomness
     num_predict=256,                    # Limit output length
     top_k=10,                          # Faster sampling

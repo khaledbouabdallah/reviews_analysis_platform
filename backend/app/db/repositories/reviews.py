@@ -66,32 +66,32 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             logger.error(f"Database error while updating review: {str(e)}")
             raise RuntimeError("Database error while updating review")
 
-    async def get_by_user(self, user_id: str, skip: int = 0, limit: int = 100) -> List[ReviewInDB]:
+    async def get_by_user(self, user_id: str, skip: int = 0) -> List[ReviewInDB]:
         try:
             oid = PyObjectId(user_id)
         except Exception:
             raise ValueError("Invalid user_id format")
 
         try:
-            reviews_data = await self.collection.find({"user_id": oid}).skip(skip).to_list(length=limit)
+            reviews_data = await self.collection.find({"user_id": oid}).skip(skip).to_list()
             return [self.db_model.model_validate(review) for review in reviews_data]
         except PyMongoError as e:
             raise RuntimeError("Database error")
 
-    async def get_by_business(self, business_id: str, skip: int = 0, limit: int = 100) -> List[ReviewInDB]:
+    async def get_by_business(self, business_id: str, skip: int = 0) -> List[ReviewInDB]:
         try:
             oid = PyObjectId(business_id)
         except Exception:
             raise ValueError("Invalid business_id format")
 
         try:
-            reviews_data = await self.collection.find({"business_id": oid}).skip(skip).to_list(length=limit)
+            reviews_data = await self.collection.find({"business_id": oid}).skip(skip).to_list()
             return [self.db_model.model_validate(review) for review in reviews_data]
         except PyMongoError as e:
             raise RuntimeError("Database error")
         
         
-    async def get_by_source(self, source_id: str, skip: int = 0, limit: int = 100) -> List[ReviewInDB]:
+    async def get_by_source(self, source_id: str, skip: int = 0) -> List[ReviewInDB]:
         """Get all reviews from a specific source."""
         try:
             oid = PyObjectId(source_id)
@@ -99,14 +99,14 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             raise ValueError("Invalid source_id format")
 
         try:
-            reviews_data = await self.collection.find({"source_id": oid}).skip(skip).to_list(length=limit)
+            reviews_data = await self.collection.find({"source_id": oid}).skip(skip).to_list()
             return [self.db_model.model_validate(review) for review in reviews_data]
         except PyMongoError as e:
             logger.error(f"Database error while fetching reviews by source: {str(e)}")
             raise RuntimeError("Database error")
         
         
-    async def get_by_job(self, job_id: str, skip: int = 0, limit: int = 100) -> List[ReviewInDB]:
+    async def get_by_job(self, job_id: str, skip: int = 0) -> List[ReviewInDB]:
         """Get all reviews linked to a specific scraping job."""
         try:
             oid = PyObjectId(job_id)
@@ -114,7 +114,7 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             raise ValueError("Invalid job_id format")
 
         try:
-            reviews_data = await self.collection.find({"job_id": oid}).skip(skip).to_list(length=limit)
+            reviews_data = await self.collection.find({"job_id": oid}).skip(skip).to_list()
             return [self.db_model.model_validate(review) for review in reviews_data]
         except PyMongoError as e:
             logger.error(f"Database error while fetching reviews by job: {str(e)}")
