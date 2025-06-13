@@ -33,7 +33,6 @@ async def run_scraper_job(job_id: str, job: JobCreate):
     try:
         # Initialize scraper
         scraper = GoogleMapsReviewScraper(
-            driver_path=settings.CHROMEDRIVER_PATH,
             headless=False,
             verbose=True,
             timeout=10,
@@ -101,4 +100,4 @@ async def run_scraper_job(job_id: str, job: JobCreate):
             scraper.exit(force=True)
             logging.info("Scraper exited successfully")
         except:
-            passkk
+            pass

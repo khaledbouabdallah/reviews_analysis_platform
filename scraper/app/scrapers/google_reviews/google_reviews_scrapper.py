@@ -150,7 +150,6 @@ class GoogleMapsReviewScraper:
 
     def __init__(
         self,
-        driver_path,
         headless=True,
         verbose=False,
         timeout=10,
@@ -256,11 +255,8 @@ class GoogleMapsReviewScraper:
         self.driver.save_screenshot(f"main_google.png")
         logging.info(f"Connecting to target url 2")
         
-        
-        
-        
+
         try:
-            link = "https://www.google.com/maps/place/VERY+PAD+THA%C3%8F/@48.9028028,2.4870341,17.5z/data=!4m8!3m7!1s0x47e613ce08f07a7d:0x48019cd4636487ab!8m2!3d48.902039!4d2.4850475!9m1!1b1!16s%2Fg%2F11h53ggbsl?entry=ttu&g_ep=EgoyMDI1MDYwNC4wIKXMDSoASAFQAw%3D%3D"
             self.driver.get(url)   
             logging.info(f"Connected to target page! ")
             self.driver.save_screenshot(f"target_page_.png")
@@ -281,8 +277,10 @@ class GoogleMapsReviewScraper:
             if hotel:
                 path = '//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[4]/div[1]/div/div[2]/div[3]'
             else:
-                path = '//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]/div[1]/div/div[2]/div[3]'
-
+                #'//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]/div[1]/div/div[2]/div[3]'
+                path = "//div[contains(@class, 'jANrlb')]/div[3]"
+            
+    
             logging.info(f"getting total reviews ... ")
             total_reviews = self._get_element_(path, type_=By.XPATH).text
             total_reviews = int(re.sub(r"\D", "", total_reviews))
@@ -296,28 +294,31 @@ class GoogleMapsReviewScraper:
 
     def extract_data(self, total_reviews):
         
+
         time.sleep(2)
-        # sort reviews by newest
-        _ = self._get_element_(
-            '//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]/div[8]/div[2]/button',
-            By.XPATH,
-        ).click()
+        
+        # with open("debug_page.html", "w", encoding="utf-8") as f:
+        #     f.write(self.driver.page_source)
+        
+        self.driver.find_element(By.XPATH, "//div[contains(@class, 'm6QErb') and contains(@class, 'Pf6ghf') and contains(@class, 'XiKgde') and contains(@class, 'KoSBEe') and contains(@class, 'ecceSd') and contains(@class, 'tLjsW')]/div[2]//button").click()
+        logging.info("Clicked on sort reviews button")
         _ = self._get_element_('//*[@id="action-menu"]/div[2]', By.XPATH).click()
+        logging.info("Clicked on newest reviews option")
         
         time.sleep(2)
 
-        # get scroll element
-        scrollable_div = self._get_element_(
-            '//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]',
-            By.XPATH,
-        )
+        try:
+            scrollable_div = self._get_element_('//*[@id="QA0Szd"]/div/div/div[1]/div[3]/div/div[1]/div/div/div[3]', By.XPATH)
+        except TimeoutException:
+            scrollable_div = self._get_element_('//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]', By.XPATH)
+            
         nb_tries = 0
         while nb_tries < 3:
             try:
                 current_seen_reviews = 0
                 reviews_data = []
                 # to avoid the StaleElementReferenceException error
-                time.sleep(1)
+                time.sleep(0.5)
                 while current_seen_reviews < total_reviews:
                     # get new reviews
                     reviews = self._get_element_(
@@ -335,6 +336,9 @@ class GoogleMapsReviewScraper:
                         )
                         reviews_data.append(result)
                     current_seen_reviews = len(reviews_data)
+                    logging.info(
+                        f"Extracted {current_seen_reviews} / {total_reviews}"
+                    )
                     # scroll to load more reviews
                     self.driver.execute_script(
                         "arguments[0].scrollTop = arguments[0].scrollHeight",
@@ -399,9 +403,9 @@ class GoogleMapsReviewScraper:
         """
 
         condition = (
-            EC.presence_of_all_elements_located
+            EC.visibility_of_all_elements_located
             if multiple
-            else EC.presence_of_element_located
+            else EC.visibility_of_element_located
         )
 
         try:
@@ -514,6 +518,7 @@ class GoogleMapsReviewScraper:
         self.accept_cookies()
         self.now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         logging.info("Resetting the scraper at {}".format(self.now))
+
 
 if __name__ == "__main__":
     args = get_arguments()
