@@ -1,7 +1,5 @@
 import streamlit as st
 from utils import get_api_client, get_item_id, format_date
-from config import LOGGER
-
 
 
 def sources_page():
@@ -19,15 +17,14 @@ def sources_page():
     
     # Load sources for this business
     if not st.session_state.sources or st.session_state.get('current_business_id') != business_id:
-        _load_business_sources(business_id)
+        _load_business_data(business_id)
         st.session_state.current_business_id = business_id
     
     # Refresh button
     col1, col2 = st.columns([1, 4])
     with col1:
         if st.button("🔄 Refresh Sources"):
-            LOGGER.info("Refreshing sources for business %s", business_id)
-            _load_business_sources(business_id)
+            _load_business_data(business_id)
             st.rerun()
     
     # Create new source form
@@ -82,7 +79,7 @@ def create_source_form(business_id: str):
                     source_type=source_type
                 )
                 st.success(f"Source '{source_name}' created successfully!")
-                _load_business_sources(business_id)
+                _load_business_data(business_id)
                 st.rerun()
                 
             except Exception as e:
@@ -126,15 +123,18 @@ def _render_source_card(source):
             st.write(f"**Created:** {created_date}")
         with col2:
             st.write(f"**ID:** {source_id}")
-            # TODO: Add job count and review count when those features are implemented
-            st.write(f"**Status:** Active")
+            # Show job count
+            job_count = st.session_state.get('source_job_counts', {}).get(source_id, 0)
+            st.write(f"**Jobs:** {job_count}")
         
         # Action buttons
         button_col1, button_col2, button_col3, button_col4 = st.columns(4)
         
         with button_col1:
             if st.button("🔄 Jobs", key=f"jobs_{source_id}"):
-                st.info("Job management will be available in Step 4")
+                # Switch to Jobs tab
+                st.session_state.active_tab = "Jobs"
+                st.rerun()
         
         with button_col2:
             if st.button("✏️ Edit", key=f"edit_{source_id}"):
@@ -189,7 +189,7 @@ def _render_edit_source_form(source, source_id, api_client):
                     api_client.update_source(source_id, new_name, new_type)
                     st.success("Source updated successfully!")
                     st.session_state[f"editing_{source_id}"] = False
-                    _load_business_sources(st.session_state.current_business_id)
+                    _load_business_data(st.session_state.current_business_id)
                     st.rerun()
                 except Exception as e:
                     st.error(f"Failed to update source: {str(e)}")
@@ -213,7 +213,7 @@ def _render_delete_source_confirmation(source, source_id, api_client):
                 api_client.delete_source(source_id)
                 st.success("Source deleted successfully!")
                 st.session_state[f"confirm_delete_{source_id}"] = False
-                _load_business_sources(st.session_state.current_business_id)
+                _load_business_data(st.session_state.current_business_id)
                 st.rerun()
             except Exception as e:
                 st.error(f"Failed to delete source: {str(e)}")
@@ -238,20 +238,23 @@ def _render_source_statistics(source):
     """Render detailed source statistics"""
     st.markdown("#### 📊 Source Statistics")
     
-    # Mock statistics for now - will be real data in later steps
+    # Mock statistics for now - will be real data from job counts
     col1, col2, col3, col4 = st.columns(4)
     
+    source_id = get_item_id(source)
+    job_count = st.session_state.get('source_job_counts', {}).get(source_id, 0)
+    
     with col1:
-        st.metric("Total Jobs", "0", help="Scraping jobs created")
+        st.metric("Total Jobs", str(job_count), help="Scraping jobs created")
     
     with col2:
-        st.metric("Total Reviews", "0", help="Reviews collected")
+        st.metric("Total Reviews", "0", help="Reviews collected (Step 5)")
     
     with col3:
-        st.metric("Success Rate", "0%", help="Successful job completion rate")
+        st.metric("Success Rate", "N/A", help="Successful job completion rate")
     
     with col4:
-        st.metric("Last Activity", "Never", help="Last scraping activity")
+        st.metric("Last Activity", "N/A", help="Last scraping activity")
     
     st.info("📋 **Note**: Statistics will be populated when jobs and reviews are implemented in Steps 4 & 5")
     
@@ -260,14 +263,29 @@ def _render_source_statistics(source):
         st.rerun()
 
 
-def _load_business_sources(business_id: str):
-    """Load sources for the current business"""
+def _load_business_data(business_id: str):
+    """Load both sources and jobs for the current business"""
     api_client = get_api_client()
     
     try:
+        # Load sources
         sources = api_client.get_sources_by_business(business_id)
-        LOGGER.info(f"Loaded sources for business {business_id}: {sources}")
         st.session_state.sources = sources if isinstance(sources, list) else []
+        
+        # Load jobs for job counts
+        jobs = api_client.get_jobs_by_business(business_id)
+        st.session_state.jobs = jobs if isinstance(jobs, list) else []
+        
+        # Calculate job counts per source
+        job_counts = {}
+        for job in st.session_state.jobs:
+            source_id = job.get('source_id')
+            job_counts[source_id] = job_counts.get(source_id, 0) + 1
+        
+        st.session_state.source_job_counts = job_counts
+        
     except Exception as e:
-        st.error(f"Failed to load sources: {str(e)}")
+        st.error(f"Failed to load business data: {str(e)}")
         st.session_state.sources = []
+        st.session_state.jobs = []
+        st.session_state.source_job_counts = {}

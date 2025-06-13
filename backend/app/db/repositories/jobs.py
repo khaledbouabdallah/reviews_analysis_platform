@@ -92,7 +92,7 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
             raise ValueError("Invalid user_id format")
 
         try:
-            jobs_data = await self.collection.find({"user_id": oid}).skip(skip).to_list(length=limit)
+            jobs_data = await self.collection.find({"business_id": oid}).skip(skip).to_list(length=limit)
             return [self.db_model.model_validate(job) for job in jobs_data]
         except PyMongoError as e:
             raise RuntimeError("Database error")

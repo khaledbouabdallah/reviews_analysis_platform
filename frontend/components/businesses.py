@@ -63,6 +63,7 @@ def business_management_page():
 def business_context_page():
     """Main page when a business is selected"""
     from components.sources import sources_page
+    from components.jobs import jobs_page
     
     business = st.session_state.selected_business
     st.title(f"📊 {business.get('name', 'Business Dashboard')}")
@@ -80,18 +81,24 @@ def business_context_page():
     
     st.markdown("---")
     
-    # Context-aware tabs
+    # Context-aware tabs with active tab tracking
+    active_tab = st.session_state.get('active_tab', 'Sources')
+    
     tab1, tab2, tab3 = st.tabs(["📁 Sources", "🔄 Jobs", "⭐ Reviews"])
     
     with tab1:
+        if active_tab != 'Sources':
+            st.session_state.active_tab = 'Sources'
         sources_page()
     
     with tab2:
-        st.header("Jobs")
-        st.info("Job management will be implemented in Step 4")
-        st.write(f"Scraping jobs for **{business.get('name')}** will appear here")
+        if active_tab != 'Jobs':
+            st.session_state.active_tab = 'Jobs'
+        jobs_page()
     
     with tab3:
+        if active_tab != 'Reviews':
+            st.session_state.active_tab = 'Reviews'
         st.header("Reviews")
         st.info("Review visualization will be implemented in Step 5")
         st.write(f"Reviews for **{business.get('name')}** will appear here")
