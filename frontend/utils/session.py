@@ -19,6 +19,16 @@ def init_session_state():
         st.session_state.sources = []
     if 'jobs' not in st.session_state:
         st.session_state.jobs = []
+    if 'reviews' not in st.session_state:
+        st.session_state.reviews = []
+    if 'selected_source_for_jobs' not in st.session_state:
+        st.session_state.selected_source_for_jobs = None
+    if 'selected_job_for_reviews' not in st.session_state:
+        st.session_state.selected_job_for_reviews = None
+    if 'selected_source_for_reviews' not in st.session_state:
+        st.session_state.selected_source_for_reviews = None
+    if 'active_tab' not in st.session_state:
+        st.session_state.active_tab = 'Sources'
 
 
 def get_api_client() -> APIClient:
@@ -37,3 +47,8 @@ def clear_session_state():
     st.session_state.businesses = []
     st.session_state.sources = []
     st.session_state.jobs = []
+    st.session_state.reviews = []
+    st.session_state.selected_source_for_jobs = None
+    st.session_state.selected_job_for_reviews = None
+    st.session_state.selected_source_for_reviews = None
+    st.session_state.active_tab = 'Sources'

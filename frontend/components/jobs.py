@@ -15,6 +15,18 @@ def jobs_page():
     
     st.write(f"Managing scraping jobs for **{business.get('name')}**")
     
+    # Check if filtering by specific source
+    selected_source_id = st.session_state.get('selected_source_for_jobs')
+    if selected_source_id:
+        source_name = _get_source_name(selected_source_id)
+        st.info(f"🔍 **Filtered by source:** {source_name}")
+        
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            if st.button("❌ Clear Filter"):
+                st.session_state.selected_source_for_jobs = None
+                st.rerun()
+    
     # Load jobs for this business if not loaded
     if not st.session_state.jobs or st.session_state.get('current_business_id') != business_id:
         _load_business_jobs(business_id)
@@ -117,9 +129,28 @@ def display_jobs_list():
         st.info("No scraping jobs created yet. Create one above to get started!")
         return
     
-    # Filter and sort jobs (newest first)
-    business_jobs = [job for job in st.session_state.jobs]
+    # Filter jobs by selected source if applicable
+    selected_source_id = st.session_state.get('selected_source_for_jobs')
+    if selected_source_id:
+        business_jobs = [job for job in st.session_state.jobs if job.get('source_id') == selected_source_id]
+        if not business_jobs:
+            source_name = _get_source_name(selected_source_id)
+            st.info(f"No jobs found for source '{source_name}'. Create one above!")
+            return
+    else:
+        business_jobs = [job for job in st.session_state.jobs]
+    
+    # Sort jobs (newest first)
     business_jobs.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+    
+    # Show job count
+    total_jobs = len(st.session_state.jobs)
+    filtered_jobs = len(business_jobs)
+    
+    if selected_source_id and total_jobs != filtered_jobs:
+        st.write(f"Showing {filtered_jobs} of {total_jobs} jobs")
+    else:
+        st.write(f"Total jobs: {total_jobs}")
     
     # Display jobs
     for job in business_jobs:
@@ -183,7 +214,10 @@ def _render_job_card(job):
         with button_col2:
             if status in ['completed'] and reviews_scraped > 0:
                 if st.button("⭐ Reviews", key=f"reviews_{job_id}"):
-                    st.info("Review viewing will be available in Step 5")
+                    # Set the selected job for review filtering and switch to Reviews tab
+                    st.session_state.selected_job_for_reviews = job_id
+                    st.session_state.active_tab = "Reviews"
+                    st.rerun()
         
         with button_col3:
             if status in ['failed']:

@@ -64,6 +64,7 @@ def business_context_page():
     """Main page when a business is selected"""
     from components.sources import sources_page
     from components.jobs import jobs_page
+    from components.reviews import reviews_page
     
     business = st.session_state.selected_business
     st.title(f"📊 {business.get('name', 'Business Dashboard')}")
@@ -99,9 +100,7 @@ def business_context_page():
     with tab3:
         if active_tab != 'Reviews':
             st.session_state.active_tab = 'Reviews'
-        st.header("Reviews")
-        st.info("Review visualization will be implemented in Step 5")
-        st.write(f"Reviews for **{business.get('name')}** will appear here")
+        reviews_page()
 
 
 def _render_business_card(business, api_client):

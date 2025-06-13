@@ -132,22 +132,37 @@ def _render_source_card(source):
         
         with button_col1:
             if st.button("🔄 Jobs", key=f"jobs_{source_id}"):
-                # Switch to Jobs tab
+                # Set the selected source for job filtering and switch to Jobs tab
+                st.session_state.selected_source_for_jobs = source_id
                 st.session_state.active_tab = "Jobs"
                 st.rerun()
         
         with button_col2:
+            if st.button("⭐ Reviews", key=f"reviews_{source_id}"):
+                # Set the selected source for review filtering and switch to Reviews tab
+                st.session_state.selected_source_for_reviews = source_id
+                st.session_state.active_tab = "Reviews"
+                st.rerun()
+        
+        with button_col3:
             if st.button("✏️ Edit", key=f"edit_{source_id}"):
                 st.session_state[f"editing_{source_id}"] = True
                 st.rerun()
         
-        with button_col3:
+        with button_col4:
             if st.button("📊 Stats", key=f"stats_{source_id}"):
                 _show_source_stats(source)
         
-        with button_col4:
-            if st.button("🗑️ Delete", key=f"delete_{source_id}"):
-                st.session_state[f"confirm_delete_{source_id}"] = True
+        # More actions in next row if needed
+        if st.session_state.get(f"show_more_actions_{source_id}", False):
+            button_col5, button_col6, button_col7, button_col8 = st.columns(4)
+            with button_col5:
+                if st.button("🗑️ Delete", key=f"delete_{source_id}"):
+                    st.session_state[f"confirm_delete_{source_id}"] = True
+                    st.rerun()
+        else:
+            if st.button("⋯ More", key=f"more_{source_id}"):
+                st.session_state[f"show_more_actions_{source_id}"] = True
                 st.rerun()
         
         # Edit form (if in edit mode)
