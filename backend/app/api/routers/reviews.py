@@ -23,6 +23,7 @@ async def list_reviews(skip: int = 0, limit: int = 100):
     except Exception as e:
         logger.error(f"Failed to retrieve reviews: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to retrieve reviews: {str(e)}")
+    
 @router.get("/{review_id}", response_model=ReviewResponse)
 async def get_review(review_id: str):
     """ Endpoint to retrieve a review by its ID.

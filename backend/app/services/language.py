@@ -5,14 +5,18 @@ Detect language of the given text using pre-trained fasttext model
 import fasttext
 import os
 
+
 # Set the path to the pre-trained language detection model
-model_path = os.path.join(os.path.dirname(__file__), "lid.176.bin")
+model_path = "/app/ml_models/lid.176.bin"
 
-print(os.path.dirname(__file__))
 
+# if not os.path.exists(model_path):
+#     print(f"Lnaugage detection model not found in {model_path}. Downloading...")
+#     download_url = "https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin"
+#     os.system(f"wget {download_url} -O {model_path}")
+    
 if not os.path.exists(model_path):
-    download_url = "https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin"
-    os.system(f"wget {download_url} -O {model_path}")
+    raise FileNotFoundError(f"Language detection model not found at {model_path}. Please ensure it is downloaded correctly.")
 
 # Load pre-trained language detection model
 model = fasttext.load_model(model_path)

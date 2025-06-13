@@ -23,6 +23,15 @@ SOURCE_VALIDATORS = {
     "csv": validate_csv_review,
 }
 
+class ProcessedData(BaseModel):
+    cleaned_text: Optional[str] = None           # Cleaned version of review text
+    translated_text: Optional[str] = None       # Translated version if applicable
+    detected_language: Optional[str] = None     # Language code (en, fr, es, etc.)
+    sentiment: Optional[Dict] = None             # Full sentiment analysis results
+    processing_status: str = "pending"          # pending, completed, failed
+    processed_at: Optional[datetime] = None     # When processing occurred
+    error_message: Optional[str] = None         # Error if processing failed
+
 
 class ReviewBase(BaseModel):
     user_id: PyObjectId
@@ -32,6 +41,7 @@ class ReviewBase(BaseModel):
     data: Dict
     source_type: str
     created_at: datetime = Field(default_factory=lambda: datetime.now())
+    processed_data: Optional[ProcessedData] = Field(default=None)
 
     @model_validator(mode='after')
     def validate_data_based_on_source(self):

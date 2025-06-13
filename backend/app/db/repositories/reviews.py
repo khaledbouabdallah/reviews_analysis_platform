@@ -119,4 +119,30 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
         except PyMongoError as e:
             logger.error(f"Database error while fetching reviews by job: {str(e)}")
             raise RuntimeError("Database error")
+        
+    async def update_processed_data(
+        self, review_id: str, processed_data: dict
+    ) -> ReviewInDB:
+        """Update the processed data of a review."""
+        try:
+            oid = PyObjectId(review_id)
+        except Exception:
+            raise ValueError("Invalid review_id format")
+
+        update_data = {"processed_data": processed_data}
+
+        try:
+            updated_review = await self.collection.find_one_and_update(
+                {"_id": oid},
+                {"$set": update_data},
+                return_document=ReturnDocument.AFTER
+            )
+
+            if updated_review:
+                return self.db_model.model_validate(updated_review)
+            else:
+                raise ValueError("Review not found")
+        except PyMongoError as e:
+            logger.error(f"Database error while updating processed data: {str(e)}")
+            raise RuntimeError("Database error while updating processed data")
     
