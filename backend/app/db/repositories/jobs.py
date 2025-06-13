@@ -1,5 +1,10 @@
 from db.repositories.base_repository import BaseRepository
-from db.mongodb import sources_collection, users_collection, busniesses_collection, jobs_collection
+from db.mongodb import (
+    sources_collection,
+    users_collection,
+    busniesses_collection,
+    jobs_collection,
+)
 from models.job import JobCreate, JobUpdate, JobInDB, JobUpdateInternal
 from models import PyObjectId
 from pymongo import ReturnDocument
@@ -12,15 +17,21 @@ from core.config import logger
 class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
     def __init__(self):
         super().__init__(jobs_collection, JobInDB)
-        
-    
+
     async def create(self, job_create: JobCreate) -> JobInDB:
         try:
 
-            await ValidatorHelper.get_source_or_raise(sources_collection, job_create.user_id, job_create.business_id, job_create.source_id)
+            await ValidatorHelper.get_source_or_raise(
+                sources_collection,
+                job_create.user_id,
+                job_create.business_id,
+                job_create.source_id,
+            )
 
             # Insert Job
-            result = await self.collection.insert_one(job_create.model_dump(by_alias=True))
+            result = await self.collection.insert_one(
+                job_create.model_dump(by_alias=True)
+            )
 
             created_job = await self.collection.find_one({"_id": result.inserted_id})
             if created_job:
@@ -40,8 +51,10 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
         except Exception as e:
             logger.error(f"Unexpected error: {str(e)}")
             raise RuntimeError(f"Unexpected error: {str(e)}")
-        
-    async def update_internal(self, job_id: str, job_update: JobUpdateInternal) -> JobInDB:
+
+    async def update_internal(
+        self, job_id: str, job_update: JobUpdateInternal
+    ) -> JobInDB:
         """Update job with internal fields."""
         try:
             oid = PyObjectId(job_id)
@@ -57,7 +70,7 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
             updated_job = await self.collection.find_one_and_update(
                 {"_id": oid},
                 {"$set": update_data},
-                return_document=ReturnDocument.AFTER
+                return_document=ReturnDocument.AFTER,
             )
 
             if updated_job:
@@ -67,9 +80,10 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
         except PyMongoError as e:
             logger.error(f"Database error while updating job: {str(e)}")
             raise RuntimeError("Database error while updating job")
-    
 
-    async def get_by_user(self, user_id: str, skip: int = 0, limit: int = 100) -> List[JobInDB]:
+    async def get_by_user(
+        self, user_id: str, skip: int = 0, limit: int = 100
+    ) -> List[JobInDB]:
         """Get all jobs of a user."""
         try:
             oid = PyObjectId(user_id)
@@ -77,14 +91,18 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
             raise ValueError("Invalid user_id format")
 
         try:
-            jobs_data = await self.collection.find({"user_id": oid}).skip(skip).to_list(length=limit)
+            jobs_data = (
+                await self.collection.find({"user_id": oid})
+                .skip(skip)
+                .to_list(length=limit)
+            )
             return [self.db_model.model_validate(job) for job in jobs_data]
         except PyMongoError as e:
             raise RuntimeError("Database error")
-        
-        
-            
-    async def get_by_business(self, business_id: str, skip: int = 0, limit: int = 100) -> List[JobInDB]:
+
+    async def get_by_business(
+        self, business_id: str, skip: int = 0, limit: int = 100
+    ) -> List[JobInDB]:
         """Get all jobs of a business."""
         try:
             oid = PyObjectId(business_id)
@@ -92,8 +110,11 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
             raise ValueError("Invalid user_id format")
 
         try:
-            jobs_data = await self.collection.find({"business_id": oid}).skip(skip).to_list(length=limit)
+            jobs_data = (
+                await self.collection.find({"business_id": oid})
+                .skip(skip)
+                .to_list(length=limit)
+            )
             return [self.db_model.model_validate(job) for job in jobs_data]
         except PyMongoError as e:
             raise RuntimeError("Database error")
-        

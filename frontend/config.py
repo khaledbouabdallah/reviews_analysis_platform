@@ -1,11 +1,11 @@
 import os
 import logging
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
 LOGGER = logging.getLogger("StreamlitApp")
 LOGGER.setLevel(logging.INFO)
-
 
 
 # Backend API Configuration
@@ -18,4 +18,3 @@ LAYOUT = "wide"
 
 # Developer Info
 DEVELOPER = "Khaled Bouabdallah"
-

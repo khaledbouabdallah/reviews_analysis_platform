@@ -5,7 +5,7 @@ from core.config import settings
 client = AsyncIOMotorClient(settings.MONGODB_URL)
 db = client[settings.MONGODB_DB_NAME]
 
-users_collection = db['users']
-reviews_collection = db['reviews']
-sources_collection = db['sources']
-jobs_collection = db['jobs']
+users_collection = db["users"]
+reviews_collection = db["reviews"]
+sources_collection = db["sources"]
+jobs_collection = db["jobs"]

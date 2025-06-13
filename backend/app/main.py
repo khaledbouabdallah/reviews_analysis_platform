@@ -4,7 +4,6 @@ FastAPI main application for the Complaint Management Platform.
 This module sets up the FastAPI application and defines the API endpoints.
 """
 
-
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,7 +11,6 @@ from core.config import settings, logger
 from api.routers import users, businesses, sources, jobs, reviews, analyzer
 from db.mongodb import init_indexes
 from contextlib import asynccontextmanager
-
 
 
 @asynccontextmanager
@@ -54,9 +52,9 @@ app.include_router(jobs.router, prefix="/api")
 app.include_router(reviews.router, prefix="/api")
 app.include_router(analyzer.router, prefix="/api")
 
+
 # Define API endpoints
 @app.get("/")
 async def root():
     """Root endpoint with API information."""
     return {"message": "Complaint Management API. See /docs for documentation."}
-

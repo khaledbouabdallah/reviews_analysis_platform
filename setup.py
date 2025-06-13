@@ -14,13 +14,11 @@ setup(
         "fastapi>=0.95.0",
         "uvicorn>=0.21.0",
         "pydantic>=1.10.7",
-
         # NLP and ML libraries
         "nltk>=3.8.1",
         "textblob>=0.17.1",
         "langdetect>=1.0.9",
         "fasttext>=0.9.2",
-
         # Web scraping libraries
         "urllib3==1.26.16",
         "selenium==3.141.0",

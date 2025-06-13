@@ -13,9 +13,6 @@ from routers.core import router as core_router
 from core.config import settings
 
 
-
-
-
 # Import the scraper class
 
 
@@ -35,7 +32,7 @@ app.include_router(core_router, prefix="", tags=["Core"])
 app.include_router(google_scraper_router, prefix="/google", tags=["Google Scraper"])
 
 
-
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)

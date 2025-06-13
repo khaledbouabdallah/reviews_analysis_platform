@@ -6,6 +6,7 @@ from db.mongodb import db, jobs_collection
 
 router = APIRouter()
 
+
 @router.get("/")
 async def root():
     """Root endpoint with API information."""

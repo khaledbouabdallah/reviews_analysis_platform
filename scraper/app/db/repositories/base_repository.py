@@ -16,7 +16,12 @@ class BaseRepository(Generic[CreateSchema, UpdateSchema, DBSchema]):
 
     async def get_all(self, skip: int = 0, limit: int = 100) -> List[DBSchema]:
         try:
-            items = await self.collection.find().skip(skip).limit(limit).to_list(length=limit)
+            items = (
+                await self.collection.find()
+                .skip(skip)
+                .limit(limit)
+                .to_list(length=limit)
+            )
             return [self.db_model.model_validate(item) for item in items]
         except PyMongoError as e:
             raise RuntimeError("Database error while fetching documents")
@@ -46,7 +51,9 @@ class BaseRepository(Generic[CreateSchema, UpdateSchema, DBSchema]):
         except PyMongoError as e:
             raise RuntimeError("Database error while creating document")
 
-    async def update(self, item_id: str, update_data: UpdateSchema) -> Optional[DBSchema]:
+    async def update(
+        self, item_id: str, update_data: UpdateSchema
+    ) -> Optional[DBSchema]:
         try:
             oid = ObjectId(item_id)
         except Exception:
@@ -56,7 +63,7 @@ class BaseRepository(Generic[CreateSchema, UpdateSchema, DBSchema]):
             updated_item = await self.collection.find_one_and_update(
                 {"_id": oid},
                 {"$set": update_data.dict(exclude_unset=True)},
-                return_document=ReturnDocument.AFTER
+                return_document=ReturnDocument.AFTER,
             )
             if updated_item:
                 return self.db_model.model_validate(updated_item)

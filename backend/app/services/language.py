@@ -2,7 +2,13 @@
 Detect language of the given text using pre-trained fasttext model
 """
 
-from fast_langdetect import detect, detect_multilingual, LangDetector, LangDetectConfig, DetectError
+from fast_langdetect import (
+    detect,
+    detect_multilingual,
+    LangDetector,
+    LangDetectConfig,
+    DetectError,
+)
 import os
 from core.config import logger
 
@@ -15,17 +21,20 @@ model_path = "/app/ml_models/lid.176.bin"
 #     print(f"Lnaugage detection model not found in {model_path}. Downloading...")
 #     download_url = "https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin"
 #     os.system(f"wget {download_url} -O {model_path}")
-    
+
 if not os.path.exists(model_path):
-    raise FileNotFoundError(f"Language detection model not found at {model_path}. Please ensure it is downloaded correctly.")
+    raise FileNotFoundError(
+        f"Language detection model not found at {model_path}. Please ensure it is downloaded correctly."
+    )
 
 # Load pre-trained language detection model
 # Custom configuration with fallback mechanism
 config = LangDetectConfig(
-    allow_fallback=True             # Enable fallback to small model if large model fails
+    allow_fallback=True  # Enable fallback to small model if large model fails
 )
 
 detector = LangDetector(config)
+
 
 def detect_language(cleaned_text: str) -> str:
     """Detect language of the given text
@@ -38,7 +47,6 @@ def detect_language(cleaned_text: str) -> str:
     """
 
     # Detect language
-    
 
     prediction = detector.detect(cleaned_text)
-    return prediction.get('lang') if prediction else "unknown"
+    return prediction.get("lang") if prediction else "unknown"
