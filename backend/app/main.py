@@ -1,3 +1,4 @@
+# backend/app/main.py (UPDATED)
 """
 FastAPI main application for the Complaint Management Platform.
 
@@ -9,6 +10,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings, logger
 from api.routers import users, businesses, sources, jobs, reviews, analyzer
+from api.routers.auth import router as auth_router
 from db.mongodb import init_indexes
 from contextlib import asynccontextmanager
 
@@ -44,8 +46,9 @@ app.add_middleware(
 )
 
 
-# Include routers
-app.include_router(users.router, prefix="/api")
+# Include routers with auth first
+app.include_router(auth_router, prefix="/api") 
+#app.include_router(users.router, prefix="/api")
 app.include_router(businesses.router, prefix="/api")
 app.include_router(sources.router, prefix="/api")
 app.include_router(jobs.router, prefix="/api")
@@ -58,3 +61,8 @@ app.include_router(analyzer.router, prefix="/api")
 async def root():
     """Root endpoint with API information."""
     return {"message": "Complaint Management API. See /docs for documentation."}
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {"status": "healthy", "message": "API is running"}

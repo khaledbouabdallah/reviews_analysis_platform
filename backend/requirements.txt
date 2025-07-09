@@ -6,6 +6,7 @@ pydantic-settings>=2.8.1
 python-dotenv>=1.0.0
 email-validator>=2.0.0 
 httpx==0.27.0
+python-multipart>=0.0.20
 
 # Authentication and authorization
 passlib[bcrypt]>=1.7.4

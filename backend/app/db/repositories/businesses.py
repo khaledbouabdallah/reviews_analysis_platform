@@ -1,3 +1,4 @@
+# backend/app/db/repositories/businesses.py (CLEAN VERSION)
 from db.repositories.base_repository import BaseRepository
 from db.mongodb import busniesses_collection, users_collection
 from models.business import BusinessCreate, BusinessUpdate, BusinessInDB
@@ -48,19 +49,21 @@ class BusinessRepository(BaseRepository[BusinessCreate, BusinessUpdate, Business
     async def get_by_user(
         self, user_id: str, skip: int = 0, limit: int = 100
     ) -> List[BusinessInDB]:
-        """Get all jobs of a user."""
+        """Get all businesses of a user."""
         try:
+            # Convert string to PyObjectId for database query
             oid = PyObjectId(user_id)
         except Exception:
             raise ValueError("Invalid user_id format")
 
         try:
-            jobs_data = (
+            businesses_data = (
                 await self.collection.find({"user_id": oid})
                 .skip(skip)
+                .limit(limit)
                 .to_list(length=limit)
             )
-            return [self.db_model.model_validate(job) for job in jobs_data]
+            return [self.db_model.model_validate(business) for business in businesses_data]
         except PyMongoError as e:
             logger.error(f"Database error while fetching businesses: {str(e)}")
             raise RuntimeError("Database error")
