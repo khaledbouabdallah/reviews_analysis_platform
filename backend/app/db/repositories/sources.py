@@ -1,14 +1,12 @@
+from core.config import logger
+from db.mongodb import busniesses_collection, sources_collection, users_collection
 from db.repositories.base_repository import BaseRepository
+from db.repositories.helpers import ValidatorHelper
 from db.repositories.jobs import JobRepository
 from db.repositories.reviews import ReviewRepository
-from db.mongodb import sources_collection, users_collection, busniesses_collection
-from models.source import SourceCreate, SourceUpdate, SourceInDB, SourceResponse
 from models import PyObjectId
-from pymongo import ReturnDocument
-from pymongo.errors import PyMongoError, DuplicateKeyError
-from typing import List, Optional
-from db.repositories.helpers import ValidatorHelper
-from core.config import logger
+from models.source import SourceCreate, SourceInDB, SourceUpdate
+from pymongo.errors import DuplicateKeyError, PyMongoError
 
 
 class SourceRepository(BaseRepository[SourceCreate, SourceUpdate, SourceInDB]):
@@ -42,19 +40,19 @@ class SourceRepository(BaseRepository[SourceCreate, SourceUpdate, SourceInDB]):
             raise ValueError("Business with this name already exists")
 
         except PyMongoError as e:
-            logger.error(f"Database error while creating business: {str(e)}")
+            logger.error(f"Database error while creating business: {e!s}")
             raise RuntimeError("Database error while creating document")
 
         except ValueError as e:
-            raise ValueError(f"Invalid data: {str(e)}")
+            raise ValueError(f"Invalid data: {e!s}")
 
         except Exception as e:
-            logger.error(f"Unexpected error: {str(e)}")
-            raise RuntimeError(f"Unexpected error: {str(e)}")
+            logger.error(f"Unexpected error: {e!s}")
+            raise RuntimeError(f"Unexpected error: {e!s}")
 
     async def get_by_user(
         self, user_id: str, skip: int = 0, limit: int = 100
-    ) -> List[SourceInDB]:
+    ) -> list[SourceInDB]:
         """Get all jobs of a user."""
         try:
             oid = PyObjectId(user_id)
@@ -68,12 +66,12 @@ class SourceRepository(BaseRepository[SourceCreate, SourceUpdate, SourceInDB]):
                 .to_list(length=limit)
             )
             return [self.db_model.model_validate(job) for job in jobs_data]
-        except PyMongoError as e:
+        except PyMongoError:
             raise RuntimeError("Database error")
 
     async def get_by_business(
         self, business_id: str, skip: int = 0, limit: int = 100
-    ) -> List[SourceInDB]:
+    ) -> list[SourceInDB]:
         """Get all jobs of a business."""
         try:
             oid = PyObjectId(business_id)
@@ -87,13 +85,10 @@ class SourceRepository(BaseRepository[SourceCreate, SourceUpdate, SourceInDB]):
                 .to_list(length=limit)
             )
             return [self.db_model.model_validate(job) for job in jobs_data]
-        except PyMongoError as e:
+        except PyMongoError:
             raise RuntimeError("Database error")
-        
-    
-    async def delete_by_business(
-        self, business_id: str
-    ) -> bool:
+
+    async def delete_by_business(self, business_id: str) -> bool:
         """Delete all sources of business."""
         try:
             # Convert string to PyObjectId for database query
@@ -105,15 +100,12 @@ class SourceRepository(BaseRepository[SourceCreate, SourceUpdate, SourceInDB]):
             result = await self.collection.delete_many({"business_id": oid})
             logger.info(f"Deleted {result.deleted_count} sources for business {oid}")
             return result.deleted_count > 0
-        
+
         except PyMongoError as e:
-            logger.error(f"Database error while deleting sources: {str(e)}")
+            logger.error(f"Database error while deleting sources: {e!s}")
             raise RuntimeError("Database error while deleting sources")
 
-
-    async def delete_by_user(
-        self, user_id: str
-    ) -> bool:
+    async def delete_by_user(self, user_id: str) -> bool:
         """Delete all sources of a user."""
         try:
             # Convert string to PyObjectId for database query
@@ -127,9 +119,9 @@ class SourceRepository(BaseRepository[SourceCreate, SourceUpdate, SourceInDB]):
             return result.deleted_count > 0
 
         except PyMongoError as e:
-            logger.error(f"Database error while deleting sources: {str(e)}")
+            logger.error(f"Database error while deleting sources: {e!s}")
             raise RuntimeError("Database error while deleting sources")
-        
+
     async def delete(self, source_id: str) -> bool:
         """Delete all data related to a source:jobs, reviews."""
         try:
@@ -138,19 +130,17 @@ class SourceRepository(BaseRepository[SourceCreate, SourceUpdate, SourceInDB]):
             raise ValueError("Invalid source_id format")
 
         try:
-    
             job_repo = JobRepository()
             review_repo = ReviewRepository()
 
             await job_repo.delete_by_source(oid)
             await review_repo.delete_by_source(oid)
-            
+
             # Finally, delete the source document itself
             result = await self.collection.delete_one({"_id": oid})
             logger.info(f"Deleted all data for source {oid}")
-            return result.deleted_count > 0 
-        
-        except PyMongoError as e:
-            logger.error(f"Database error during source deletion: {str(e)}")
-            raise RuntimeError("Error while deleting source data")
+            return result.deleted_count > 0
 
+        except PyMongoError as e:
+            logger.error(f"Database error during source deletion: {e!s}")
+            raise RuntimeError("Error while deleting source data")

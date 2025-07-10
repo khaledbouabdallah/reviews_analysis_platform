@@ -1,8 +1,9 @@
+from datetime import datetime, timezone
+from typing import Generic, TypeVar
+
 from bson import ObjectId
 from pymongo import ReturnDocument
 from pymongo.errors import PyMongoError
-from typing import Generic, List, Optional, TypeVar, Type
-from datetime import datetime, timezone
 
 # Typing generics for reuse
 CreateSchema = TypeVar("CreateSchema")
@@ -11,11 +12,11 @@ DBSchema = TypeVar("DBSchema")
 
 
 class BaseRepository(Generic[CreateSchema, UpdateSchema, DBSchema]):
-    def __init__(self, collection, db_model: Type[DBSchema]):
+    def __init__(self, collection, db_model: type[DBSchema]):
         self.collection = collection
         self.db_model = db_model
 
-    async def get_all(self, skip: int = 0, limit: int = 100) -> List[DBSchema]:
+    async def get_all(self, skip: int = 0, limit: int = 100) -> list[DBSchema]:
         try:
             items = (
                 await self.collection.find()
@@ -24,10 +25,10 @@ class BaseRepository(Generic[CreateSchema, UpdateSchema, DBSchema]):
                 .to_list(length=limit)
             )
             return [self.db_model.model_validate(item) for item in items]
-        except PyMongoError as e:
+        except PyMongoError:
             raise RuntimeError("Database error while fetching documents")
 
-    async def get_by_id(self, item_id: str) -> Optional[DBSchema]:
+    async def get_by_id(self, item_id: str) -> DBSchema | None:
         try:
             oid = ObjectId(item_id)
         except Exception:
@@ -38,7 +39,7 @@ class BaseRepository(Generic[CreateSchema, UpdateSchema, DBSchema]):
             if item:
                 return self.db_model.model_validate(item)
             return None
-        except PyMongoError as e:
+        except PyMongoError:
             raise RuntimeError("Database error while fetching document by ID")
 
     async def create(self, data: CreateSchema) -> DBSchema:
@@ -49,12 +50,10 @@ class BaseRepository(Generic[CreateSchema, UpdateSchema, DBSchema]):
             if created_item:
                 return self.db_model.model_validate(created_item)
             raise RuntimeError("Failed to retrieve created document")
-        except PyMongoError as e:
+        except PyMongoError:
             raise RuntimeError("Database error while creating document")
 
-    async def update(
-        self, item_id: str, update_data: UpdateSchema
-    ) -> Optional[DBSchema]:
+    async def update(self, item_id: str, update_data: UpdateSchema) -> DBSchema | None:
         try:
             oid = ObjectId(item_id)
         except Exception:
@@ -71,7 +70,7 @@ class BaseRepository(Generic[CreateSchema, UpdateSchema, DBSchema]):
             if updated_item:
                 return self.db_model.model_validate(updated_item)
             return None
-        except PyMongoError as e:
+        except PyMongoError:
             raise RuntimeError("Database error while updating document")
 
     async def delete(self, item_id: str) -> bool:
@@ -83,5 +82,5 @@ class BaseRepository(Generic[CreateSchema, UpdateSchema, DBSchema]):
         try:
             result = await self.collection.delete_one({"_id": oid})
             return result.deleted_count == 1
-        except PyMongoError as e:
+        except PyMongoError:
             raise RuntimeError("Database error while deleting document")

@@ -6,7 +6,7 @@ meta {
 
 post {
   url: {{base_url}}/api/auth/login
-  body: json
+  body: multipartForm
   auth: inherit
 }
 
@@ -15,4 +15,9 @@ body:json {
           "username": "testuser3",
           "password": "password123"
   }
+}
+
+body:multipart-form {
+  username: testuser3
+  password: password123
 }

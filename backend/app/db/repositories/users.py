@@ -1,22 +1,22 @@
 from datetime import datetime, timezone
-from typing import List, Optional, Dict, Any
-from models import PyObjectId
+
+from core.config import logger
+from core.security import get_password_hash
 from db.mongodb import users_collection
 from db.repositories.businesses import BusinessRepository
-from db.repositories.sources import SourceRepository
 from db.repositories.jobs import JobRepository
 from db.repositories.reviews import ReviewRepository
-from models.user import UserCreate, UserInDB, UserUpdate, UserResponse
-from pymongo.errors import PyMongoError, DuplicateKeyError
-from core.security import get_password_hash
+from db.repositories.sources import SourceRepository
+from models import PyObjectId
+from models.user import UserCreate, UserInDB, UserUpdate
 from pymongo import ReturnDocument
-from core.config import logger
+from pymongo.errors import PyMongoError
 
 
 class UserRepository:
     """Repository for user operations in MongoDB."""
 
-    async def get_by_username(self, username: str) -> Optional[UserInDB]:
+    async def get_by_username(self, username: str) -> UserInDB | None:
         """Get a user by username."""
         user_data = await users_collection.find_one({"username": username})
         logger.info(f"get_by_username: {user_data}, {bool(user_data)}")
@@ -25,14 +25,14 @@ class UserRepository:
             return UserInDB.model_validate(user_data)
         return None
 
-    async def get_by_email(self, email: str) -> Optional[UserInDB]:
+    async def get_by_email(self, email: str) -> UserInDB | None:
         """Get a user by email."""
         user_data = await users_collection.find_one({"email": email})
         if user_data:
             return UserInDB.model_validate(user_data)
         return None
 
-    async def get_by_id(self, user_id: str) -> Optional[UserInDB]:
+    async def get_by_id(self, user_id: str) -> UserInDB | None:
         """Get a user by ID."""
         try:
             user_data = await users_collection.find_one({"_id": PyObjectId(user_id)})
@@ -42,7 +42,7 @@ class UserRepository:
         except:
             return None
 
-    async def get_all(self, skip: int = 0, limit: int = 100) -> List[UserInDB]:
+    async def get_all(self, skip: int = 0, limit: int = 100) -> list[UserInDB]:
         """Get all users with pagination."""
         users_data = (
             await users_collection.find().skip(skip).limit(limit).to_list(length=limit)
@@ -86,7 +86,7 @@ class UserRepository:
         if updated_user:
             return UserInDB.model_validate(updated_user)
         return None
-    
+
     async def delete(self, user_id: str) -> bool:
         """Delete all data related to a user: businesses, sources, jobs, reviews."""
         try:
@@ -104,13 +104,12 @@ class UserRepository:
             await source_repo.delete_by_user(user_id)
             await job_repo.delete_by_user(user_id)
             await review_repo.delete_by_user(user_id)
-            
-            
+
             # Finally, delete the user document itself
             result = await users_collection.delete_one({"_id": oid})
             logger.info(f"Deleted all data for user {user_id}")
-            return result.deleted_count > 0 
-        
+            return result.deleted_count > 0
+
         except PyMongoError as e:
-            logger.error(f"Database error during user deletion: {str(e)}")
+            logger.error(f"Database error during user deletion: {e!s}")
             raise RuntimeError("Error while deleting user data")

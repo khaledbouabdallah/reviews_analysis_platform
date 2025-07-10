@@ -1,10 +1,9 @@
 # backend/app/api/dependencies.py
+from core.security import decode_access_token
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+from jose import JWTError
 from models.user import UserInDB
-from core.security import decode_access_token
-from core.config import settings
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -13,8 +12,10 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserInDB:
     """
     Get current user from JWT token
     """
-    from db.repositories.users import UserRepository  # Import here to avoid circular imports
-    
+    from db.repositories.users import (
+        UserRepository,  # Import here to avoid circular imports
+    )
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -27,7 +28,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserInDB:
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
-            
+
     except JWTError:
         raise credentials_exception
     except Exception:
@@ -50,8 +51,7 @@ async def get_current_active_user(
     """
     if current_user.disabled:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
-            detail="Inactive user"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
         )
     return current_user
 

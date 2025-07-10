@@ -1,23 +1,22 @@
-from typing import List, Optional, Dict
-from pydantic import BaseModel, Field, field_validator, model_validator
-from pydantic import FieldValidationInfo
-from datetime import datetime, timezone
-from models import PyObjectId
-import re
 import os
+import re
+from datetime import datetime, timezone
+
 from core.config import settings
+from models import PyObjectId
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class JobBase(BaseModel):
-    name: Optional[str] = Field(default=None, max_length=100, min_length=2)
+    name: str | None = Field(default=None, max_length=100, min_length=2)
     status: str = Field(default="pending")
     url: str = Field(..., max_length=500, min_length=5)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    started_at: Optional[datetime] = None
-    ended_at: Optional[datetime] = None
-    total_reviews: Optional[int] = None
-    reviews_scraped: Optional[int] = None
-    error: Optional[str] = None
+    started_at: datetime | None = None
+    ended_at: datetime | None = None
+    total_reviews: int | None = None
+    reviews_scraped: int | None = None
+    error: str | None = None
     user_id: PyObjectId
     business_id: PyObjectId
     source_id: PyObjectId
@@ -92,37 +91,35 @@ class JobBase(BaseModel):
 class JobCreate(JobBase):
     """Used for creating a new job."""
 
-    pass
-
 
 class JobInDB(JobBase):
     """Used internally and for DB storage."""
 
-    job_id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
 
 
 class JobUpdate(BaseModel):
     """Used for updating an existing job."""
 
-    title: Optional[str] = None
-    status: Optional[str] = None
+    title: str | None = None
+    status: str | None = None
 
 
 class JobUpdateInternal(JobBase):
     """Used for internal updates to a job."""
 
-    title: Optional[str] = None
-    status: Optional[str] = None
-    url: Optional[str] = None
-    creation_time: Optional[datetime] = None
-    started_at: Optional[datetime] = None
-    ended_at: Optional[datetime] = None
-    total_reviews: Optional[int] = None
-    reviews_scraped: Optional[int] = None
-    error: Optional[str] = None
+    title: str | None = None
+    status: str | None = None
+    url: str | None = None
+    creation_time: datetime | None = None
+    started_at: datetime | None = None
+    ended_at: datetime | None = None
+    total_reviews: int | None = None
+    reviews_scraped: int | None = None
+    error: str | None = None
 
 
 class JobResponse(JobBase):
     """Used for returning job data in API responses."""
 
-    job_id: PyObjectId
+    id: PyObjectId

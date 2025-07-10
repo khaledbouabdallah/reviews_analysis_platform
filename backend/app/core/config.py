@@ -1,8 +1,8 @@
+import logging
 import os
 from pathlib import Path
-from pydantic_settings import BaseSettings
-import logging
 
+from pydantic_settings import BaseSettings
 
 logger = logging.getLogger("uvicorn")
 APP_DIR = os.getcwd()
@@ -10,7 +10,6 @@ Parent_DIR = Path(APP_DIR).parent
 
 
 class Settings(BaseSettings):
-
     MONGODB_URL: str
     MONGODB_DB_NAME: str
     ALLOWED_SOURCE_TYPES: list[str] = ["google", "csv"]
@@ -22,7 +21,7 @@ class Settings(BaseSettings):
         "SECRET_KEY", "your-secret-key-here-change-in-production"
     )
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440 # 1 day
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 1 day
 
     class Config:
         env_file = os.path.join(Parent_DIR, ".env")

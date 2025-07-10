@@ -2,16 +2,9 @@
 Detect language of the given text using pre-trained fasttext model
 """
 
-from fast_langdetect import (
-    detect,
-    detect_multilingual,
-    LangDetector,
-    LangDetectConfig,
-    DetectError,
-)
 import os
-from core.config import logger
 
+from fast_langdetect import LangDetectConfig, LangDetector
 
 # Set the path to the pre-trained language detection model
 model_path = "/app/ml_models/lid.176.bin"

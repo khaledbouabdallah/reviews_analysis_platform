@@ -1,9 +1,9 @@
 # backend/app/models/business.py (CLEAN VERSION)
-from typing import List, Optional, Dict
-from pydantic import BaseModel, Field, field_validator
-from datetime import datetime, timezone
-from models import PyObjectId
 import re
+from datetime import datetime, timezone
+
+from models import PyObjectId
+from pydantic import BaseModel, Field, field_validator
 
 
 class BusinessBase(BaseModel):
@@ -21,7 +21,9 @@ class BusinessBase(BaseModel):
         if not v or not v.strip():
             raise ValueError("Business name cannot be empty or whitespace")
         if not (2 <= len(v.strip()) <= 100):
-            raise ValueError("Business name length must be between 2 and 100 characters")
+            raise ValueError(
+                "Business name length must be between 2 and 100 characters"
+            )
         if not re.match(r"^[\w\s\-\.]+$", v):
             raise ValueError("Business name contains invalid characters")
         return v.strip()
@@ -34,11 +36,11 @@ class BusinessCreate(BusinessBase):
 class BusinessInDB(BusinessBase):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     user_id: PyObjectId
-    updated_at: Optional[datetime] = None
+    updated_at: datetime | None = None
 
 
 class BusinessUpdate(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
     @field_validator("name")
     def validate_name(cls, v):
@@ -46,7 +48,9 @@ class BusinessUpdate(BaseModel):
             if not v or not v.strip():
                 raise ValueError("Business name cannot be empty or whitespace")
             if not (2 <= len(v.strip()) <= 100):
-                raise ValueError("Business name length must be between 2 and 100 characters")
+                raise ValueError(
+                    "Business name length must be between 2 and 100 characters"
+                )
             if not re.match(r"^[\w\s\-\.]+$", v):
                 raise ValueError("Business name contains invalid characters")
             return v.strip()
@@ -56,4 +60,4 @@ class BusinessUpdate(BaseModel):
 class BusinessResponse(BusinessBase):
     id: PyObjectId
     user_id: PyObjectId
-    updated_at: Optional[datetime] = None
+    updated_at: datetime | None = None

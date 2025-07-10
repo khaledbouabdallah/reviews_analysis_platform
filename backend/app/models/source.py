@@ -1,9 +1,9 @@
-from pydantic import BaseModel, Field, field_validator
-from typing import Optional
-from datetime import datetime, timezone
-from models import PyObjectId
 import re
+from datetime import datetime, timezone
+
 from core.config import settings
+from models import PyObjectId
+from pydantic import BaseModel, Field, field_validator
 
 
 class SourceBase(BaseModel):
@@ -43,17 +43,18 @@ class SourceCreate(SourceBase):
 class SourceInDB(SourceBase):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     created_at: datetime
-    updated_at: Optional[datetime] = None
-    last_collection_time: Optional[datetime] = None
+    updated_at: datetime | None = None
+    last_collection_time: datetime | None = None
 
 
 class SourceUpdate(BaseModel):
-    name: Optional[str] = None
-    type: Optional[str] = None
+    name: str | None = None
+    type: str | None = None
+    business_id: PyObjectId | None = None
 
 
 class SourceResponse(SourceBase):
     id: PyObjectId
     created_at: datetime
-    updated_at: Optional[datetime] = None
-    last_collection_time: Optional[datetime] = None
+    updated_at: datetime | None = None
+    last_collection_time: datetime | None = None

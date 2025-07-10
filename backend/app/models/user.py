@@ -1,13 +1,14 @@
-from pydantic import BaseModel, Field, field_serializer, EmailStr, model_validator
-from typing import Optional, Annotated
-from models import PyObjectId
 from datetime import datetime, timezone
+from typing import Annotated
+
+from models import PyObjectId
+from pydantic import BaseModel, EmailStr, Field, field_serializer, model_validator
 
 
 # Base User model with common fields
 class UserBase(BaseModel):
     username: Annotated[str, Field(min_length=3, max_length=50)]
-    email: Optional[EmailStr] = None
+    email: EmailStr | None = None
     disabled: bool = False
 
     model_config = {
@@ -22,7 +23,7 @@ class UserInDB(UserBase):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     hashed_password: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: Optional[datetime] = None
+    updated_at: datetime | None = None
 
 
 # Model for creating a new user
@@ -33,10 +34,10 @@ class UserCreate(UserBase):
 
 # Model for updating an existing user
 class UserUpdate(BaseModel):
-    username: Optional[str] = Field(default=None, min_length=3, max_length=50)
-    email: Optional[EmailStr] = None
-    password: Optional[str] = Field(default=None, min_length=8)
-    disabled: Optional[bool] = None
+    username: str | None = Field(default=None, min_length=3, max_length=50)
+    email: EmailStr | None = None
+    password: str | None = Field(default=None, min_length=8)
+    disabled: bool | None = None
 
     model_config = {"arbitrary_types_allowed": True}
 
@@ -53,10 +54,10 @@ class UserUpdate(BaseModel):
 class UserResponse(BaseModel):
     id: PyObjectId
     username: str
-    email: Optional[EmailStr] = None
+    email: EmailStr | None = None
     disabled: bool = False
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime | None = None
 
     model_config = {"populate_by_name": True, "arbitrary_types_allowed": True}
 
@@ -65,7 +66,7 @@ class UserResponse(BaseModel):
         return str(id)
 
     @field_serializer("created_at", "updated_at")
-    def serialize_datetime(self, dt: Optional[datetime]) -> Optional[str]:
+    def serialize_datetime(self, dt: datetime | None) -> str | None:
         if dt:
             return dt.isoformat()
         return None

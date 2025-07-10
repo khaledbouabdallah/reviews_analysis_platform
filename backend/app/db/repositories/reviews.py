@@ -1,17 +1,11 @@
-from db.repositories.base_repository import BaseRepository
-from db.mongodb import (
-    sources_collection,
-    users_collection,
-    busniesses_collection,
-    reviews_collection,
-)
-from models.review import ReviewCreate, ReviewUpdate, ReviewInDB
-from models import PyObjectId
-from pymongo import ReturnDocument
-from pymongo.errors import PyMongoError, DuplicateKeyError
-from typing import List
-from db.repositories.helpers import ValidatorHelper
 from core.config import logger
+from db.mongodb import reviews_collection, sources_collection
+from db.repositories.base_repository import BaseRepository
+from db.repositories.helpers import ValidatorHelper
+from models import PyObjectId
+from models.review import ReviewCreate, ReviewInDB, ReviewUpdate
+from pymongo import ReturnDocument
+from pymongo.errors import DuplicateKeyError, PyMongoError
 
 
 class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
@@ -40,15 +34,15 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             raise ValueError("Review with this data already exists")
 
         except PyMongoError as e:
-            logger.error(f"Database error while creating review: {str(e)}")
+            logger.error(f"Database error while creating review: {e!s}")
             raise RuntimeError("Database error while creating review")
 
         except ValueError as e:
-            raise ValueError(f"Invalid data: {str(e)}")
+            raise ValueError(f"Invalid data: {e!s}")
 
         except Exception as e:
-            logger.error(f"Unexpected error: {str(e)}")
-            raise RuntimeError(f"Unexpected error: {str(e)}")
+            logger.error(f"Unexpected error: {e!s}")
+            raise RuntimeError(f"Unexpected error: {e!s}")
 
     async def update(self, review_id: str, review_update: ReviewUpdate) -> ReviewInDB:
         try:
@@ -70,13 +64,12 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
 
             if updated_review:
                 return self.db_model.model_validate(updated_review)
-            else:
-                raise ValueError("Review not found")
+            raise ValueError("Review not found")
         except PyMongoError as e:
-            logger.error(f"Database error while updating review: {str(e)}")
+            logger.error(f"Database error while updating review: {e!s}")
             raise RuntimeError("Database error while updating review")
 
-    async def get_by_user(self, user_id: str, skip: int = 0) -> List[ReviewInDB]:
+    async def get_by_user(self, user_id: str, skip: int = 0) -> list[ReviewInDB]:
         try:
             oid = PyObjectId(user_id)
         except Exception:
@@ -87,12 +80,12 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
                 await self.collection.find({"user_id": oid}).skip(skip).to_list()
             )
             return [self.db_model.model_validate(review) for review in reviews_data]
-        except PyMongoError as e:
+        except PyMongoError:
             raise RuntimeError("Database error")
 
     async def get_by_business(
         self, business_id: str, skip: int = 0
-    ) -> List[ReviewInDB]:
+    ) -> list[ReviewInDB]:
         try:
             oid = PyObjectId(business_id)
         except Exception:
@@ -103,10 +96,10 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
                 await self.collection.find({"business_id": oid}).skip(skip).to_list()
             )
             return [self.db_model.model_validate(review) for review in reviews_data]
-        except PyMongoError as e:
+        except PyMongoError:
             raise RuntimeError("Database error")
 
-    async def get_by_source(self, source_id: str, skip: int = 0) -> List[ReviewInDB]:
+    async def get_by_source(self, source_id: str, skip: int = 0) -> list[ReviewInDB]:
         """Get all reviews from a specific source."""
         try:
             oid = PyObjectId(source_id)
@@ -119,10 +112,10 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             )
             return [self.db_model.model_validate(review) for review in reviews_data]
         except PyMongoError as e:
-            logger.error(f"Database error while fetching reviews by source: {str(e)}")
+            logger.error(f"Database error while fetching reviews by source: {e!s}")
             raise RuntimeError("Database error")
 
-    async def get_by_job(self, job_id: str, skip: int = 0) -> List[ReviewInDB]:
+    async def get_by_job(self, job_id: str, skip: int = 0) -> list[ReviewInDB]:
         """Get all reviews linked to a specific scraping job."""
         try:
             oid = PyObjectId(job_id)
@@ -135,7 +128,7 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             )
             return [self.db_model.model_validate(review) for review in reviews_data]
         except PyMongoError as e:
-            logger.error(f"Database error while fetching reviews by job: {str(e)}")
+            logger.error(f"Database error while fetching reviews by job: {e!s}")
             raise RuntimeError("Database error")
 
     async def update_processed_data(
@@ -158,12 +151,11 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
 
             if updated_review:
                 return self.db_model.model_validate(updated_review)
-            else:
-                raise ValueError("Review not found")
+            raise ValueError("Review not found")
         except PyMongoError as e:
-            logger.error(f"Database error while updating processed data: {str(e)}")
+            logger.error(f"Database error while updating processed data: {e!s}")
             raise RuntimeError("Database error while updating processed data")
-        
+
     async def delete_by_user(self, user_id: str) -> bool:
         """Delete all reviews of a user."""
         try:
@@ -176,7 +168,7 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             logger.info(f"Deleted {result.deleted_count} reviews for user {user_id}")
             return result.deleted_count > 0
         except PyMongoError as e:
-            logger.error(f"Database error while deleting reviews: {str(e)}")
+            logger.error(f"Database error while deleting reviews: {e!s}")
             raise RuntimeError("Database error while deleting reviews")
 
     async def delete_by_business(self, business_id: str) -> bool:
@@ -188,12 +180,14 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
 
         try:
             result = await self.collection.delete_many({"business_id": oid})
-            logger.info(f"Deleted {result.deleted_count} reviews for business {business_id}")
+            logger.info(
+                f"Deleted {result.deleted_count} reviews for business {business_id}"
+            )
             return result.deleted_count > 0
         except PyMongoError as e:
-            logger.error(f"Database error while deleting reviews: {str(e)}")
+            logger.error(f"Database error while deleting reviews: {e!s}")
             raise RuntimeError("Database error while deleting reviews")
-        
+
     async def delete_by_source(self, source_id: str) -> bool:
         """Delete all reviews of a source."""
         try:
@@ -203,17 +197,15 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
 
         try:
             result = await self.collection.delete_many({"source_id": oid})
-            logger.info(f"Deleted {result.deleted_count} reviews for source {source_id}")
+            logger.info(
+                f"Deleted {result.deleted_count} reviews for source {source_id}"
+            )
             return result.deleted_count > 0
         except PyMongoError as e:
-            logger.error(f"Database error while deleting reviews by source: {str(e)}")
+            logger.error(f"Database error while deleting reviews by source: {e!s}")
             raise RuntimeError("Database error while deleting reviews by source")
-        
-    
-        
-    async def delete_by_job(
-        self, source_id: str
-    ) -> None:
+
+    async def delete_by_job(self, source_id: str) -> None:
         """Delete all jobs of a source."""
         try:
             # Convert string to PyObjectId for database query
@@ -224,13 +216,12 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
         try:
             result = await self.collection.delete_many({"source_id": oid})
             logger.info(f"Deleted {result.deleted_count} jobs for source {source_id}")
-            return None
-        
+            return
+
         except PyMongoError as e:
-            logger.error(f"Database error while deleting jobs: {str(e)}")
+            logger.error(f"Database error while deleting jobs: {e!s}")
             raise RuntimeError("Database error while deleting jobs")
-        
-        
+
     async def delete(self, review_id: str) -> bool:
         """Delete a specific review."""
         try:
@@ -243,5 +234,5 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             logger.info(f"Deleted review {review_id}")
             return result.deleted_count > 0
         except PyMongoError as e:
-            logger.error(f"Database error while deleting review: {str(e)}")
+            logger.error(f"Database error while deleting review: {e!s}")
             raise RuntimeError("Database error while deleting review")

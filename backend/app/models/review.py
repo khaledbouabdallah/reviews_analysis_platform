@@ -1,8 +1,8 @@
-from pydantic import BaseModel, Field, field_validator, model_validator
-from typing import Dict, Optional
 from datetime import datetime
-from models import PyObjectId
+
 from core.config import settings
+from models import PyObjectId
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 def validate_google_review(data):
@@ -26,13 +26,13 @@ SOURCE_VALIDATORS = {
 
 
 class ProcessedData(BaseModel):
-    cleaned_text: Optional[str] = None  # Cleaned version of review text
-    translated_text: Optional[str] = None  # Translated version if applicable
-    detected_language: Optional[str] = None  # Language code (en, fr, es, etc.)
-    sentiment: Optional[Dict] = None  # Full sentiment analysis results
+    cleaned_text: str | None = None  # Cleaned version of review text
+    translated_text: str | None = None  # Translated version if applicable
+    detected_language: str | None = None  # Language code (en, fr, es, etc.)
+    sentiment: dict | None = None  # Full sentiment analysis results
     processing_status: str = "pending"  # pending, completed, failed
-    processed_at: Optional[datetime] = None  # When processing occurred
-    error_message: Optional[str] = None  # Error if processing failed
+    processed_at: datetime | None = None  # When processing occurred
+    error_message: str | None = None  # Error if processing failed
 
 
 class ReviewBase(BaseModel):
@@ -40,14 +40,13 @@ class ReviewBase(BaseModel):
     business_id: PyObjectId
     source_id: PyObjectId
     job_id: PyObjectId
-    data: Dict
+    data: dict
     source_type: str
     created_at: datetime = Field(default_factory=lambda: datetime.now())
-    processed_data: Optional[ProcessedData] = Field(default=None)
+    processed_data: ProcessedData | None = Field(default=None)
 
     @model_validator(mode="after")
     def validate_data_based_on_source(self):
-
         if not self.source_type or self.source_type not in SOURCE_VALIDATORS:
             raise ValueError(f"Unsupported or missing source_type: {self.source_type}")
 
@@ -81,8 +80,8 @@ class ReviewCreate(ReviewBase):
 
 
 class ReviewUpdate(BaseModel):
-    data: Optional[Dict] = None
-    source_type: Optional[str] = None
+    data: dict | None = None
+    source_type: str | None = None
 
     @model_validator(mode="after")
     def validate_data_based_on_source(self):

@@ -5,7 +5,7 @@ This module provides functionality to analyze sentiment in text content.
 Uses NLTK's VADER for English and multi-language support via TextBlob.
 """
 
-from typing import Any, Dict, Tuple
+from typing import Any
 
 import nltk
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
@@ -25,7 +25,7 @@ class SentimentAnalyzer:
         """Initialize the sentiment analyzer with VADER for English."""
         self.vader = SentimentIntensityAnalyzer()
 
-    def analyze(self, text: str, language: str = "en") -> Dict[str, Any]:
+    def analyze(self, text: str, language: str = "en") -> dict[str, Any]:
         """
         Analyze the sentiment of the given text.
 
@@ -53,7 +53,7 @@ class SentimentAnalyzer:
         # Use TextBlob for other languages
         return self._analyze_with_textblob(text)
 
-    def _analyze_with_vader(self, text: str) -> Dict[str, Any]:
+    def _analyze_with_vader(self, text: str) -> dict[str, Any]:
         """Analyze sentiment using VADER (optimized for English)."""
         scores = self.vader.polarity_scores(text)
         sentiment, confidence = self._interpret_scores(
@@ -71,7 +71,7 @@ class SentimentAnalyzer:
             },
         }
 
-    def _analyze_with_textblob(self, text: str) -> Dict[str, Any]:
+    def _analyze_with_textblob(self, text: str) -> dict[str, Any]:
         """Analyze sentiment using TextBlob (works with multiple languages)."""
         blob = TextBlob(text)
 
@@ -99,8 +99,8 @@ class SentimentAnalyzer:
         }
 
     def _interpret_scores(
-        self, compound: float, detailed_scores: Tuple[float, float, float]
-    ) -> Tuple[str, float]:
+        self, compound: float, detailed_scores: tuple[float, float, float]
+    ) -> tuple[str, float]:
         """
         Interpret sentiment scores and determine category and confidence.
 

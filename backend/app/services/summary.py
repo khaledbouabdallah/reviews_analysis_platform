@@ -1,9 +1,9 @@
 import os
-from langchain_ollama import OllamaLLM
-from langchain.prompts import PromptTemplate
+
 from langchain.chains.llm import LLMChain
+from langchain.prompts import PromptTemplate
+from langchain_ollama import OllamaLLM
 from langsmith import traceable
-from core.config import logger
 
 QWEN2_5_MODEL = "qwen2.5:3b-instruct"
 GEMMA3_27B_MODEL = "gemma3:27b"

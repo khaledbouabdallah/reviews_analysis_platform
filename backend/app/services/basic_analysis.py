@@ -3,15 +3,14 @@
 Enhanced review service that automatically processes reviews when created.
 """
 
-from typing import Dict, Any, List
+from datetime import datetime, timezone
+
+from core.config import logger
 from db.repositories.reviews import ReviewRepository
-from models.review import ReviewCreate, ReviewInDB
+from models.review import ReviewInDB
 from services.cleaner import preprocess_comment
 from services.language import detect_language
 from services.sentiment import SentimentAnalyzer
-from core.config import logger
-from datetime import datetime, timezone
-from core.config import logger
 
 
 class BasicAnalyzer:
@@ -21,7 +20,7 @@ class BasicAnalyzer:
         self.review_repo = ReviewRepository()
         self.sentiment_analyzer = SentimentAnalyzer()
 
-    async def batch_simple_analyze(self, reviews: List[ReviewInDB]) -> List[ReviewInDB]:
+    async def batch_simple_analyze(self, reviews: list[ReviewInDB]) -> list[ReviewInDB]:
         """
         Process a batch of reviews for sentiment and language detection.
 
@@ -69,7 +68,7 @@ class BasicAnalyzer:
             translated_text = review.data.get("comment", None)
             translated_text = preprocess_comment(translated_text)
 
-            logger.info(f"doing sentiment analysis")
+            logger.info("doing sentiment analysis")
             # Analyze sentiment of english text
             sentiment_result = self.sentiment_analyzer.analyze(translated_text, "en")
 
@@ -85,7 +84,7 @@ class BasicAnalyzer:
                 "processed_at": datetime.now(timezone.utc),
             }
 
-            logger.info(f"updating review")
+            logger.info("updating review")
 
             # Update review with processed data
             updated_review = await self.review_repo.update_processed_data(
@@ -95,7 +94,7 @@ class BasicAnalyzer:
             return updated_review
 
         except Exception as e:
-            logger.error(f"Error processing review {review.id}: {str(e)}")
+            logger.error(f"Error processing review {review.id}: {e!s}")
             await self._mark_processing_failed(review.id, str(e))
             return None
 
@@ -112,7 +111,7 @@ class BasicAnalyzer:
             )
             return updated_review
         except Exception as e:
-            logger.error(f"Failed to mark review {review_id} as failed: {str(e)}")
+            logger.error(f"Failed to mark review {review_id} as failed: {e!s}")
 
     def _is_review_processed(self, review: ReviewInDB) -> bool:
         """Check if review has been successfully processed."""

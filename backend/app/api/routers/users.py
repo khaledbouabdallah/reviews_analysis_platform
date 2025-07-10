@@ -1,9 +1,8 @@
-from fastapi import APIRouter, HTTPException, status
-from typing import List
-from pymongo.errors import DuplicateKeyError
-from db.repositories.users import UserRepository
-from models.user import UserCreate, UserResponse, UserInDB
 from core.config import logger
+from db.repositories.users import UserRepository
+from fastapi import APIRouter, HTTPException, status
+from models.user import UserCreate, UserResponse
+from pymongo.errors import DuplicateKeyError
 
 router = APIRouter(prefix="/users", tags=["users"])
 user_repo = UserRepository()
@@ -52,11 +51,11 @@ async def create_user(user: UserCreate):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create user: {str(e)}",
+            detail=f"Failed to create user: {e!s}",
         )
 
 
-@router.get("/", response_model=List[UserResponse])
+@router.get("/", response_model=list[UserResponse])
 async def list_users(skip: int = 0, limit: int = 100):
     """
     Retrieve a list of users.
@@ -121,4 +120,3 @@ async def delete_user(user_id: str):
 
     # Delete the user
     await user_repo.delete(user_id)
-    return None
