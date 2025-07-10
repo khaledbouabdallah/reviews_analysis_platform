@@ -73,7 +73,7 @@ class ReviewInDB(ReviewBase):
 
 
 class ReviewResponse(ReviewBase):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    id: PyObjectId
 
 
 class ReviewCreate(ReviewBase):

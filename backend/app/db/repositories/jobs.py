@@ -5,6 +5,7 @@ from db.mongodb import (
     busniesses_collection,
     jobs_collection,
 )
+from db.repositories.reviews import ReviewRepository
 from models.job import JobCreate, JobUpdate, JobInDB, JobUpdateInternal
 from models import PyObjectId
 from pymongo import ReturnDocument
@@ -118,3 +119,85 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
             return [self.db_model.model_validate(job) for job in jobs_data]
         except PyMongoError as e:
             raise RuntimeError("Database error")
+        
+    async def delete_by_user(
+        self, user_id: str
+    ) -> bool:
+        """Delete all jobs of a user."""
+        try:
+            # Convert string to PyObjectId for database query
+            oid = PyObjectId(user_id)
+        except Exception:
+            raise ValueError("Invalid user_id format")
+
+        try:
+            result = await self.collection.delete_many({"user_id": oid})
+            logger.info(f"Deleted {result.deleted_count} jobs for user {oid}")
+            return result.deleted_count > 0
+
+        except PyMongoError as e:
+            logger.error(f"Database error while deleting jobs: {str(e)}")
+            raise RuntimeError("Database error while deleting jobs") 
+        
+        
+    async def delete_by_business(
+        self, business_id: str
+    ) -> bool:
+        """Delete all sources of business."""
+        try:
+            # Convert string to PyObjectId for database query
+            oid = PyObjectId(business_id)
+        except Exception:
+            raise ValueError("Invalid user_id or business_id format")
+
+        try:
+            result = await self.collection.delete_many({"business_id": oid})
+            logger.info(f"Deleted {result.deleted_count} sources for business {oid}")
+            return result.deleted_count > 0
+        
+        except PyMongoError as e:
+            logger.error(f"Database error while deleting sources: {str(e)}")
+            raise RuntimeError("Database error while deleting sources")
+
+ 
+    async def delete_by_source(
+        self, source_id: str
+    ) -> bool:
+        """Delete all jobs of a source."""
+        try:
+            # Convert string to PyObjectId for database query
+            oid = PyObjectId(source_id)
+        except Exception:
+            raise ValueError("Invalid user_id or source_id format")
+
+        try:
+            result = await self.collection.delete_many({"source_id": oid})
+            logger.info(f"Deleted {result.deleted_count} jobs for source {oid}")
+            return result.deleted_count > 0
+        
+        except PyMongoError as e:
+            logger.error(f"Database error while deleting jobs: {str(e)}")
+            raise RuntimeError("Database error while deleting jobs")
+        
+    async def delete(self, source_id: str) -> bool:
+        """Delete all data related to a job:jobs, reviews."""
+        try:
+            oid = PyObjectId(source_id)
+        except Exception:
+            raise ValueError("Invalid source_id format")
+
+        try:
+    
+            
+            review_repo = ReviewRepository()
+            await review_repo.delete_by_source(oid)
+            
+            # Finally, delete the job document itself
+            result = await self.collection.delete_one({"_id": oid})
+            logger.info(f"Deleted all data for job {oid}")
+            return result.deleted_count > 0 
+        
+        except PyMongoError as e:
+            logger.error(f"Database error during job deletion: {str(e)}")
+            raise RuntimeError("Error while deleting job data")
+

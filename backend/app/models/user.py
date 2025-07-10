@@ -51,7 +51,7 @@ class UserUpdate(BaseModel):
 
 # Response model for API clients
 class UserResponse(BaseModel):
-    id: PyObjectId = Field(alias="_id")
+    id: PyObjectId
     username: str
     email: Optional[EmailStr] = None
     disabled: bool = False

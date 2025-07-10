@@ -67,15 +67,16 @@ services:
     container_name: reviews_frontend
     restart: always
     ports:
-      - "8501:8501"
+      - "3000:3000"  # Only change the port
     depends_on:
       - backend
     environment:
-      - BACKEND_API_URL=http://backend:8000
-      - PYTHONUNBUFFERED=1
-      - PYTHONIOENCODING=UTF-8
+      #- NEXT_PUBLIC_API_URL=http://backend:8000  # Keep internal container communication
+      - NODE_ENV=development
     volumes:
       - ./frontend:/app
+      #- /app/node_modules
+      - /app/.next
     networks:
       - reviews_network
 

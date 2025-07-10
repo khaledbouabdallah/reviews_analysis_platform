@@ -56,7 +56,6 @@ app.include_router(reviews.router, prefix="/api")
 app.include_router(analyzer.router, prefix="/api")
 
 
-# Define API endpoints
 @app.get("/")
 async def root():
     """Root endpoint with API information."""

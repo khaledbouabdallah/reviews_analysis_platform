@@ -1,8 +1,13 @@
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
-from bson import ObjectId
+from models import PyObjectId
 from db.mongodb import users_collection
+from db.repositories.businesses import BusinessRepository
+from db.repositories.sources import SourceRepository
+from db.repositories.jobs import JobRepository
+from db.repositories.reviews import ReviewRepository
 from models.user import UserCreate, UserInDB, UserUpdate, UserResponse
+from pymongo.errors import PyMongoError, DuplicateKeyError
 from core.security import get_password_hash
 from pymongo import ReturnDocument
 from core.config import logger
@@ -30,7 +35,7 @@ class UserRepository:
     async def get_by_id(self, user_id: str) -> Optional[UserInDB]:
         """Get a user by ID."""
         try:
-            user_data = await users_collection.find_one({"_id": ObjectId(user_id)})
+            user_data = await users_collection.find_one({"_id": PyObjectId(user_id)})
             if user_data:
                 return UserInDB.model_validate(user_data)
             return None
@@ -62,7 +67,7 @@ class UserRepository:
     async def update(self, user_id: str, update_data: UserUpdate) -> UserInDB | None:
         """Update a user and return the updated document."""
         try:
-            oid = ObjectId(user_id)
+            oid = PyObjectId(user_id)
         except Exception:
             return None
 
@@ -81,11 +86,31 @@ class UserRepository:
         if updated_user:
             return UserInDB.model_validate(updated_user)
         return None
-
+    
     async def delete(self, user_id: str) -> bool:
-        """Delete a user."""
+        """Delete all data related to a user: businesses, sources, jobs, reviews."""
         try:
-            result = await users_collection.delete_one({"_id": ObjectId(user_id)})
-            return result.deleted_count > 0
-        except:
-            return False
+            oid = PyObjectId(user_id)
+        except Exception:
+            raise ValueError("Invalid user_id format")
+
+        try:
+            business_repo = BusinessRepository()
+            source_repo = SourceRepository()
+            job_repo = JobRepository()
+            review_repo = ReviewRepository()
+
+            await business_repo.delete_by_user(user_id)
+            await source_repo.delete_by_user(user_id)
+            await job_repo.delete_by_user(user_id)
+            await review_repo.delete_by_user(user_id)
+            
+            
+            # Finally, delete the user document itself
+            result = await users_collection.delete_one({"_id": oid})
+            logger.info(f"Deleted all data for user {user_id}")
+            return result.deleted_count > 0 
+        
+        except PyMongoError as e:
+            logger.error(f"Database error during user deletion: {str(e)}")
+            raise RuntimeError("Error while deleting user data")

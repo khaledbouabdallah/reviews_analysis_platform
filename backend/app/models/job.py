@@ -125,4 +125,4 @@ class JobUpdateInternal(JobBase):
 class JobResponse(JobBase):
     """Used for returning job data in API responses."""
 
-    job_id: PyObjectId = Field(alias="_id")
+    job_id: PyObjectId

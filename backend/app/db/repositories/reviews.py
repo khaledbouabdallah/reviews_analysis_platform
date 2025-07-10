@@ -163,3 +163,85 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
         except PyMongoError as e:
             logger.error(f"Database error while updating processed data: {str(e)}")
             raise RuntimeError("Database error while updating processed data")
+        
+    async def delete_by_user(self, user_id: str) -> bool:
+        """Delete all reviews of a user."""
+        try:
+            oid = PyObjectId(user_id)
+        except Exception:
+            raise ValueError("Invalid user_id format")
+
+        try:
+            result = await self.collection.delete_many({"user_id": oid})
+            logger.info(f"Deleted {result.deleted_count} reviews for user {user_id}")
+            return result.deleted_count > 0
+        except PyMongoError as e:
+            logger.error(f"Database error while deleting reviews: {str(e)}")
+            raise RuntimeError("Database error while deleting reviews")
+
+    async def delete_by_business(self, business_id: str) -> bool:
+        """Delete all reviews of a business."""
+        try:
+            oid = PyObjectId(business_id)
+        except Exception:
+            raise ValueError("Invalid business_id format")
+
+        try:
+            result = await self.collection.delete_many({"business_id": oid})
+            logger.info(f"Deleted {result.deleted_count} reviews for business {business_id}")
+            return result.deleted_count > 0
+        except PyMongoError as e:
+            logger.error(f"Database error while deleting reviews: {str(e)}")
+            raise RuntimeError("Database error while deleting reviews")
+        
+    async def delete_by_source(self, source_id: str) -> bool:
+        """Delete all reviews of a source."""
+        try:
+            oid = PyObjectId(source_id)
+        except Exception:
+            raise ValueError("Invalid source_id format")
+
+        try:
+            result = await self.collection.delete_many({"source_id": oid})
+            logger.info(f"Deleted {result.deleted_count} reviews for source {source_id}")
+            return result.deleted_count > 0
+        except PyMongoError as e:
+            logger.error(f"Database error while deleting reviews by source: {str(e)}")
+            raise RuntimeError("Database error while deleting reviews by source")
+        
+    
+        
+    async def delete_by_job(
+        self, source_id: str
+    ) -> None:
+        """Delete all jobs of a source."""
+        try:
+            # Convert string to PyObjectId for database query
+            oid = PyObjectId(source_id)
+        except Exception:
+            raise ValueError("Invalid user_id or source_id format")
+
+        try:
+            result = await self.collection.delete_many({"source_id": oid})
+            logger.info(f"Deleted {result.deleted_count} jobs for source {source_id}")
+            return None
+        
+        except PyMongoError as e:
+            logger.error(f"Database error while deleting jobs: {str(e)}")
+            raise RuntimeError("Database error while deleting jobs")
+        
+        
+    async def delete(self, review_id: str) -> bool:
+        """Delete a specific review."""
+        try:
+            oid = PyObjectId(review_id)
+        except Exception:
+            raise ValueError("Invalid review_id format")
+
+        try:
+            result = await self.collection.delete_one({"_id": oid})
+            logger.info(f"Deleted review {review_id}")
+            return result.deleted_count > 0
+        except PyMongoError as e:
+            logger.error(f"Database error while deleting review: {str(e)}")
+            raise RuntimeError("Database error while deleting review")
