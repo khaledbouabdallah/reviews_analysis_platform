@@ -7,7 +7,7 @@ from core.security import create_access_token, verify_password
 from db.repositories.users import UserRepository
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from models.user import UserInDB
+from models.user import UserCreate, UserInDB
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -24,7 +24,7 @@ class TokenData(BaseModel):
 
 
 @router.post("/login", response_model=Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):  # noqa: B008 - FastAPI dependency injection
     """
     Login endpoint that returns JWT token
     """
@@ -59,37 +59,44 @@ async def register_user(user_data: dict):
     """
     Register new user (can be moved to users router if preferred)
     """
+    # Validate input data
     try:
-        from models.user import UserCreate
-
-        # Validate input
         user_create = UserCreate(**user_data)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e),
+        ) from e
 
-        # Check if user already exists
-        existing_user = await user_repo.get_by_username(user_create.username)
-        if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Username already registered",
-            )
+    # Check if user already exists
+    existing_user = await user_repo.get_by_username(user_create.username)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username already registered",
+        )
 
-        existing_email = await user_repo.get_by_email(user_create.email)
-        if existing_email:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail="Email already registered"
-            )
+    existing_email = await user_repo.get_by_email(user_create.email)
+    if existing_email:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already registered",
+        )
 
-        # Create user
+    # Create the user
+    try:
         new_user = await user_repo.create(user_create)
-
-        return {"message": "User registered successfully", "user_id": str(new_user.id)}
-
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to register user",
+        ) from e
+
+    return {"message": "User registered successfully", "user_id": str(new_user.id)}
 
 
 @router.get("/me")
-async def read_users_me(current_user: UserInDB = Depends(get_current_active_user)):
+async def read_users_me(current_user: UserInDB = Depends(get_current_active_user)):  # noqa: B008 - FastAPI dependency injection
     """
     Get current user info
     """
@@ -102,20 +109,15 @@ async def read_users_me(current_user: UserInDB = Depends(get_current_active_user
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_my_account(current_user: UserInDB = Depends(get_current_active_user)):
+async def delete_my_account(current_user: UserInDB = Depends(get_current_active_user)):  # noqa: B008 - FastAPI dependency injection
     """
     Delete the current user's account and all associated data
     """
     try:
-        # TODO Delete user's businesses (and cascade to sources, jobs, reviews)
-        # await business_repo.delete_by_user(str(current_user.id))
-
         # Delete the user account
         await user_repo.delete(str(current_user.id))
-
-        return
-    except Exception:
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete account",
-        )
+        ) from e

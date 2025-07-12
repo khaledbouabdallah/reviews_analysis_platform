@@ -98,7 +98,7 @@ class TestBusinesses:
         )
         business_id = create_response.json()["id"]
 
-        # Delete business
+        # Delete
         response = requests.delete(
             f"{base_url}/businesses/{business_id}",
             headers=authenticated_user["headers"],

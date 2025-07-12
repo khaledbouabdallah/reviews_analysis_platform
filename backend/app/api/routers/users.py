@@ -19,7 +19,6 @@ async def create_user(user: UserCreate):
     - **full_name**: optional user's full name
     """
     try:
-        logger.info(f"router: Creating user 1: {user}")
         # Check if username already exists
         existing_user = await user_repo.get_by_username(user.username)
         if existing_user:
@@ -28,8 +27,6 @@ async def create_user(user: UserCreate):
                 detail="Username already registered",
             )
 
-        logger.info(f"router: Creating user 2: {user}")
-
         # Check if email already exists
         existing_email = await user_repo.get_by_email(user.email)
         if existing_email:
@@ -37,22 +34,16 @@ async def create_user(user: UserCreate):
                 status_code=status.HTTP_409_CONFLICT, detail="Email already registered"
             )
 
-        logger.info(f"router: Creating user 3: {user}")
         # Create the user
         new_user = await user_repo.create(user)
-        logger.info(f"router: created!: {user}")
-        return UserResponse.model_validate(new_user.model_dump(by_alias=True))
+        logger.info(f"Creating user: {user.username}, {user.id}")
+        return UserResponse.model_validate(new_user.model_dump(by_alias=False))
 
-    except DuplicateKeyError:
+    except DuplicateKeyError as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Username or email already exists",
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create user: {e!s}",
-        )
+        ) from e
 
 
 @router.get("/", response_model=list[UserResponse])
