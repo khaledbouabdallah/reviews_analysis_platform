@@ -5,7 +5,7 @@ import requests
 class TestJobs:
     """Test job CRUD operations"""
 
-    @pytest.fixture()
+    @pytest.fixture
     def complete_setup(
         self, base_url, authenticated_user, business_data, source_data, job_data
     ):

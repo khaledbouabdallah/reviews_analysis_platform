@@ -146,6 +146,23 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
             logger.error(f"Database error while deleting sources: {e!s}")
             raise RuntimeError("Database error while deleting sources")
 
+    async def delete_by_location(self, location_id: str) -> bool:
+        """Delete all sources of location."""
+        try:
+            # Convert string to PyObjectId for database query
+            oid = PyObjectId(location_id)
+        except Exception:
+            raise ValueError("Invalid user_id or location_id format")
+
+        try:
+            result = await self.collection.delete_many({"location_id": oid})
+            logger.info(f"Deleted {result.deleted_count} sources for location {oid}")
+            return result.deleted_count > 0
+
+        except PyMongoError as e:
+            logger.error(f"Database error while deleting sources: {e!s}")
+            raise RuntimeError("Database error while deleting sources")
+
     async def delete_by_source(self, source_id: str) -> bool:
         """Delete all jobs of a source."""
         try:

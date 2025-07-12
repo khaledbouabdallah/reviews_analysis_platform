@@ -1,25 +1,26 @@
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import (
-    NoSuchElementException,
-    TimeoutException,
-    StaleElementReferenceException,
-)
-import random
-import re
+import argparse
 import datetime
-import time
-import pandas as pd
-import os
 import json
 import logging
-import argparse
+import os
+import random
+import re
+import time
+
+import pandas as pd
 import undetected_chromedriver as uc
+from selenium import webdriver
+from selenium.common.exceptions import (
+    NoSuchElementException,
+    StaleElementReferenceException,
+    TimeoutException,
+)
+from selenium.webdriver.common.by import By
 
 # import types for type hinting
 from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 ignored_exceptions = (
     NoSuchElementException,
@@ -67,10 +68,9 @@ def get_arguments():
             return v
         if v.lower() in ("yes", "true", "t", "y", "1"):
             return True
-        elif v.lower() in ("no", "false", "f", "n", "0"):
+        if v.lower() in ("no", "false", "f", "n", "0"):
             return False
-        else:
-            raise argparse.ArgumentTypeError("Boolean value expected.")
+        raise argparse.ArgumentTypeError("Boolean value expected.")
 
     # read arguments from the command line
     parser = argparse.ArgumentParser(description="Google Maps Review Scraper")
@@ -160,7 +160,7 @@ class GoogleMapsReviewScraper:
         extra_headers=[],
     ):
 
-        # todo: make sure the URL is a valid Google Maps reviews link
+        # TODO: make sure the URL is a valid Google Maps reviews link
         options = webdriver.ChromeOptions()
         self.now = NOW
         self.headless = headless
@@ -200,7 +200,7 @@ class GoogleMapsReviewScraper:
 
             self.accept_cookies()
         except Exception as e:
-            logging.error(f"Error connecting to {MAPS_LINK}")
+            logging.exception(f"Error connecting to {MAPS_LINK}")
             raise e
 
     def accept_cookies(self):
@@ -215,7 +215,7 @@ class GoogleMapsReviewScraper:
         time.sleep(0.5)
 
         logging.info("Clicked on accept cookies button")
-        self.driver.save_screenshot(f"cookies_accepted_check.png")
+        self.driver.save_screenshot("cookies_accepted_check.png")
         logging.info("Clicked on accept cookies button")
 
         # check if the cookie banner is still visible
@@ -238,7 +238,7 @@ class GoogleMapsReviewScraper:
             self.cookies_accepted = True
 
         # take a screenshot of the page after accepting cookies
-        self.driver.save_screenshot(f"cookies_accepted.png")
+        self.driver.save_screenshot("cookies_accepted.png")
 
     def connect(self, url):
 
@@ -248,15 +248,15 @@ class GoogleMapsReviewScraper:
         # remove spaces and new lines from the URL
         # url = re.sub(r"\s+", "", url)
 
-        logging.info(f"Connecting to target url")
-        self.driver.save_screenshot(f"main_google.png")
-        logging.info(f"Connecting to target url 2")
+        logging.info("Connecting to target url")
+        self.driver.save_screenshot("main_google.png")
+        logging.info("Connecting to target url 2")
 
         try:
             self.driver.get(url)
-            logging.info(f"Connected to target page! ")
-            self.driver.save_screenshot(f"target_page_.png")
-            logging.info(f"Connected to target page! 2 ")
+            logging.info("Connected to target page! ")
+            self.driver.save_screenshot("target_page_.png")
+            logging.info("Connected to target page! 2 ")
             if not self.cookies_accepted:
                 self.accept_cookies()
 
@@ -265,7 +265,7 @@ class GoogleMapsReviewScraper:
                 hotel = True
             except Exception as e:
                 hotel = False
-                logging.error(f"Error checking if hotel: {e}")
+                logging.exception(f"Error checking if hotel: {e}")
 
             logging.info(f"is hotel: {hotel}")
 
@@ -275,14 +275,14 @@ class GoogleMapsReviewScraper:
                 #'//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]/div[1]/div/div[2]/div[3]'
                 path = "//div[contains(@class, 'jANrlb')]/div[3]"
 
-            logging.info(f"getting total reviews ... ")
+            logging.info("getting total reviews ... ")
             total_reviews = self._get_element_(path, type_=By.XPATH).text
             total_reviews = int(re.sub(r"\D", "", total_reviews))
             logging.info(f"Total reviews: {total_reviews}")
             return total_reviews
 
         except Exception as e:
-            logging.error(f"Error in connect method: {e}")
+            logging.exception(f"Error in connect method: {e}")
             raise e
 
     def extract_data(self, total_reviews):
@@ -347,7 +347,7 @@ class GoogleMapsReviewScraper:
                     return reviews_data
 
             except (StaleElementReferenceException, TimeoutException) as e:
-                logging.error(f"TimeoutException: {e}")
+                logging.exception(f"TimeoutException: {e}")
                 nb_tries += 1
                 continue
             raise TimeoutException(
@@ -418,22 +418,22 @@ class GoogleMapsReviewScraper:
                 elements = self.wait.until(condition((type_, target)))
             return elements
         except TimeoutException as e:
-            logging.error(
+            logging.exception(
                 f"TimeoutException: Unable to locate element with {type_} : {target}"
             )
             raise e
         except NoSuchElementException as e:
-            logging.error(
+            logging.exception(
                 f"NoSuchElementException: Unable to locate element with {type_} : {target}"
             )
             raise e
         except StaleElementReferenceException as e:
-            logging.error(
+            logging.exception(
                 f"StaleElementReferenceException: Unable to locate element with {type_} : {target}"
             )
             raise e
         except Exception as e:
-            logging.error(f"Exception: No defined exception for {type_} : {target}")
+            logging.exception(f"Exception: No defined exception for {type_} : {target}")
             raise e
 
     def exit(self, force=False):
@@ -542,7 +542,7 @@ class GoogleMapsReviewScraper:
         self.driver.get(MAPS_LINK)
         self.accept_cookies()
         self.now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        logging.info("Resetting the scraper at {}".format(self.now))
+        logging.info(f"Resetting the scraper at {self.now}")
 
 
 if __name__ == "__main__":
@@ -567,7 +567,7 @@ if __name__ == "__main__":
             data=data, path=args.path, name=args.name, timestamp=args.timestamp
         )
     except Exception as e:
-        logging.error(f"Error: {e}")
+        logging.exception(f"Error: {e}")
     finally:
 
         if "scrapper" in locals():

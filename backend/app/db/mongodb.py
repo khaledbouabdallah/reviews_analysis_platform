@@ -7,9 +7,11 @@ db = client[settings.MONGODB_DB_NAME]
 
 users_collection = db["users"]
 busniesses_collection = db["busniesses"]
+locations_collection = db["locations"]
 sources_collection = db["sources"]
 jobs_collection = db["jobs"]
 reviews_collection = db["reviews"]
+
 
 
 async def init_indexes():

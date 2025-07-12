@@ -1,12 +1,12 @@
-from db.repositories.base_repository import BaseRepository
-from db.mongodb import sources_collection, jobs_collection
-from models.job import JobCreate, JobUpdate, JobInDB, JobUpdateInternal
-from models import PyObjectId
-from pymongo import ReturnDocument
-from pymongo.errors import PyMongoError, DuplicateKeyError
-from typing import List, Optional
-from db.repositories.helpers import ValidatorHelper
+
 from core.config import logger
+from db.mongodb import jobs_collection, sources_collection
+from db.repositories.base_repository import BaseRepository
+from db.repositories.helpers import ValidatorHelper
+from models import PyObjectId
+from models.job import JobCreate, JobInDB, JobUpdate, JobUpdateInternal
+from pymongo import ReturnDocument
+from pymongo.errors import DuplicateKeyError, PyMongoError
 
 
 class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
@@ -37,15 +37,15 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
             raise ValueError("Job with this name already exists")
 
         except PyMongoError as e:
-            logger.error(f"Database error while creating job: {str(e)}")
+            logger.error(f"Database error while creating job: {e!s}")
             raise RuntimeError("Database error while creating job")
 
         except ValueError as e:
-            raise ValueError(f"Invalid data: {str(e)}")
+            raise ValueError(f"Invalid data: {e!s}")
 
         except Exception as e:
-            logger.error(f"Unexpected error: {str(e)}")
-            raise RuntimeError(f"Unexpected error: {str(e)}")
+            logger.error(f"Unexpected error: {e!s}")
+            raise RuntimeError(f"Unexpected error: {e!s}")
 
     async def update_internal(
         self, job_id: str, job_update: JobUpdateInternal
@@ -70,15 +70,14 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
 
             if updated_job:
                 return self.db_model.model_validate(updated_job)
-            else:
-                raise ValueError("Job not found")
+            raise ValueError("Job not found")
         except PyMongoError as e:
-            logger.error(f"Database error while updating job: {str(e)}")
+            logger.error(f"Database error while updating job: {e!s}")
             raise RuntimeError("Database error while updating job")
 
     async def get_by_user(
         self, user_id: str, skip: int = 0, limit: int = 100
-    ) -> List[JobInDB]:
+    ) -> list[JobInDB]:
         """Get all jobs of a user."""
         try:
             oid = PyObjectId(user_id)
@@ -92,12 +91,12 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
                 .to_list(length=limit)
             )
             return [self.db_model.model_validate(job) for job in jobs_data]
-        except PyMongoError as e:
+        except PyMongoError:
             raise RuntimeError("Database error")
 
     async def get_by_business(
         self, business_id: str, skip: int = 0, limit: int = 100
-    ) -> List[JobInDB]:
+    ) -> list[JobInDB]:
         """Get all jobs of a business."""
         try:
             oid = PyObjectId(business_id)
@@ -111,5 +110,5 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
                 .to_list(length=limit)
             )
             return [self.db_model.model_validate(job) for job in jobs_data]
-        except PyMongoError as e:
+        except PyMongoError:
             raise RuntimeError("Database error")

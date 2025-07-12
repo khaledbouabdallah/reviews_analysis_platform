@@ -5,6 +5,7 @@ from db.mongodb import busniesses_collection, users_collection
 from db.repositories.base_repository import BaseRepository
 from db.repositories.helpers import ValidatorHelper
 from db.repositories.jobs import JobRepository
+from db.repositories.locations import LocationRepository
 from db.repositories.reviews import ReviewRepository
 from db.repositories.sources import SourceRepository
 from models import PyObjectId
@@ -101,7 +102,9 @@ class BusinessRepository(BaseRepository[BusinessCreate, BusinessUpdate, Business
             source_repo = SourceRepository()
             job_repo = JobRepository()
             review_repo = ReviewRepository()
+            location_repo = LocationRepository()
 
+            await location_repo.delete_by_business(oid)
             await source_repo.delete_by_business(oid)
             await job_repo.delete_by_business(oid)
             await review_repo.delete_by_business(oid)

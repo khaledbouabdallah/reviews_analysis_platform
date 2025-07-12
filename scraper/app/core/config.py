@@ -1,6 +1,6 @@
-from pydantic_settings import BaseSettings  # type: ignore
 import logging
 
+from pydantic_settings import BaseSettings  # type: ignore
 
 logger = logging.getLogger("uvicorn")
 

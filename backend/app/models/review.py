@@ -38,6 +38,7 @@ class ProcessedData(BaseModel):
 class ReviewBase(BaseModel):
     user_id: PyObjectId
     business_id: PyObjectId
+    location_id: PyObjectId | None = None
     source_id: PyObjectId
     job_id: PyObjectId
     data: dict

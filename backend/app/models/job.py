@@ -19,6 +19,7 @@ class JobBase(BaseModel):
     error: str | None = None
     user_id: PyObjectId
     business_id: PyObjectId
+    location_id: PyObjectId | None = None
     source_id: PyObjectId
     source_type: str
 

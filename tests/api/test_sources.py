@@ -5,7 +5,7 @@ import requests
 class TestSources:
     """Test source CRUD operations"""
 
-    @pytest.fixture()
+    @pytest.fixture
     def business_with_source(
         self, base_url, authenticated_user, business_data, source_data
     ):
@@ -48,15 +48,18 @@ class TestSources:
             f"{base_url}/sources",
             json=business_with_source["source_data"],
             headers=business_with_source["headers"],
+            timeout=3,
         )
         assert create_response.status_code == 201
 
         # List sources
         response = requests.get(
-            f"{base_url}/sources", headers=business_with_source["headers"]
+            f"{base_url}/sources", headers=business_with_source["headers"], timeout=3
         )
 
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
         assert len(data) >= 1
+
+    # def test_create_source_with_location(self, base_url, business_with_source)

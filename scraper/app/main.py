@@ -1,17 +1,12 @@
-from fastapi import FastAPI, BackgroundTasks, HTTPException, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List, Dict, Any
 import os
-import logging
-import time
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 # print current working directory
 print("Current working directory:", os.getcwd())
-from routers.google_scrapper import router as google_scraper_router
 from routers.core import router as core_router
-from core.config import settings
-
+from routers.google_scrapper import router as google_scraper_router
 
 # Import the scraper class
 

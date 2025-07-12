@@ -1,16 +1,16 @@
-from datetime import datetime, timezone
-from db.mongodb import db, jobs_collection, reviews_collection
-from scrapers.google_reviews.google_reviews_scrapper import GoogleMapsReviewScraper
-from anyio import to_thread
-from core.config import settings
 import logging
+from datetime import datetime, timezone
+
+from anyio import to_thread
+from scrapers.google_reviews.google_reviews_scrapper import GoogleMapsReviewScraper
 
 logging.basicConfig(level=logging.INFO)
-from models.job import JobCreate, JobUpdateInternal
-from models.review import ReviewCreate, ReviewUpdate
+import tempfile
+
 from db.repositories.jobs import JobRepository
 from db.repositories.reviews import ReviewRepository
-import tempfile
+from models.job import JobCreate, JobUpdateInternal
+from models.review import ReviewCreate
 
 job_repo = JobRepository()
 review_repo = ReviewRepository()

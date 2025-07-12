@@ -17,7 +17,7 @@ def base_url():
     return "http://localhost:8000/api"
 
 
-@pytest.fixture()
+@pytest.fixture
 def test_user_data():
     """Generate unique test user data for each test"""
     unique_id = str(uuid.uuid4())[:8]
@@ -28,7 +28,7 @@ def test_user_data():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def authenticated_user(
     base_url: str, test_user_data: dict
 ) -> Generator[dict, None, None]:
@@ -72,21 +72,31 @@ def authenticated_user(
         pass  # Ignore cleanup failures
 
 
-@pytest.fixture()
+@pytest.fixture
 def business_data():
     """Sample business data"""
     unique_id = str(uuid.uuid4())[:8]
     return {"name": f"Test Business {unique_id}"}
 
 
-@pytest.fixture()
+@pytest.fixture
+def location_data():
+    """Sample location data"""
+    unique_id = str(uuid.uuid4())[:8]
+    return {
+        "name": f"Test Location {unique_id}",
+        "adresse": "Test adresse",  # Simulating a business ID
+    }
+
+
+@pytest.fixture
 def source_data():
     """Sample source data"""
     unique_id = str(uuid.uuid4())[:8]
     return {"name": f"Test Source {unique_id}", "type": "google"}
 
 
-@pytest.fixture()
+@pytest.fixture
 def job_data():
     """Sample job data"""
     return {

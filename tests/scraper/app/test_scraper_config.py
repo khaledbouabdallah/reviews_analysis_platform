@@ -1,20 +1,14 @@
+
 import pytest
 from pydantic import ValidationError
-from typing import List
-
-import sys
-import os
 
 # Add the project root directory to the Python path
 # sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
-
-
 # Import your ScraperConfig model
 # If your ScraperConfig is in a module called 'app', you would do:
 # from app.main import ScraperConfig
 # Adjust the import path based on your project structure
 from scraper.app.main import ScraperConfig
-
 
 # Test data
 alid_reviews_urls = [

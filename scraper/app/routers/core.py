@@ -1,8 +1,5 @@
-from fastapi import APIRouter, HTTPException, status, BackgroundTasks
-from typing import List, Optional
-from datetime import datetime
-from db.mongodb import db, jobs_collection
 
+from fastapi import APIRouter
 
 router = APIRouter()
 

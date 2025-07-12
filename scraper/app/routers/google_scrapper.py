@@ -1,17 +1,10 @@
-from fastapi import APIRouter, HTTPException, status, BackgroundTasks
-from typing import List, Optional
-from pydantic import BaseModel, Field, field_validator
-from datetime import datetime
-import re
-import dotenv
-import os
-import time
+
+from db.repositories.jobs import JobRepository
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 
 # from models.core import JobStatus, ScraperConfig
-from models.job import JobResponse, JobCreate, JobInDB
-from db.mongodb import db, jobs_collection
+from models.job import JobInDB, JobResponse
 from scrapers.google_reviews.runner import run_scraper_job
-from db.repositories.jobs import JobRepository
 
 router = APIRouter()
 
