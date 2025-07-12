@@ -58,6 +58,10 @@ export class DashboardService {
       throw new Error(`API Error: ${response.status}`);
     }
 
+    if (options.method === 'DELETE' || response.status === 204) {
+    return response; // Return response object, not parsed JSON
+  }
+
     return response.json();
   }
 
@@ -94,6 +98,39 @@ export class DashboardService {
       return [];
     }
   }
+
+  async deleteBusiness(businessId: string): Promise<void> {
+    try {
+      const response = await this.fetchWithAuth(`/api/businesses/${businessId}/`, {
+        method: 'DELETE',
+      });
+      //console.log('Business deleted successfully');
+      console.log('Response:', response.status);
+      if (response.status !== 204) {
+        throw new Error('Failed to delete business');
+      }
+    } catch (error) {
+      console.error('Error deleting business:', error);
+      throw error;
+    }
+  }
+
+
+  async updateBusiness(businessId: string, data: { name: string }): Promise<Business> {
+  try {
+    const response = await this.fetchWithAuth(`/api/businesses/${businessId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    
+    return response;
+  } catch (error) {
+    console.error('Error updating business:', error);
+    throw error;
+  }
+}
+
+
 
   async getBusinessesWithStats(): Promise<BusinessWithStats[]> {
     try {

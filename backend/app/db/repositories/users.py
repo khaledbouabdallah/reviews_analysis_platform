@@ -19,8 +19,6 @@ class UserRepository:
     async def get_by_username(self, username: str) -> UserInDB | None:
         """Get a user by username."""
         user_data = await users_collection.find_one({"username": username})
-        logger.info(f"get_by_username: {user_data}, {bool(user_data)}")
-
         if user_data:
             return UserInDB.model_validate(user_data)
         return None
@@ -55,11 +53,7 @@ class UserRepository:
         user_dict["hashed_password"] = get_password_hash(user.password)
         user_dict["created_at"] = datetime.now(timezone.utc)
         user_dict["updated_at"] = datetime.now(timezone.utc)
-
-        logger.info(f"Creating user: {user_dict}")
-
         result = await users_collection.insert_one(user_dict)
-        logger.info(f"User created with ID: {result.inserted_id}")
         user_dict["_id"] = result.inserted_id
 
         return UserInDB.model_validate(user_dict)
@@ -91,8 +85,9 @@ class UserRepository:
         """Delete all data related to a user: businesses, sources, jobs, reviews."""
         try:
             oid = PyObjectId(user_id)
-        except Exception:
-            raise ValueError("Invalid user_id format")
+        except ValueError as e:
+            logger.error(f"Invalid user_id format: {user_id}")
+            raise ValueError(f"Invalid user_id format: {user_id}") from e
 
         try:
             business_repo = BusinessRepository()
@@ -104,12 +99,17 @@ class UserRepository:
             await source_repo.delete_by_user(user_id)
             await job_repo.delete_by_user(user_id)
             await review_repo.delete_by_user(user_id)
-
             # Finally, delete the user document itself
             result = await users_collection.delete_one({"_id": oid})
-            logger.info(f"Deleted all data for user {user_id}")
-            return result.deleted_count > 0
 
         except PyMongoError as e:
-            logger.error(f"Database error during user deletion: {e!s}")
-            raise RuntimeError("Error while deleting user data")
+            error_message = "Error while deleting user data: {e!s}"
+            logger.error(error_message)
+            raise PyMongoError(error_message) from e
+        except Exception as e:
+            error_message = f"Unexpected error while deleting user data: {e!s}"
+            logger.error(error_message)
+            raise Exception(error_message) from e
+
+        else:
+            return result.deleted_count > 0

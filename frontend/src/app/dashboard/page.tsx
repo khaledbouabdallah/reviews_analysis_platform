@@ -77,25 +77,25 @@ export default function DashboardPage() {
         {/* Stats Cards */}
         <StatsCards stats={stats} loading={loading} />
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          {/* Businesses - Takes 2 columns on large screens */}
-          <div className="lg:col-span-2">
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Your Businesses</h2>
-              <BusinessGrid businesses={businesses} loading={loading} />
-            </div>
-          </div>
 
-          {/* Sidebar - Takes 1 column on large screens */}
-          <div className="space-y-6">
-            <QuickActions />
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">System Status</h2>
-              <p className="text-sm text-gray-600">All systems operational</p>
-            </div>
+
+
+        {/* Business Grid - Full Width */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Your Businesses</h2>
+          <div className="text-sm text-gray-500">
+            {!loading && businesses.length > 0 && (
+              <span>{businesses.length} business{businesses.length !== 1 ? 'es' : ''}</span>
+            )}
           </div>
         </div>
+        <BusinessGrid 
+          businesses={businesses} 
+          loading={loading}
+          onBusinessCreated={loadDashboardData}
+        />
+      </div>
 
         {/* Recent Activity - Full width */}
         <div className="mb-8">
