@@ -9,8 +9,8 @@ import { DashboardNavigation } from '@/components/dashboard/DashboardNavigation'
 import { StatsCards } from '@/components/dashboard/StatsCards';
 import { BusinessGrid } from '@/components/dashboard/BusinessGrid';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
-import { QuickActions } from '@/components/dashboard/QuickActions';
-// import { SystemStatus } from '@/components/dashboard/SystemStatus';
+
+
 
 export default function DashboardPage() {
   const router = useRouter();
