@@ -2,11 +2,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { 
-  Plus, 
-  Play, 
-  MessageSquare, 
-  BarChart3, 
+import {
+  Plus,
+  Play,
+  MessageSquare,
+  BarChart3,
   ArrowRight,
   Zap
 } from 'lucide-react';

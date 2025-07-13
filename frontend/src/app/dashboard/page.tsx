@@ -40,7 +40,7 @@ export default function DashboardPage() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      
+
       // Load all dashboard data in parallel
       const [statsData, businessesData, activitiesData, statusData] = await Promise.all([
         dashboardService.getDashboardStats(),
@@ -64,7 +64,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardNavigation />
-      
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="mb-8">
@@ -90,8 +90,8 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
-        <BusinessGrid 
-          businesses={businesses} 
+        <BusinessGrid
+          businesses={businesses}
           loading={loading}
           onBusinessCreated={loadDashboardData}
         />
