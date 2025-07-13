@@ -1,15 +1,17 @@
-import argparse
-import datetime
 import json
 import logging
 import os
 import random
 import re
 import time
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from typing import Any
 
 import pandas as pd
 import undetected_chromedriver as uc
-from selenium import webdriver
+from dateutil.relativedelta import relativedelta
 from selenium.common.exceptions import (
     NoSuchElementException,
     StaleElementReferenceException,
@@ -27,21 +29,71 @@ ignored_exceptions = (
     StaleElementReferenceException,
 )
 
-NOW = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-# DATA_PATH = "data"
+
+NOW = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 MAPS_LINK = "https://www.google.com/maps"
-
-
-script_dir = os.path.dirname(os.path.abspath(__file__))
-scraper_dir = os.path.dirname(script_dir)
-chromedriver_path = os.path.join(scraper_dir, "Driver", "chromedriver")
-
 
 # go to parent directory
 os.chdir(os.path.dirname(os.getcwd()))
 
 
-def convert_to_google_com(url):
+@dataclass
+class ScraperConfig:
+    """Configuration class for GoogleMapsReviewScraper"""
+
+    headless: bool = True
+    verbose: bool = False
+    timeout: int = 10
+    original: bool = True
+    language: str = "en"
+    concat_extra: bool = False
+    log_file: str | None = None
+    extra_headers: list[str] = field(default_factory=list)
+    progress_callback: Callable[[dict[str, Any]], None] | None = None
+
+
+def parse_relative_date(text: str) -> str:
+    text = text.strip().lower()
+
+    # Remove optional words like "edited", "on", etc.
+    text = re.sub(r"^(edited|updated)\s+", "", text)
+    text = re.sub(r"\s+on$", "", text)
+
+    # Convert "a" to "1" for expressions like "a year ago"
+    text = re.sub(r"\ba\b", "1", text)
+
+    # Try to match expressions like "1 year ago", "16 hours ago", etc.
+    match = re.match(r"(\d+)\s+(second|minute|hour|day|week|month|year)s?\s+ago", text)
+    if not match:
+        if "just now" in text or "moments ago" in text:
+            return datetime.now().strftime("%Y-%m-%d")
+        raise ValueError(f"Unrecognized time format: '{text}'")
+
+    value, unit = int(match.group(1)), match.group(2)
+    now = datetime.now()
+
+    if unit == "second":
+        delta = timedelta(seconds=value)
+    elif unit == "minute":
+        delta = timedelta(minutes=value)
+    elif unit == "hour":
+        delta = timedelta(hours=value)
+    elif unit == "day":
+        delta = timedelta(days=value)
+    elif unit == "week":
+        delta = timedelta(weeks=value)
+    elif unit == "month":
+        delta = relativedelta(months=value)
+    elif unit == "year":
+        delta = relativedelta(years=value)
+    else:
+        raise ValueError(f"Unknown time unit: {unit}")
+
+    result_date = now - delta
+    return result_date.strftime("%Y-%m-%d")
+
+
+def convert_to_google_com(url: str) -> str:
     """
     Convert any Google Maps URL to use google.com domain.
 
@@ -62,85 +114,6 @@ def convert_to_google_com(url):
     return converted_url
 
 
-def get_arguments():
-    def str2bool(v):
-        if isinstance(v, bool):
-            return v
-        if v.lower() in ("yes", "true", "t", "y", "1"):
-            return True
-        if v.lower() in ("no", "false", "f", "n", "0"):
-            return False
-        raise argparse.ArgumentTypeError("Boolean value expected.")
-
-    # read arguments from the command line
-    parser = argparse.ArgumentParser(description="Google Maps Review Scraper")
-    parser.add_argument(
-        "--driver",
-        type=str,
-        default=chromedriver_path,
-        help="Path to the Chrome driver",
-    )
-    parser.add_argument("--url", type=str, help="URL of the Google Maps reviews")
-    parser.add_argument(
-        "--headless",
-        type=str2bool,
-        default=True,
-        help="Run the browser in headless mode, default is True",
-    )
-    parser.add_argument(
-        "--verbose", type=str2bool, default=False, help="Verbose mode, default is False"
-    )
-    parser.add_argument(
-        "--timeout",
-        type=int,
-        default=5,
-        help="timeout for the driver, in seconds, default is 10s",
-    )
-    parser.add_argument(
-        "--original",
-        type=str2bool,
-        default=True,
-        help="Get the comment in the original language, default is True",
-    )
-    parser.add_argument(
-        "--language",
-        type=str,
-        default="en",
-        help="Language for the reviews, default is English",
-    )
-    parser.add_argument(
-        "--concat_extra",
-        type=str2bool,
-        default=False,
-        help="Concatenate extra attributes in a single column, default is False",
-    )
-    parser.add_argument(
-        "--path",
-        type=str,
-        default="data",
-        help="Path to save the data, default is data",
-    )
-    parser.add_argument(
-        "--name",
-        type=str,
-        default="reviews",
-        help="Name of the file to save the data, default is 'reviews'",
-    )
-    parser.add_argument(
-        "--timestamp",
-        type=str2bool,
-        default=True,
-        help="Add timestamp to the file name, default is True",
-    )
-    parser.add_argument(
-        "--log_file",
-        type=str,
-        default=None,
-        help="Name of the log file, default is None, show logs in command line",
-    )
-    return parser.parse_args()
-
-
 class GoogleMapsReviewScraper:
     """
     A class to scrape Google Maps reviews for a given location.
@@ -150,256 +123,609 @@ class GoogleMapsReviewScraper:
 
     def __init__(
         self,
-        headless=True,
-        verbose=False,
-        timeout=10,
-        original=True,
-        language="en",
-        concat_extra=False,
-        log_file=None,
-        extra_headers=[],
+        headless: bool = True,
+        verbose: bool = False,
+        timeout: int = 10,
+        original: bool = True,
+        language: str = "en",
+        concat_extra: bool = False,
+        log_file: str | None = None,
+        extra_headers: list[str] | None = None,
+        progress_callback: Callable[[dict[str, Any]], None] | None = None,
+        config: ScraperConfig | None = None,
     ):
+        """
+        Initialize the scraper with configuration.
 
-        # TODO: make sure the URL is a valid Google Maps reviews link
-        options = webdriver.ChromeOptions()
-        self.now = NOW
-        self.headless = headless
-        self.original = original
-        self.concat_extra = concat_extra
-        self.log_file = log_file
-        self.timeout = timeout
-        self.language = language
-        self.cookies_accepted = False
-        # check if the language is accepted
-        if language not in self.accepted_languages:
-            raise ValueError(f"Language {language} is not accepted.")
-
-        level = logging.INFO if verbose else logging.ERROR
-
-        if self.log_file:
-            logging.basicConfig(filename=f"logs/{log_file}_{NOW}.log", level=level)
+        Args:
+            config: ScraperConfig object (takes precedence if provided)
+            **kwargs: Individual parameters for backward compatibility
+        """
+        # Use config if provided, otherwise create from individual parameters
+        if config:
+            self.config = config
         else:
-            logging.basicConfig(level=level)
+            self.config = ScraperConfig(
+                headless=headless,
+                verbose=verbose,
+                timeout=timeout,
+                original=original,
+                language=language,
+                concat_extra=concat_extra,
+                log_file=log_file,
+                extra_headers=extra_headers or [],
+                progress_callback=progress_callback,
+            )
 
-        options = uc.ChromeOptions()
-        options.arguments.extend(["--no-sandbox", "--disable-setuid-sandbox"])
-        self.driver = uc.Chrome(headless=False, use_subprocess=False, options=options)
-        logging.info("driver started")
+        self.now = NOW
+        self.cookies_accepted = False
+        self.start_time = time.time()
 
-        # set the delay for the driver
-        self.wait = WebDriverWait(
-            driver=self.driver, ignored_exceptions=ignored_exceptions, timeout=timeout
+        # Setup logging
+        self._setup_logging()
+
+        # Validate language
+        if self.config.language not in self.accepted_languages:
+            raise ValueError(
+                f"Language '{self.config.language}' not supported. "
+                f"Accepted languages: {self.accepted_languages}"
+            )
+
+        # Initialize driver
+        self._init_driver()
+
+        # Connect to Google Maps
+        self._connect_to_maps()
+
+    def _setup_logging(self) -> None:
+        """Setup structured logging configuration"""
+        log_level = logging.DEBUG if self.config.verbose else logging.INFO
+
+        # Create formatter with consistent structure
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - [%(funcName)s:%(lineno)d] - %(message)s"
         )
 
-        # connect to google maps and accept the cookies
+        # Configure logger
+        self.logger = logging.getLogger(f"GoogleMapsScraper_{self.now}")
+        self.logger.setLevel(log_level)
+
+        # Clear existing handlers
+        self.logger.handlers.clear()
+
+        # Add file handler if specified
+        if self.config.log_file:
+            os.makedirs("logs", exist_ok=True)
+            file_handler = logging.FileHandler(
+                f"logs/{self.config.log_file}_{self.now}.log"
+            )
+            file_handler.setFormatter(formatter)
+            self.logger.addHandler(file_handler)
+
+        # Add console handler
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        self.logger.addHandler(console_handler)
+
+        self.logger.info(
+            "Scraper initialized with configuration",
+            extra={
+                "headless": self.config.headless,
+                "language": self.config.language,
+                "timeout": self.config.timeout,
+            },
+        )
+
+    def _init_driver(self) -> None:
+        """Initialize the Chrome driver with proper configuration"""
         try:
+            self.logger.info("Initializing Chrome driver...")
+
+            options = uc.ChromeOptions()
+            options.arguments.extend(["--no-sandbox", "--disable-setuid-sandbox"])
+            options.arguments.extend(self.config.extra_headers)
+
+            if self.config.headless:
+                options.add_argument("--headless")
+
+            self.driver = uc.Chrome(
+                headless=self.config.headless, use_subprocess=False, options=options
+            )
+
+            # Set up WebDriverWait
+            self.wait = WebDriverWait(
+                driver=self.driver,
+                ignored_exceptions=ignored_exceptions,
+                timeout=self.config.timeout,
+            )
+
+            self.logger.info("Chrome driver initialized successfully")
+
+        except Exception as e:
+            self.logger.error(f"Failed to initialize Chrome driver: {e}")
+            raise RuntimeError(f"Driver initialization failed: {e}")
+
+    def _connect_to_maps(self) -> None:
+        """Connect to Google Maps and handle initial setup"""
+        try:
+            self.logger.info(f"Connecting to Google Maps: {MAPS_LINK}")
+            start_time = time.time()
 
             self.driver.get(MAPS_LINK)
             time.sleep(random.uniform(8, 10))
-            # take a screenshot of the page
 
             self.accept_cookies()
+
+            elapsed = time.time() - start_time
+            self.logger.info(
+                f"Connected to Google Maps successfully (took {elapsed:.2f}s)"
+            )
+
         except Exception as e:
-            logging.exception(f"Error connecting to {MAPS_LINK}")
-            raise e
+            self.logger.error(f"Failed to connect to Google Maps: {e}")
+            raise RuntimeError(f"Google Maps connection failed: {e}")
 
-    def accept_cookies(self):
-        # wait for the page to load and get cookies accept button
-        accept_button = self._get_element_(
-            "//*[@id='yDmH0d']/c-wiz/div/div/div/div[2]/div[1]/div[3]/div[1]/div[1]/form[2]/div/div/button",
-            type_=By.XPATH,
-        )
-        # Add wait time
-        time.sleep(0.5)
-        accept_button.click()
-        time.sleep(0.5)
+    def _emit_progress(self, event_type: str, data: dict[str, Any]) -> None:
+        """Emit progress event if callback is configured"""
+        if self.config.progress_callback:
+            progress_data = {
+                "event_type": event_type,
+                "timestamp": datetime.now().isoformat(),
+                "elapsed_time": time.time() - self.start_time,
+                **data,
+            }
+            try:
+                self.config.progress_callback(progress_data)
+            except Exception as e:
+                self.logger.warning(f"Progress callback failed: {e}")
 
-        logging.info("Clicked on accept cookies button")
-        self.driver.save_screenshot("cookies_accepted_check.png")
-        logging.info("Clicked on accept cookies button")
+    def accept_cookies(self) -> None:
+        """Accept cookies banner with improved error handling"""
+        try:
+            self.logger.info("Looking for cookies acceptance button...")
 
-        # check if the cookie banner is still visible
+            accept_button, _ = self._get_element_(
+                "//*[@id='yDmH0d']/c-wiz/div/div/div/div[2]/div[1]/div[3]/div[1]/div[1]/form[2]/div/div/button",
+                type_=By.XPATH,
+                operation="accept cookies",
+            )
+
+            time.sleep(0.5)
+            accept_button.click()
+            time.sleep(0.5)
+
+            self.logger.info("Clicked cookies acceptance button")
+
+            # Verify cookies are accepted
+            self._verify_cookies_accepted()
+
+        except Exception as e:
+            self.logger.error(f"Failed to accept cookies: {e}")
+            raise RuntimeError(f"Cookie acceptance failed: {e}")
+
+    def _verify_cookies_accepted(self) -> None:
+        """Verify that cookies banner is no longer visible"""
         try:
             cookie_banner = self.driver.find_element(
                 By.XPATH, "//*[@id='yDmH0d']/c-wiz/div/div/div/div[2]/div[1]"
             )
+
             if cookie_banner.is_displayed():
+                self.logger.warning("Cookie banner still visible, retrying...")
                 time.sleep(2)
-                # If still visible, try clicking again
-                logging.info("Cookie banner still visible, trying again")
-                accept_button = self._get_element_(
+
+                accept_button, _ = self._get_element_(
                     "//*[@id='yDmH0d']/c-wiz/div/div/div/div[2]/div[1]/div[3]/div[1]/div[1]/form[2]/div/div/button",
                     type_=By.XPATH,
+                    operation="accept cookies retry",
                 )
                 accept_button.click()
 
-        except:
-            logging.info("Cookies accepted")
+        except NoSuchElementException:
+            self.logger.info("Cookies accepted successfully")
             self.cookies_accepted = True
 
-        # take a screenshot of the page after accepting cookies
-        self.driver.save_screenshot("cookies_accepted.png")
+    def connect(self, url: str) -> int:
+        """
+        Connect to the target URL and extract total review count.
 
-    def connect(self, url):
+        Args:
+            url: Google Maps URL
 
-        url = f"{url}&hl={self.language}"
-        # ww.google.anything => ww.google.com
-        url = convert_to_google_com(url)
-        # remove spaces and new lines from the URL
-        # url = re.sub(r"\s+", "", url)
+        Returns:
+            int: Total number of reviews found
 
-        logging.info("Connecting to target url")
-        self.driver.save_screenshot("main_google.png")
-        logging.info("Connecting to target url 2")
-
+        Raises:
+            RuntimeError: If connection or review extraction fails
+        """
         try:
-            self.driver.get(url)
-            logging.info("Connected to target page! ")
-            self.driver.save_screenshot("target_page_.png")
-            logging.info("Connected to target page! 2 ")
+            # Prepare URL
+
+            processed_url = f"{url}&hl={self.config.language}"
+            processed_url = convert_to_google_com(processed_url)
+            self.logger.info(f"Connecting to target URL: {processed_url}")
+            self._emit_progress("url_connection", {"url": processed_url})
+
+            connection_start = time.time()
+            self.driver.get(processed_url)
+
             if not self.cookies_accepted:
                 self.accept_cookies()
 
-            try:
-                _ = self._get_element_("A1zNzb", By.CLASS_NAME)
-                hotel = True
-            except Exception as e:
-                hotel = False
-                logging.exception(f"Error checking if hotel: {e}")
+            # Determine if this is a hotel listing
+            is_hotel = self._check_if_hotel()
+            self.logger.info(
+                f"Location type detected: {'hotel' if is_hotel else 'business'}"
+            )
 
-            logging.info(f"is hotel: {hotel}")
+            # Extract total reviews
+            total_reviews = self._extract_total_reviews()
 
-            if hotel:
-                path = '//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[4]/div[1]/div/div[2]/div[3]'
-            else:
-                #'//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]/div[1]/div/div[2]/div[3]'
-                path = "//div[contains(@class, 'jANrlb')]/div[3]"
+            connection_time = time.time() - connection_start
+            self.logger.info(
+                f"Connected successfully. Found {total_reviews} reviews (took {connection_time:.2f}s)"
+            )
 
-            logging.info("getting total reviews ... ")
-            total_reviews = self._get_element_(path, type_=By.XPATH).text
-            total_reviews = int(re.sub(r"\D", "", total_reviews))
-            logging.info(f"Total reviews: {total_reviews}")
+            self._emit_progress(
+                "connection_complete",
+                {
+                    "total_reviews": total_reviews,
+                    "is_hotel": is_hotel,
+                    "connection_time": connection_time,
+                },
+            )
+
             return total_reviews
 
         except Exception as e:
-            logging.exception(f"Error in connect method: {e}")
-            raise e
+            self.logger.error(f"Connection failed: {e}")
+            raise RuntimeError(f"Failed to connect to URL '{url}': {e}")
 
-    def extract_data(self, total_reviews):
+    def _check_if_hotel(self) -> bool:
+        """Check if the current page is a hotel listing"""
+        try:
+            self._get_element_("A1zNzb", By.CLASS_NAME, operation="hotel detection")
+            return True
+        except (TimeoutException, NoSuchElementException):
+            return False
 
-        time.sleep(2)
+    def _extract_total_reviews(self) -> int:
+        """Extract total number of reviews from the page"""
+        try:
+            targets = [("//div[contains(@class, 'jANrlb')]/div[3]", By.XPATH)]
 
-        # with open("debug_page.html", "w", encoding="utf-8") as f:
-        #     f.write(self.driver.page_source)
+            total_reviews_element, _ = self._get_element_(
+                targets, type_=By.XPATH, operation="extract total reviews"
+            )
 
-        self.driver.find_element(
-            By.XPATH,
-            "//div[contains(@class, 'm6QErb') and contains(@class, 'Pf6ghf') and contains(@class, 'XiKgde') and contains(@class, 'KoSBEe') and contains(@class, 'ecceSd') and contains(@class, 'tLjsW')]/div[2]//button",
-        ).click()
-        logging.info("Clicked on sort reviews button")
-        _ = self._get_element_('//*[@id="action-menu"]/div[2]', By.XPATH).click()
-        logging.info("Clicked on newest reviews option")
+            total_reviews_text = total_reviews_element.text
+            total_reviews = int(re.sub(r"\D", "", total_reviews_text))
 
-        time.sleep(2)
+            return total_reviews
+
+        except Exception as e:
+            self.logger.error(f"Failed to extract total reviews: {e}")
+            raise RuntimeError(f"Could not extract review count: {e}")
+
+    def extract_data(self, total_reviews: int) -> list[dict[str, Any]]:
+        """
+        Extract review data with progress tracking.
+
+        Args:
+            total_reviews: Expected number of reviews
+
+        Returns:
+            List of review dictionaries
+
+        Raises:
+            RuntimeError: If extraction fails after retries
+        """
+        self.logger.info(f"Starting review extraction for {total_reviews} reviews")
+        self._emit_progress("extraction_start", {"total_reviews": total_reviews})
+
+        extraction_start = time.time()
 
         try:
-            scrollable_div = self._get_element_(
-                '//*[@id="QA0Szd"]/div/div/div[1]/div[3]/div/div[1]/div/div/div[3]',
-                By.XPATH,
-            )
-        except TimeoutException:
-            scrollable_div = self._get_element_(
-                '//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]',
-                By.XPATH,
+            # Setup for review extraction
+            self._setup_review_extraction()
+
+            # Get scrollable container
+            scrollable_div = self._get_scrollable_container()
+
+            # Extract reviews with retries
+            reviews_data = self._extract_reviews_with_retries(
+                total_reviews, scrollable_div
             )
 
-        nb_tries = 0
-        while nb_tries < 3:
+            extraction_time = time.time() - extraction_start
+            self.logger.info(
+                f"Extraction completed: {len(reviews_data)} reviews in {extraction_time:.2f}s"
+            )
+
+            self._emit_progress(
+                "extraction_complete",
+                {
+                    "reviews_extracted": len(reviews_data),
+                    "extraction_time": extraction_time,
+                },
+            )
+
+            return reviews_data
+
+        except Exception as e:
+            self.logger.error(f"Review extraction failed: {e}")
+            raise RuntimeError(f"Failed to extract reviews: {e}")
+
+    def _setup_review_extraction(self) -> None:
+        """Setup the page for review extraction (sorting, etc.)"""
+        try:
+            time.sleep(2)
+
+            # Click sort button
+            sort_button = self.driver.find_element(
+                By.XPATH,
+                "//div[contains(@class, 'm6QErb') and contains(@class, 'Pf6ghf') and contains(@class, 'XiKgde') and contains(@class, 'KoSBEe') and contains(@class, 'ecceSd') and contains(@class, 'tLjsW')]/div[2]//button",
+            )
+            sort_button.click()
+            self.logger.info("Clicked sort reviews button")
+
+            # Select newest reviews
+            newest_option, _ = self._get_element_(
+                '//*[@id="action-menu"]/div[2]',
+                By.XPATH,
+                operation="select newest reviews",
+            )
+            newest_option.click()
+            self.logger.info("Selected newest reviews sorting")
+
+            time.sleep(2)
+
+        except Exception as e:
+            self.logger.warning(f"Could not setup review sorting: {e}")
+
+    def _get_scrollable_container(self) -> WebElement:
+        """Get the scrollable container for reviews"""
+        targets = [
+            (
+                "//*[contains(@class, 'm6QErb') and contains(@class, 'DxyBCb') and contains(@class, 'kA9KIf') and contains(@class, 'dS8AEf') and contains(@class, 'XiKgde')][.//*[contains(@class, 'jANrlb')]]",
+                By.XPATH,
+            )
+            # (
+            #     '//*[@id="QA0Szd"]/div/div/div[1]/div[3]/div/div[1]/div/div/div[3]',
+            #     By.XPATH,
+            # ),
+            # (
+            #     '//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]',
+            #     By.XPATH,
+            # ),
+        ]
+        try:
+            scrollable_container, selector_idx = self._get_element_(
+                targets, operation="get scrollable container"
+            )
+            return scrollable_container
+        except TimeoutException:
+            self.logger.error("Scrollable container not found")
+            raise RuntimeError("Could not find scrollable container for reviews")
+
+    def _extract_reviews_with_retries(
+        self, total_reviews: int, scrollable_div: WebElement
+    ) -> list[dict[str, Any]]:
+        """Extract reviews with retry logic"""
+        max_retries = 3
+        report_interval = 10  # Report progress every 10 reviews
+
+        is_hotel = self._check_if_hotel()
+
+        for attempt in range(max_retries):
             try:
-                current_seen_reviews = 0
+                self.logger.info(
+                    f"Review extraction attempt {attempt + 1}/{max_retries}"
+                )
+
                 reviews_data = []
-                # to avoid the StaleElementReferenceException error
-                time.sleep(0.5)
+                current_seen_reviews = 0
+                last_progress_report = 0
+
                 while current_seen_reviews < total_reviews:
-                    # get new reviews
-                    reviews = self._get_element_(
-                        target="jJc9Ad", type_=By.CLASS_NAME, multiple=True
+                    # Get current reviews
+                    reviews, _ = self._get_element_(
+                        target="jJc9Ad",
+                        type_=By.CLASS_NAME,
+                        multiple=True,
+                        operation="get review elements",
                     )
 
+                    # Extract new reviews
                     for i in range(current_seen_reviews + 1, len(reviews) + 1):
-                        review = self._get_element_(
+                        review_element, _ = self._get_element_(
                             f"(//*[contains(@class, 'jJc9Ad')])[{i}]",
                             type_=By.XPATH,
-                            multiple=False,
+                            operation=f"get review {i}",
                         )
-                        result = self._extract_review_(
-                            review, concat_extra=self.concat_extra
-                        )
+                        if is_hotel:
+                            self.logger.debug(
+                                f"YESSSSSSSSSSSSSSSS Extracting hotel review {i}"
+                            )
+                            result = self._extract_review_hotel_(
+                                review_element, concat_extra=self.config.concat_extra
+                            )
+                        else:
+                            self.logger.debug(
+                                f"NOOOOOOOOOOOOOOOOOOOOO Extracting review {i}"
+                            )
+                            result = self._extract_review_(
+                                review_element, concat_extra=self.config.concat_extra
+                            )
                         reviews_data.append(result)
+
                     current_seen_reviews = len(reviews_data)
-                    logging.info(f"Extracted {current_seen_reviews} / {total_reviews}")
-                    # scroll to load more reviews
+
+                    # Report progress every 10 reviews or significant milestones
+                    if (
+                        current_seen_reviews - last_progress_report >= report_interval
+                        or current_seen_reviews >= total_reviews
+                    ):
+                        progress_percent = (current_seen_reviews / total_reviews) * 100
+                        self.logger.info(
+                            f"Progress: {current_seen_reviews}/{total_reviews} ({progress_percent:.1f}%)"
+                        )
+
+                        self._emit_progress(
+                            "extraction_progress",
+                            {
+                                "current_reviews": current_seen_reviews,
+                                "total_reviews": total_reviews,
+                                "progress_percent": progress_percent,
+                            },
+                        )
+
+                        last_progress_report = current_seen_reviews
+
+                    # Scroll to load more reviews
                     self.driver.execute_script(
                         "arguments[0].scrollTop = arguments[0].scrollHeight",
                         scrollable_div,
                     )
+
                 if len(reviews_data) == total_reviews:
                     return reviews_data
 
             except (StaleElementReferenceException, TimeoutException) as e:
-                logging.exception(f"TimeoutException: {e}")
-                nb_tries += 1
-                continue
-            raise TimeoutException(
-                "Unable to extract all reviews, max number of tries reached"
-            )
+                self.logger.warning(f"Extraction attempt {attempt + 1} failed: {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(2)  # Wait before retry
+                    continue
+                raise RuntimeError(
+                    f"Failed to extract reviews after {max_retries} attempts: {e}"
+                )
 
-    def save_data(self, data, path="data", name="", timestamp=True):
-        if not os.path.exists(path):
-            os.makedirs(path)
+        raise RuntimeError(
+            f"Unable to extract all reviews after {max_retries} attempts"
+        )
 
-        if timestamp:
-            name = f"{name}_{self.now}"
+    def save_data(
+        self,
+        data: list[dict[str, Any]],
+        path: str = "data",
+        name: str = "",
+        timestamp: bool = True,
+    ) -> None:
+        """Save extracted data to file"""
+        try:
+            if not os.path.exists(path):
+                os.makedirs(path)
 
-        if self.concat_extra:
-            df = pd.DataFrame(data)
-            df.to_csv(f"{path}/{name}.csv", index=False)
-            logging.info(f"Data saved to {path}/{name}.csv")
-        else:
-            with open(f"{path}/{name}.json", "w") as f:
-                json.dump(data, f)
-            logging.info(f"Data saved to {path}/{name}.json")
+            if timestamp:
+                name = f"{name}_{self.now}"
 
-    def scrap(self, url):
-        logging.info(f"Scraping {url} ...")
-        start = time.time()
-        total_reviews = self.connect(url)
-        logging.info(f"Connected, Total number of reviews: {total_reviews}")
-        if total_reviews == 0:
-            logging.warning("No reviews were found, returning None")
-            return None
+            save_start = time.time()
 
-        data = self.extract_data(total_reviews)
-        logging.info(f"Scraped {len(data)} reviews")
-        end = time.time()
-        logging.info(f"Scraping completed in {end - start} seconds")
-        return data
+            if self.config.concat_extra:
+                df = pd.DataFrame(data)
+                filepath = f"{path}/{name}.csv"
+                df.to_csv(filepath, index=False)
+            else:
+                filepath = f"{path}/{name}.json"
+                with open(filepath, "w") as f:
+                    json.dump(data, f, indent=2)
 
-    def _get_element_(self, target, type_, source=None, multiple=False):
+            save_time = time.time() - save_start
+            self.logger.info(f"Data saved to {filepath} (took {save_time:.2f}s)")
+
+        except Exception as e:
+            self.logger.error(f"Failed to save data: {e}")
+            raise RuntimeError(f"Data saving failed: {e}")
+
+    def scrap(self, url: str) -> list[dict[str, Any]] | None:
         """
-        Finds and returns a web element based on the given XPath.
+        Main scraping method with comprehensive logging and progress tracking.
 
         Args:
-            driver: The WebDriver instance (e.g., Chrome, Firefox).
-            xpath: The XPath string to locate the element.
-            timeout: The maximum time to wait for the element (default is 10 seconds).
+            url: Google Maps URL to scrape
 
         Returns:
-            WebElement: The located element.
-
-        Raises:
-            TimeoutException: If the element is not found within the timeout period.
+            List of review data or None if no reviews found
         """
+        self.logger.info(f"Starting scraping job for URL: {url}")
+        self._emit_progress("scraping_start", {"url": url})
+
+        scraping_start = time.time()
+
+        try:
+            # Connect and get total reviews
+            total_reviews = self.connect(url)
+
+            if total_reviews == 0:
+                self.logger.warning("No reviews found for this location")
+                self._emit_progress(
+                    "scraping_complete",
+                    {
+                        "status": "no_reviews",
+                        "total_reviews": 0,
+                        "reviews_extracted": 0,
+                    },
+                )
+                return None
+
+            # Extract review data
+            data = self.extract_data(total_reviews)
+
+            scraping_time = time.time() - scraping_start
+
+            self.logger.info(
+                f"Scraping completed successfully: {len(data)} reviews in {scraping_time:.2f}s"
+            )
+            self._emit_progress(
+                "scraping_complete",
+                {
+                    "status": "success",
+                    "total_reviews": total_reviews,
+                    "reviews_extracted": len(data),
+                    "scraping_time": scraping_time,
+                },
+            )
+
+            return data
+
+        except Exception as e:
+            scraping_time = time.time() - scraping_start
+            self.logger.error(f"Scraping failed after {scraping_time:.2f}s: {e}")
+            self._emit_progress(
+                "scraping_failed", {"error": str(e), "scraping_time": scraping_time}
+            )
+            raise
+
+    def _get_element_(
+        self,
+        target: str | list[tuple[str, By]],
+        type_: By | None = None,
+        source: WebElement | None = None,
+        multiple: bool = False,
+        operation: str = "unknown",
+    ) -> tuple[WebElement | list[WebElement], int]:
+        """
+        Enhanced element finder with selector fallback.
+
+        Args:
+            target: Element selector(s) - can be:
+                   - string (with type_ parameter) - OLD WAY
+                   - list of (selector, By_type) tuples for fallback - NEW WAY
+            type_: By type (used when target is string)
+            source: Source element to search within
+            multiple: Whether to find multiple elements
+            operation: Description of the operation for logging
+
+        Returns:
+            tuple: (WebElement(s), selector_index_used)
+        """
+        # Normalize input to list of (selector, type) tuples
+        if isinstance(target, str):
+            if type_ is None:
+                raise ValueError("type_ must be provided when target is a string")
+            selectors = [(target, type_)]
+        else:
+            selectors = target
 
         condition = (
             EC.visibility_of_all_elements_located
@@ -407,105 +733,228 @@ class GoogleMapsReviewScraper:
             else EC.visibility_of_element_located
         )
 
+        wait_obj = (
+            WebDriverWait(
+                driver=source,
+                ignored_exceptions=ignored_exceptions,
+                timeout=self.config.timeout,
+            )
+            if source
+            else self.wait
+        )
+
+        # Try each selector once
+        last_exception = None
+
+        for selector_idx, (selector, selector_type) in enumerate(selectors):
+            try:
+                self.logger.debug(
+                    f"Trying selector {selector_idx + 1}/{len(selectors)} for operation: {operation}"
+                )
+
+                elements = wait_obj.until(condition((selector_type, selector)))
+
+                if multiple:
+                    self.logger.debug(
+                        f"Found {len(elements)} elements with selector {selector_idx + 1} for operation: {operation}"
+                    )
+                else:
+                    self.logger.debug(
+                        f"Found element with selector {selector_idx + 1} for operation: {operation}"
+                    )
+
+                return elements, selector_idx
+
+            except (TimeoutException, NoSuchElementException) as e:
+                last_exception = e
+                selector_name = getattr(selector_type, "name", str(selector_type))
+                self.logger.debug(
+                    f"Selector {selector_idx + 1} failed: {selector_name}='{selector}'"
+                )
+
+            except Exception as e:
+                last_exception = e
+                self.logger.warning(
+                    f"Unexpected error with selector {selector_idx + 1}: {e}"
+                )
+
+        # All selectors failed
+        error_msg = f"All selectors failed for operation '{operation}'"
+        self.logger.error(error_msg)
+        if last_exception:
+            raise type(last_exception)(f"{error_msg}. Last error: {last_exception}")
+        raise TimeoutException(error_msg)
+
+    def exit(self, force: bool = False) -> None:
+        """Clean browser shutdown with proper resource cleanup"""
         try:
-            if source:
-                elements = WebDriverWait(
-                    driver=source,
-                    ignored_exceptions=ignored_exceptions,
-                    timeout=self.timeout,
-                ).until(condition((type_, target)))
-            else:
-                elements = self.wait.until(condition((type_, target)))
-            return elements
-        except TimeoutException as e:
-            logging.exception(
-                f"TimeoutException: Unable to locate element with {type_} : {target}"
-            )
-            raise e
-        except NoSuchElementException as e:
-            logging.exception(
-                f"NoSuchElementException: Unable to locate element with {type_} : {target}"
-            )
-            raise e
-        except StaleElementReferenceException as e:
-            logging.exception(
-                f"StaleElementReferenceException: Unable to locate element with {type_} : {target}"
-            )
-            raise e
+            self.logger.info("Shutting down scraper...")
+
+            if not force and not self.config.headless:
+                _ = input("Press Enter to close the browser...")
+
+            if hasattr(self, "driver"):
+                self.driver.quit()
+                self.logger.info("Browser closed successfully")
+
         except Exception as e:
-            logging.exception(f"Exception: No defined exception for {type_} : {target}")
-            raise e
-
-    def exit(self, force=False):
-        """function to close the browser"""
-        if force:
-            self.driver.quit()
-            return
-
-        if not self.headless:
-            _ = input("Type Anything to close the browser")
-        self.driver.quit()
+            self.logger.warning(f"Error during shutdown: {e}")
+        finally:
+            total_time = time.time() - self.start_time
+            self.logger.info(f"Scraper session ended (total time: {total_time:.2f}s)")
 
     def _extract_review_(
         self, review_container: WebElement, concat_extra: bool = False
-    ) -> dict:
+    ) -> dict[str, Any]:
+        """Extract individual review data with improved error handling"""
         review = {}
-        # get username
-        review["username"] = review_container.find_element(By.CLASS_NAME, "d4r55").text
 
-        # get rating
         try:
-            stars = review_container.find_elements(
-                By.XPATH,
-                ".//span[contains(@class, 'hCCjke') and contains(@class, 'elGi1d')]",
-            )
-            review["rating"] = len(stars)
-        except NoSuchElementException:
-            review["rating"] = int(
-                review_container.find_element(By.CLASS_NAME, "fzvQIb").text.split("/")[
-                    0
-                ]
-            )
-            print("name ", review["username"], " rating: ", review["rating"])
-
-        # get date
-        review["date"] = review_container.find_element(By.CLASS_NAME, "rsqaWe").text
-
-        # check if has likes
-        try:
-            review["likes"] = review_container.find_element(
-                By.CLASS_NAME, "pkWtMe"
+            # Get username
+            review["username"] = review_container.find_element(
+                By.CLASS_NAME, "d4r55"
             ).text
-        except NoSuchElementException:
-            review["likes"] = 0
 
-        # get comment text
-        try:
-            comment_section = review_container.find_element(By.CLASS_NAME, "MyEned")
+            # Get rating
             try:
-                comment_section.find_element(By.TAG_NAME, "button").click()
+                stars = review_container.find_elements(
+                    By.XPATH,
+                    ".//span[contains(@class, 'hCCjke') and contains(@class, 'elGi1d')]",
+                )
+                review["rating"] = len(stars)
             except NoSuchElementException:
-                pass
-            review["comment"] = comment_section.find_element(
-                By.CLASS_NAME, "wiI7pd"
-            ).text
-        except NoSuchElementException:
-            review["comment"] = None
+                rating_text = review_container.find_element(
+                    By.CLASS_NAME, "fzvQIb"
+                ).text
+                review["rating"] = int(rating_text.split("/")[0])
 
-        # check for extra attributes
+            # Get date
+            date_text = review_container.find_element(By.CLASS_NAME, "rsqaWe").text
+            review["date"] = parse_relative_date(date_text)
+
+            # Get likes (optional)
+            try:
+                review["likes"] = review_container.find_element(
+                    By.CLASS_NAME, "pkWtMe"
+                ).text
+            except NoSuchElementException:
+                review["likes"] = 0
+
+            # Get translated text
+            try:
+                comment_section = review_container.find_element(By.CLASS_NAME, "MyEned")
+                try:
+                    # Try to expand "more" button
+                    comment_section.find_element(By.TAG_NAME, "button").click()
+                except NoSuchElementException:
+                    pass
+                review["translated_text"] = comment_section.find_element(
+                    By.CLASS_NAME, "wiI7pd"
+                ).text
+            except NoSuchElementException:
+                review["translated_text"] = None
+
+            # Extract extra attributes
+            self._extract_extra_attributes(review_container, review, concat_extra)
+
+            # Get original text if enabled
+            if self.config.original:
+                self._extract_original_text(review_container, review)
+
+            return review
+
+        except Exception as e:
+            self.logger.warning(f"Failed to extract review data: {e}")
+            return {"error": f"Extraction failed: {e}"}
+
+    def _extract_review_hotel_(
+        self, review_container: WebElement, concat_extra: bool = False
+    ) -> dict[str, Any]:
+        """Extract individual review data for hotel listing"""
+        review = {}
+
+        try:
+            # Get username
+            review["username"] = review_container.find_element(
+                By.CLASS_NAME, "d4r55"
+            ).text
+
+            # Get rating
+            try:
+                rating_text = review_container.find_element(
+                    By.CLASS_NAME, "fzvQIb"
+                ).text
+                review["rating"] = int(rating_text.split("/")[0])
+            except NoSuchElementException:
+                stars = review_container.find_elements(
+                    By.XPATH,
+                    ".//span[contains(@class, 'hCCjke') and contains(@class, 'elGi1d')]",
+                )
+                review["rating"] = len(stars)
+
+            # Get date
+            try:
+                date_text = review_container.find_element(
+                    By.CLASS_NAME, "xRkPPb"
+                ).text.split("\n")[0]
+                review["date"] = parse_relative_date(date_text)
+            except NoSuchElementException as e:
+                raise ValueError("Could not find date element in hotel review") from e
+
+            # Get likes (optional)
+            try:
+                review["likes"] = review_container.find_element(
+                    By.CLASS_NAME, "pkWtMe"
+                ).text
+            except NoSuchElementException:
+                review["likes"] = 0
+
+            # Get translated text
+            try:
+                comment_section = review_container.find_element(By.CLASS_NAME, "MyEned")
+                try:
+                    # Try to expand "more" button
+                    comment_section.find_element(By.TAG_NAME, "button").click()
+                except NoSuchElementException:
+                    pass
+                review["translated_text"] = comment_section.find_element(
+                    By.CLASS_NAME, "wiI7pd"
+                ).text
+            except NoSuchElementException:
+                review["translated_text"] = None
+
+            # Extract extra attributes
+            self._extract_extra_attributes(review_container, review, concat_extra)
+
+            # Get original text if enabled
+            if self.config.original:
+                self._extract_original_text(review_container, review)
+
+            return review
+
+        except Exception as e:
+            self.logger.warning(f"Failed to extract review data: {e}")
+            return {"error": f"Extraction failed: {e}"}
+
+    def _extract_extra_attributes(
+        self, review_container: WebElement, review: dict[str, Any], concat_extra: bool
+    ) -> None:
+        """Extract extra review attributes"""
         if concat_extra:
             review["extra"] = ""
+
         try:
             extra = review_container.find_element(
                 By.CSS_SELECTOR, "div[jslog='127691']"
             )
             extras = extra.find_elements(By.CLASS_NAME, "PBK6be")
-            for i in range(len(extras)):
-                spans = extras[i].find_elements(By.CLASS_NAME, "RfDO5c")
+
+            for extra_item in extras:
+                spans = extra_item.find_elements(By.CLASS_NAME, "RfDO5c")
+
                 if len(spans) == 2:
-                    key = spans[0].text
-                    value = spans[1].text
-                else:
+                    key, value = spans[0].text, spans[1].text
+                elif len(spans) == 1:
                     txt = (
                         spans[0]
                         .text.replace("<b>", "")
@@ -514,62 +963,53 @@ class GoogleMapsReviewScraper:
                         .replace(" ", "")
                     )
                     try:
-                        key, value = txt.split(":")
+                        key, value = txt.split(":", 1)
                     except ValueError:
-                        logging.warning(f"Unable to split extra attribute: '{txt}'")
+                        self.logger.warning(f"Could not parse extra attribute: '{txt}'")
                         continue
-                if not concat_extra:
-                    review[key] = value
                 else:
-                    review["extra"] += "," + f"{key}:{value}"
+                    continue
+
+                if concat_extra:
+                    review["extra"] += (
+                        f",{key}:{value}" if review["extra"] else f"{key}:{value}"
+                    )
+                else:
+                    review[key] = value
+
         except NoSuchElementException:
-            pass
+            pass  # No extra attributes found
 
-        if self.original:
-            try:
-                review_container.find_element(By.CLASS_NAME, "oqftme").find_element(
-                    By.TAG_NAME, "button"
-                ).click()
-                review["original"] = comment_section.find_element(
-                    By.CLASS_NAME, "wiI7pd"
-                ).text
-            except NoSuchElementException:
-                review["original"] = review["comment"]
+    def _extract_original_text(
+        self, review_container: WebElement, review: dict[str, Any]
+    ) -> None:
+        """Extract original language text if available"""
+        try:
+            translate_button = review_container.find_element(
+                By.CLASS_NAME, "oqftme"
+            ).find_element(By.TAG_NAME, "button")
+            translate_button.click()
+            time.sleep(0.5)  # Wait for translation
 
-        return review
+            comment_section = review_container.find_element(By.CLASS_NAME, "MyEned")
+            review["original_text"] = comment_section.find_element(
+                By.CLASS_NAME, "wiI7pd"
+            ).text
+        except NoSuchElementException:
+            review["original_text"] = review.get("translated_text")
 
-    def reset(self):
-        self.driver.get(MAPS_LINK)
-        self.accept_cookies()
-        self.now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        logging.info(f"Resetting the scraper at {self.now}")
+    def reset(self) -> None:
+        """Reset scraper to initial state"""
+        try:
+            self.logger.info("Resetting scraper state...")
 
+            self.driver.get(MAPS_LINK)
+            self.accept_cookies()
+            self.now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            self.start_time = time.time()
 
-if __name__ == "__main__":
-    args = get_arguments()
+            self.logger.info(f"Scraper reset completed at {self.now}")
 
-    print("starting scrapper")
-
-    try:
-        scrapper = GoogleMapsReviewScraper(
-            driver_path=args.driver,
-            headless=args.headless,
-            verbose=args.verbose,
-            timeout=args.timeout,
-            original=args.original,
-            language=args.language,
-            concat_extra=args.concat_extra,
-            log_file=args.log_file,
-        )
-        print(args.url)
-        data = scrapper.scrap(args.url)
-        scrapper.save_data(
-            data=data, path=args.path, name=args.name, timestamp=args.timestamp
-        )
-    except Exception as e:
-        logging.exception(f"Error: {e}")
-    finally:
-
-        if "scrapper" in locals():
-            logging.info("Exiting the scraper")
-            scrapper.exit(force=False)
+        except Exception as e:
+            self.logger.error(f"Reset failed: {e}")
+            raise RuntimeError(f"Scraper reset failed: {e}")
