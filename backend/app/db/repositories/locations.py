@@ -17,7 +17,7 @@ class LocationRepository(BaseRepository[LocationCreate, LocationUpdate, Location
     async def create(self, location_create: LocationCreate) -> LocationInDB:
         try:
             await ValidatorHelper.get_user_or_raise(
-                users_collection, location_create.user_id
+                users_collection, location_create.user_id,
             )
             await ValidatorHelper.get_business_or_raise(
                 busniesses_collection,
@@ -27,11 +27,11 @@ class LocationRepository(BaseRepository[LocationCreate, LocationUpdate, Location
 
             # Insert business
             result = await self.collection.insert_one(
-                location_create.model_dump(by_alias=True)
+                location_create.model_dump(by_alias=True),
             )
 
             created_business = await self.collection.find_one(
-                {"_id": result.inserted_id}
+                {"_id": result.inserted_id},
             )
             if created_business:
                 return self.db_model.model_validate(created_business)
@@ -52,7 +52,7 @@ class LocationRepository(BaseRepository[LocationCreate, LocationUpdate, Location
             raise RuntimeError(f"Unexpected error when creating location {e!s}")
 
     async def get_by_user(
-        self, user_id: str, skip: int = 0, limit: int = 100
+        self, user_id: str, skip: int = 0, limit: int = 100,
     ) -> list[LocationInDB]:
         """Get all jobs of a user."""
         try:
@@ -71,7 +71,7 @@ class LocationRepository(BaseRepository[LocationCreate, LocationUpdate, Location
             raise RuntimeError("Database error while fetching locations by user")
 
     async def get_by_business(
-        self, business_id: str, skip: int = 0, limit: int = 100
+        self, business_id: str, skip: int = 0, limit: int = 100,
     ) -> list[LocationInDB]:
         """Get all locations of a business."""
         try:

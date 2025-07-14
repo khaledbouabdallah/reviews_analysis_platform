@@ -53,7 +53,7 @@ class BaseRepository(Generic[CreateSchema, UpdateSchema, DBSchema]):
             raise RuntimeError("Database error while creating document")
 
     async def update(
-        self, item_id: str, update_data: UpdateSchema
+        self, item_id: str, update_data: UpdateSchema,
     ) -> DBSchema | None:
         try:
             oid = ObjectId(item_id)

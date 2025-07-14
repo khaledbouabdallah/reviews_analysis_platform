@@ -1,6 +1,5 @@
 # backend/app/services/review_service.py
-"""
-Enhanced review service that automatically processes reviews when created.
+"""Enhanced review service that automatically processes reviews when created.
 """
 
 from datetime import datetime, timezone
@@ -21,13 +20,13 @@ class BasicAnalyzer:
         self.sentiment_analyzer = SentimentAnalyzer()
 
     async def batch_simple_analyze(self, reviews: list[ReviewInDB]) -> list[ReviewInDB]:
-        """
-        Process a batch of reviews for sentiment and language detection.
+        """Process a batch of reviews for sentiment and language detection.
 
         Args:
             reviews: List of reviews to process
         Returns:
             List of booleans indicating success for each review
+
         """
         results = []
         for review in reviews:
@@ -41,11 +40,11 @@ class BasicAnalyzer:
         return results
 
     async def simple_analyze(self, review: ReviewInDB) -> ReviewInDB:
-        """
-        Automatically process a review for sentiment and language detection.
+        """Automatically process a review for sentiment and language detection.
 
         Args:
             review: Review to process
+
         """
         try:
             # Extract text from review data
@@ -88,7 +87,7 @@ class BasicAnalyzer:
 
             # Update review with processed data
             updated_review = await self.review_repo.update_processed_data(
-                str(review.id), processed_data
+                str(review.id), processed_data,
             )
             logger.debug(f"Successfully processed review {review.id}")
             return updated_review
@@ -107,7 +106,7 @@ class BasicAnalyzer:
                 "processed_at": datetime.now(timezone.utc),
             }
             updated_review = await self.review_repo.update_processed_data(
-                review_id, failed_data
+                review_id, failed_data,
             )
             return updated_review
         except Exception as e:

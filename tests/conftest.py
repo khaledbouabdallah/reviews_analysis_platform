@@ -30,17 +30,16 @@ def test_user_data():
 
 @pytest.fixture
 def authenticated_user(
-    base_url: str, test_user_data: dict
+    base_url: str, test_user_data: dict,
 ) -> Generator[dict, None, None]:
-    """
-    Create a test user, authenticate, and provide auth headers.
+    """Create a test user, authenticate, and provide auth headers.
     Cleans up the user after the test.
     """
     # Register user
     response = requests.post(f"{base_url}/auth/register", json=test_user_data)
     if response.status_code not in [200, 409]:  # 409 = already exists
         pytest.fail(
-            f"Failed to register user: {response.status_code} - {response.text}"
+            f"Failed to register user: {response.status_code} - {response.text}",
         )
 
     # Login to get token

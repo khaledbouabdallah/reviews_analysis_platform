@@ -16,7 +16,7 @@ class SourceRepository(BaseRepository[SourceCreate, SourceUpdate, SourceInDB]):
     async def create(self, business_create: SourceCreate) -> SourceInDB:
         try:
             await ValidatorHelper.get_user_or_raise(
-                users_collection, business_create.user_id
+                users_collection, business_create.user_id,
             )
             await ValidatorHelper.get_business_or_raise(
                 busniesses_collection,
@@ -26,11 +26,11 @@ class SourceRepository(BaseRepository[SourceCreate, SourceUpdate, SourceInDB]):
 
             # Insert business
             result = await self.collection.insert_one(
-                business_create.model_dump(by_alias=True)
+                business_create.model_dump(by_alias=True),
             )
 
             created_business = await self.collection.find_one(
-                {"_id": result.inserted_id}
+                {"_id": result.inserted_id},
             )
             if created_business:
                 return self.db_model.model_validate(created_business)
@@ -51,7 +51,7 @@ class SourceRepository(BaseRepository[SourceCreate, SourceUpdate, SourceInDB]):
             raise RuntimeError(f"Unexpected error: {e!s}")
 
     async def get_by_user(
-        self, user_id: str, skip: int = 0, limit: int = 100
+        self, user_id: str, skip: int = 0, limit: int = 100,
     ) -> list[SourceInDB]:
         """Get all jobs of a user."""
         try:
@@ -70,7 +70,7 @@ class SourceRepository(BaseRepository[SourceCreate, SourceUpdate, SourceInDB]):
             raise RuntimeError("Database error")
 
     async def get_by_business(
-        self, business_id: str, skip: int = 0, limit: int = 100
+        self, business_id: str, skip: int = 0, limit: int = 100,
     ) -> list[SourceInDB]:
         """Get all jobs of a business."""
         try:

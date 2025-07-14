@@ -12,10 +12,10 @@ class ValidatorHelper:
 
     @staticmethod
     async def get_business_or_raise(
-        business_collection: Collection, user_id: PyObjectId, business_id: PyObjectId
+        business_collection: Collection, user_id: PyObjectId, business_id: PyObjectId,
     ):
         business = await business_collection.find_one(
-            {"_id": business_id, "user_id": user_id}
+            {"_id": business_id, "user_id": user_id},
         )
         if not business:
             raise ValueError("Business not found for this user")
@@ -29,7 +29,7 @@ class ValidatorHelper:
         source_id: PyObjectId,
     ):
         source = await source_collection.find_one(
-            {"_id": source_id, "user_id": user_id, "business_id": business_id}
+            {"_id": source_id, "user_id": user_id, "business_id": business_id},
         )
         if not source:
             raise ValueError("Source not found for this business and user")
@@ -50,7 +50,7 @@ class ValidatorHelper:
                 "business_id": business_id,
                 "source_id": source_id,
                 "status": {"$ne": "deleted"},  # Ensure job is not deleted
-            }
+            },
         )
         if not job:
             raise ValueError("Job not found for this business, source, and user")

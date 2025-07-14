@@ -7,7 +7,7 @@ class TestLocations:
 
     @pytest.fixture
     def business_with_location(
-        self, base_url, authenticated_user, business_data, location_data
+        self, base_url, authenticated_user, business_data, location_data,
     ):
         """Create a business and return it with location data"""
         # Create business
@@ -53,7 +53,7 @@ class TestLocations:
 
         # List locations
         response = requests.get(
-            f"{base_url}/locations", headers=business_with_location["headers"]
+            f"{base_url}/locations", headers=business_with_location["headers"],
         )
 
         assert response.status_code == 200

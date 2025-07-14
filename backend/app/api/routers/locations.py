@@ -14,10 +14,9 @@ location_repo = LocationRepository()
 
 @router.post("/", response_model=LocationResponse, status_code=status.HTTP_201_CREATED)
 async def create_location(
-    location_data: dict, current_user: UserInDB = Depends(get_current_active_user)
+    location_data: dict, current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    Create a new location for the authenticated user.
+    """Create a new location for the authenticated user.
     """
     try:
         # Create location with current user's ID
@@ -57,12 +56,11 @@ async def list_user_locations(
     limit: int = 100,
     current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    List locations for the authenticated user only.
+    """List locations for the authenticated user only.
     """
     try:
         locations = await location_repo.get_by_user(
-            str(current_user.id), skip=skip, limit=limit
+            str(current_user.id), skip=skip, limit=limit,
         )
         return [
             LocationResponse.model_validate(location.model_dump(by_alias=False))
@@ -78,16 +76,15 @@ async def list_user_locations(
 
 @router.get("/{location_id}", response_model=LocationResponse)
 async def get_location(
-    location_id: str, current_user: UserInDB = Depends(get_current_active_user)
+    location_id: str, current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    Get a location by ID (only if user owns it).
+    """Get a location by ID (only if user owns it).
     """
     try:
         location = await location_repo.get_by_id(location_id)
         if not location:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="location not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="location not found",
             )
 
         # Check if user owns this location
@@ -116,15 +113,14 @@ async def update_location(
     location_update: LocationUpdate,
     current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    Update a location by ID (only if user owns it).
+    """Update a location by ID (only if user owns it).
     """
     try:
         # First check if location exists and user owns it
         location = await location_repo.get_by_id(location_id)
         if not location:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="location not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="location not found",
             )
 
         if location.user_id != current_user.id:
@@ -149,17 +145,16 @@ async def update_location(
 
 @router.delete("/{location_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_location(
-    location_id: str, current_user: UserInDB = Depends(get_current_active_user)
+    location_id: str, current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    Delete a location by ID (only if user owns it).
+    """Delete a location by ID (only if user owns it).
     """
     try:
         # First check if location exists and user owns it
         location = await location_repo.get_by_id(location_id)
         if not location:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="location not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="location not found",
             )
 
         if location.user_id != current_user.id:
@@ -189,8 +184,7 @@ async def get_locations_by_business(
     limit: int = 100,
     current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    Get all locations of a business (only if user owns the business).
+    """Get all locations of a business (only if user owns the business).
     """
     try:
         # Verify business ownership through the locations themselves

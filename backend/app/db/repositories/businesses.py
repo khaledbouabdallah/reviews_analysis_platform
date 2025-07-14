@@ -20,16 +20,16 @@ class BusinessRepository(BaseRepository[BusinessCreate, BusinessUpdate, Business
     async def create(self, business_create: BusinessCreate) -> BusinessInDB:
         try:
             await ValidatorHelper.get_user_or_raise(
-                users_collection, business_create.user_id
+                users_collection, business_create.user_id,
             )
 
             # Insert business
             result = await self.collection.insert_one(
-                business_create.model_dump(by_alias=True)
+                business_create.model_dump(by_alias=True),
             )
 
             created_business = await self.collection.find_one(
-                {"_id": result.inserted_id}
+                {"_id": result.inserted_id},
             )
             if created_business:
                 return self.db_model.model_validate(created_business)
@@ -50,7 +50,7 @@ class BusinessRepository(BaseRepository[BusinessCreate, BusinessUpdate, Business
             raise RuntimeError(f"Unexpected error: {e!s}")
 
     async def get_by_user(
-        self, user_id: str, skip: int = 0, limit: int = 100
+        self, user_id: str, skip: int = 0, limit: int = 100,
     ) -> list[BusinessInDB]:
         """Get all businesses of a user."""
         try:

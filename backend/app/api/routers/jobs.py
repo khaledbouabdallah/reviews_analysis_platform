@@ -1,23 +1,22 @@
-# backend/app/api/routers/jobs.py (SECURED VERSION)
-import httpx
+# backend/app/api/routers/jobs.py (CELERY VERSION)
+
 from api.dependencies import get_current_active_user
-from core.config import settings
+from celery.result import AsyncResult
+from celery_app import celery_app
 from db.repositories.jobs import JobRepository
 from fastapi import APIRouter, Depends, HTTPException, status
 from models.job import JobCreate, JobResponse, JobUpdate
 from models.user import UserInDB
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
-SCRAPER_SERVICE_URL = settings.SCRAPER_SERVICE_URL
 job_repo = JobRepository()
 
 
-@router.post("/", response_model=JobResponse)
+@router.post("/", response_model=dict)
 async def scrap_endpoint(
-    job_data: dict, current_user: UserInDB = Depends(get_current_active_user)
+    job_data: dict, current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    Endpoint to initiate a scraping job for the authenticated user.
+    """Endpoint to initiate a scraping job for the authenticated user.
     """
     try:
         # Create job with current user's ID
@@ -26,6 +25,7 @@ async def scrap_endpoint(
             url=job_data["url"],
             user_id=str(current_user.id),
             business_id=job_data["business_id"],
+            location_id=job_data.get("location_id"),
             source_id=job_data["source_id"],
             source_type=job_data["source_type"],
         )
@@ -33,29 +33,33 @@ async def scrap_endpoint(
         job_data_processed = job.model_dump(mode="json", by_alias=True)
         print("Received job data:", job_data_processed)
 
-        if job_data_processed.get("source_type") == "google":
-            request_url = f"{SCRAPER_SERVICE_URL}/google/scrap"
-        else:
-            raise HTTPException(status_code=400, detail="Unsupported source")
+        # Check source type support
+        if job_data_processed.get("source_type") != "google":
+            raise HTTPException(status_code=400, detail="Unsupported source type")
 
+        # Create job in database
         created_job = await job_repo.create(job)
+        job_id = str(created_job.id)
+
+        # Queue Celery task instead of HTTP call
+        task = celery_app.send_task(
+            "celery_tasks.scraper_task",
+            args=[job_id, job_data_processed],
+            queue="scraping",
+        )
+
+        # Return task information
+        return {
+            "id": job_id,
+            "task_id": task.id,
+            "status": "queued",
+            "message": "Scraping job queued successfully",
+        }
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create job: {e!s}")
-
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            request_url, json=created_job.model_dump(mode="json", by_alias=True)
-        )
-        if response.status_code != 200:
-            modified_job = await job_repo.update(
-                str(created_job.job_id), {"status": "failed", "error": response.text}
-            )
-            raise HTTPException(status_code=response.status_code, detail=response.text)
-
-        return JobResponse.model_validate(response.json())
 
 
 @router.get("/", response_model=list[JobResponse])
@@ -64,13 +68,12 @@ async def list_user_jobs(
     limit: int = 100,
     current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    List jobs for the authenticated user only.
+    """List jobs for the authenticated user only.
     """
     try:
         jobs = await job_repo.get_by_user(str(current_user.id), skip=skip, limit=limit)
         return [
-            JobResponse.model_validate(job.model_dump(by_alias=True)) for job in jobs
+            JobResponse.model_validate(job.model_dump(by_alias=False)) for job in jobs
         ]
 
     except Exception as e:
@@ -79,10 +82,9 @@ async def list_user_jobs(
 
 @router.get("/{job_id}", response_model=JobResponse)
 async def get_job(
-    job_id: str, current_user: UserInDB = Depends(get_current_active_user)
+    job_id: str, current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    Get a job by ID (only if user owns it).
+    """Get a job by ID (only if user owns it).
     """
     try:
         job = await job_repo.get_by_id(job_id)
@@ -104,12 +106,84 @@ async def get_job(
         raise HTTPException(status_code=500, detail=f"Failed to retrieve job: {e!s}")
 
 
+@router.get("/{job_id}/status", response_model=dict)
+async def get_job_status(
+    job_id: str, current_user: UserInDB = Depends(get_current_active_user),
+):
+    """Get detailed job status including Celery task information.
+    """
+    try:
+        # Get job from database
+        job = await job_repo.get_by_id(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+
+        # Check if user owns this job
+        if job.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to access this job",
+            )
+
+        # Return job status
+        return {
+            "id": job_id,
+            "status": job.status,
+            "total_reviews": job.total_reviews,
+            "reviews_scraped": job.reviews_scraped,
+            "created_at": job.created_at.isoformat() if job.created_at else None,
+            "started_at": job.started_at.isoformat() if job.started_at else None,
+            "ended_at": job.ended_at.isoformat() if job.ended_at else None,
+            "error": job.error,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get job status: {e!s}")
+
+
+@router.get("/tasks/{task_id}/status", response_model=dict)
+async def get_task_status(
+    task_id: str, current_user: UserInDB = Depends(get_current_active_user),
+):
+    """Get Celery task status by task ID.
+    """
+    try:
+        result = AsyncResult(task_id, app=celery_app)
+
+        if result.state == "PENDING":
+            response = {
+                "task_id": task_id,
+                "state": result.state,
+                "status": "Task is waiting to be processed",
+            }
+        elif result.state == "PROGRESS":
+            response = {"task_id": task_id, "state": result.state, **result.info}
+        elif result.state == "SUCCESS":
+            response = {
+                "task_id": task_id,
+                "state": result.state,
+                "result": result.result,
+            }
+        else:  # FAILURE, REVOKED, etc.
+            response = {
+                "task_id": task_id,
+                "state": result.state,
+                "error": str(result.info) if result.info else "Unknown error",
+            }
+
+        return response
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get task status: {e!s}")
+
+
 @router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_job(
-    job_id: str, current_user: UserInDB = Depends(get_current_active_user)
+    job_id: str, current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    Delete a job by ID (only if user owns it).
+    """Delete a job by ID (only if user owns it).
     """
     try:
         # First check if job exists and user owns it
@@ -132,14 +206,72 @@ async def delete_job(
         raise HTTPException(status_code=500, detail=f"Failed to delete job: {e!s}")
 
 
+@router.delete("/{job_id}/cancel", response_model=dict)
+async def cancel_job(
+    job_id: str, current_user: UserInDB = Depends(get_current_active_user),
+):
+    """Cancel a running job by ID (only if user owns it).
+    """
+    try:
+        # First check if job exists and user owns it
+        job = await job_repo.get_by_id(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+
+        if job.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to cancel this job",
+            )
+
+        # Check if job is in a cancellable state
+        if job.status in ["completed", "failed", "cancelled"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Job cannot be cancelled - current status: {job.status}",
+            )
+
+        # Find and revoke active tasks for this job
+        cancelled = False
+        active_tasks = celery_app.control.inspect().active()
+
+        if active_tasks:
+            for worker, tasks in active_tasks.items():
+                for task in tasks:
+                    if (
+                        task["name"] == "celery_tasks.scraper_task"
+                        and len(task.get("args", [])) > 0
+                        and task["args"][0] == job_id
+                    ):
+                        celery_app.control.revoke(task["id"], terminate=True)
+                        cancelled = True
+                        break
+
+        # Also queue a cancellation task to update job status
+        if cancelled:
+            celery_app.send_task(
+                "celery_tasks.cancel_job_task", args=[job_id], queue="management",
+            )
+
+        return {
+            "id": job_id,
+            "message": "Job cancellation requested",
+            "cancelled": cancelled,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to cancel job: {e!s}")
+
+
 @router.put("/{job_id}", response_model=JobResponse)
 async def update_job(
     job_id: str,
     job_data: JobUpdate,
     current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    Update a job by ID (only if user owns it).
+    """Update a job by ID (only if user owns it).
     """
     try:
         # First check if job exists and user owns it
@@ -169,8 +301,7 @@ async def get_jobs_by_business(
     limit: int = 100,
     current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    Get all jobs of a business (only if user owns the business).
+    """Get all jobs of a business (only if user owns the business).
     """
     try:
         jobs = await job_repo.get_by_business(business_id, skip=skip, limit=limit)
@@ -185,7 +316,7 @@ async def get_jobs_by_business(
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve business's jobs: {e!s}"
+            status_code=500, detail=f"Failed to retrieve business's jobs: {e!s}",
         )
 
 
@@ -196,8 +327,7 @@ async def get_jobs_by_source(
     limit: int = 100,
     current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    Get all jobs of a source (only if user owns the source).
+    """Get all jobs of a source (only if user owns the source).
     """
     try:
         jobs = await job_repo.get_by_source(source_id, skip=skip, limit=limit)
@@ -212,5 +342,5 @@ async def get_jobs_by_source(
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve source's jobs: {e!s}"
+            status_code=500, detail=f"Failed to retrieve source's jobs: {e!s}",
         )

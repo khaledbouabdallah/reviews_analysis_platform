@@ -25,7 +25,7 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
 
             # Insert Job
             result = await self.collection.insert_one(
-                job_create.model_dump(by_alias=True)
+                job_create.model_dump(by_alias=True),
             )
 
             created_job = await self.collection.find_one({"_id": result.inserted_id})
@@ -48,7 +48,7 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
             raise RuntimeError(f"Unexpected error: {e!s}")
 
     async def update_internal(
-        self, job_id: str, job_update: JobUpdateInternal
+        self, job_id: str, job_update: JobUpdateInternal,
     ) -> JobInDB:
         """Update job with internal fields."""
         try:
@@ -76,7 +76,7 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
             raise RuntimeError("Database error while updating job")
 
     async def get_by_user(
-        self, user_id: str, skip: int = 0, limit: int = 100
+        self, user_id: str, skip: int = 0, limit: int = 100,
     ) -> list[JobInDB]:
         """Get all jobs of a user."""
         try:
@@ -95,7 +95,7 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
             raise RuntimeError("Database error")
 
     async def get_by_business(
-        self, business_id: str, skip: int = 0, limit: int = 100
+        self, business_id: str, skip: int = 0, limit: int = 100,
     ) -> list[JobInDB]:
         """Get all jobs of a business."""
         try:

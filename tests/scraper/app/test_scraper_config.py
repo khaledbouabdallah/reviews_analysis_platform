@@ -1,4 +1,3 @@
-
 import pytest
 from pydantic import ValidationError
 
@@ -11,7 +10,7 @@ from pydantic import ValidationError
 from scraper.app.main import ScraperConfig
 
 # Test data
-alid_reviews_urls = [
+valid_reviews_urls = [
     "https://www.google.com/maps/place/ZE+POULET+GRILL%C3%89/@48.6032551,2.5563247,17z/data=!4m18!1m9!3m8!1s0x47e5e53b9271c797:0x396c8733943540ba!2sCh%C3%A2teau+de+la+Grange!8m2!3d48.5996925!4d2.5578856!9m1!1b1!16s%2Fg%2F11ngpq6w0v!3m7!1s0x47e5e54e3b5a9d59:0x3e7d92be94bc4b5f!8m2!3d48.60389!4d2.552744!9m1!1b1!16s%2Fg%2F11v60rdlt9?entry=ttu&g_ep=EgoyMDI1MDQwNy4wIKXMDSoASAFQAw%3D%3D",
     "https://www.google.com/maps/place/Shade/@36.0701868,4.7656488,15.52z/data=!4m18!1m9!3m8!1s0x47e5e53b9271c797:0x396c8733943540ba!2sCh%C3%A2teau+de+la+Grange!8m2!3d48.5996925!4d2.5578856!9m1!1b1!16s%2Fg%2F11ngpq6w0v!3m7!1s0x128cbd00580d6567:0x74243f4e84458071!8m2!3d36.0689084!4d4.7563303!9m1!1b1!16s%2Fg%2F11vqhtd7g4?entry=ttu&g_ep=EgoyMDI1MDQwNy4wIKXMDSoASAFQAw%3D%3D",
     "https://www.google.fr/maps/place/%C3%89cole+Le+Balory/@48.5873726,2.563117,15z/data=!4m8!3m7!1s0x47e5e48e1940e4d9:0xb38c30a437fd2b5!8m2!3d48.5824984!4d2.5609046!9m1!1b1!16s%2Fg%2F113dp9s8m?entry=ttu&g_ep=EgoyMDI1MDQwNy4wIKXMDSoASAFQAw%3D%3D",

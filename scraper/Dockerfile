@@ -2,10 +2,6 @@ FROM ubuntu:latest
 
 EXPOSE 5900
 
-COPY ./requirements.txt /tmp/requirements.txt
-COPY ./app /app
-COPY ./scripts /scripts
-
 RUN apt-get update && apt-get install -y \
     xvfb \
     x11vnc \
@@ -34,15 +30,15 @@ RUN x11vnc -storepasswd 1234 ~/.vnc/passwd
 # Install packages for python
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        build-essential \
-        curl \
-        libffi-dev \
-        libssl-dev \
-        zlib1g-dev \
-        liblzma-dev \
-        libbz2-dev \
-        libreadline-dev \
-        libsqlite3-dev
+    build-essential \
+    curl \
+    libffi-dev \
+    libssl-dev \
+    zlib1g-dev \
+    liblzma-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev
 
 # Download and install Python 3.10
 WORKDIR /tmp2
@@ -56,11 +52,16 @@ RUN wget https://www.python.org/ftp/python/3.10.0/Python-3.10.0.tgz \
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
     && python3.10 get-pip.py
 
+COPY ./requirements.txt /tmp/requirements.txt
+
 # Make venv and install python dependencies
 RUN python3.10 -m venv /py && \
-  /py/bin/pip install --upgrade pip && \
-  /py/bin/pip install --no-cache-dir -r /tmp/requirements.txt && \
-  rm /tmp/requirements.txt
+    /py/bin/pip install --upgrade pip && \
+    /py/bin/pip install --no-cache-dir -r /tmp/requirements.txt && \
+    rm /tmp/requirements.txt
+
+COPY ./app /app
+COPY ./scripts /scripts
 
 WORKDIR /app
 

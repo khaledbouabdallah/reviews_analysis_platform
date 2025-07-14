@@ -13,8 +13,8 @@ def preprocess_comment(text):
 
     Returns:
         str: The preprocessed text.
-    """
 
+    """
     # Normalize Unicode characters (fix accented letters, etc.)
     text = unicodedata.normalize("NFKC", text)
 

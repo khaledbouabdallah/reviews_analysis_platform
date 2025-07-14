@@ -68,13 +68,13 @@ class UserRepository:
         # Handle password updates securely
         if "password" in update_data:
             update_data["hashed_password"] = get_password_hash(
-                update_data.pop("password")
+                update_data.pop("password"),
             )
 
         update_data["updated_at"] = datetime.now(timezone.utc)
 
         updated_user = await users_collection.find_one_and_update(
-            {"_id": oid}, {"$set": update_data}, return_document=ReturnDocument.AFTER
+            {"_id": oid}, {"$set": update_data}, return_document=ReturnDocument.AFTER,
         )
 
         if updated_user:

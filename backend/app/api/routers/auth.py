@@ -25,8 +25,7 @@ class TokenData(BaseModel):
 
 @router.post("/login", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):  # noqa: B008 - FastAPI dependency injection
-    """
-    Login endpoint that returns JWT token
+    """Login endpoint that returns JWT token
     """
     # Get user by username
     user = await user_repo.get_by_username(form_data.username)
@@ -42,13 +41,13 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     # Check if user is disabled
     if user.disabled:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user",
         )
 
     # Create access token
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        subject=user.username, expires_delta=access_token_expires
+        subject=user.username, expires_delta=access_token_expires,
     )
 
     return {"access_token": access_token, "token_type": "bearer"}
@@ -56,8 +55,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 @router.post("/register", response_model=dict)
 async def register_user(user_data: dict):
-    """
-    Register new user (can be moved to users router if preferred)
+    """Register new user (can be moved to users router if preferred)
     """
     # Validate input data
     try:
@@ -97,8 +95,7 @@ async def register_user(user_data: dict):
 
 @router.get("/me")
 async def read_users_me(current_user: UserInDB = Depends(get_current_active_user)):  # noqa: B008 - FastAPI dependency injection
-    """
-    Get current user info
+    """Get current user info
     """
     return {
         "id": str(current_user.id),
@@ -110,8 +107,7 @@ async def read_users_me(current_user: UserInDB = Depends(get_current_active_user
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_my_account(current_user: UserInDB = Depends(get_current_active_user)):  # noqa: B008 - FastAPI dependency injection
-    """
-    Delete the current user's account and all associated data
+    """Delete the current user's account and all associated data
     """
     try:
         # Delete the user account

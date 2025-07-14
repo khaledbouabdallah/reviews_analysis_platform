@@ -23,7 +23,7 @@ class TestAuthentication:
     def test_protected_route_access(self, base_url, authenticated_user):
         """Test accessing protected route with valid token"""
         response = requests.get(
-            f"{base_url}/auth/me", headers=authenticated_user["headers"]
+            f"{base_url}/auth/me", headers=authenticated_user["headers"],
         )
 
         assert response.status_code == 200

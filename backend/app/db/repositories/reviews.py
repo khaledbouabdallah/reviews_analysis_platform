@@ -22,7 +22,7 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             )
 
             result = await self.collection.insert_one(
-                review_create.model_dump(by_alias=True)
+                review_create.model_dump(by_alias=True),
             )
 
             created_review = await self.collection.find_one({"_id": result.inserted_id})
@@ -84,7 +84,7 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             raise RuntimeError("Database error")
 
     async def get_by_business(
-        self, business_id: str, skip: int = 0
+        self, business_id: str, skip: int = 0,
     ) -> list[ReviewInDB]:
         try:
             oid = PyObjectId(business_id)
@@ -132,7 +132,7 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             raise RuntimeError("Database error")
 
     async def update_processed_data(
-        self, review_id: str, processed_data: dict
+        self, review_id: str, processed_data: dict,
     ) -> ReviewInDB:
         """Update the processed data of a review."""
         try:
@@ -181,7 +181,7 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
         try:
             result = await self.collection.delete_many({"business_id": oid})
             logger.info(
-                f"Deleted {result.deleted_count} reviews for business {business_id}"
+                f"Deleted {result.deleted_count} reviews for business {business_id}",
             )
             return result.deleted_count > 0
         except PyMongoError as e:
@@ -215,7 +215,7 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
         try:
             result = await self.collection.delete_many({"source_id": oid})
             logger.info(
-                f"Deleted {result.deleted_count} reviews for source {source_id}"
+                f"Deleted {result.deleted_count} reviews for source {source_id}",
             )
             return result.deleted_count > 0
         except PyMongoError as e:

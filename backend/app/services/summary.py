@@ -29,14 +29,14 @@ model = OllamaLLM(
 
 @traceable
 async def summarize_reviews(reviews: list) -> str:
-    """
-    Summarize a list of reviews using the Qwen2.5 model.
+    """Summarize a list of reviews using the Qwen2.5 model.
 
     Args:
         reviews (list): List of review strings to summarize.
 
     Returns:
         str: Summary of the reviews.
+
     """
     if not reviews:
         return "No reviews to summarize."

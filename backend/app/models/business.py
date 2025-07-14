@@ -22,7 +22,7 @@ class BusinessBase(BaseModel):
             raise ValueError("Business name cannot be empty or whitespace")
         if not (2 <= len(v.strip()) <= 100):
             raise ValueError(
-                "Business name length must be between 2 and 100 characters"
+                "Business name length must be between 2 and 100 characters",
             )
         if not re.match(r"^[\w\s\-\.]+$", v):
             raise ValueError("Business name contains invalid characters")
@@ -49,7 +49,7 @@ class BusinessUpdate(BaseModel):
                 raise ValueError("Business name cannot be empty or whitespace")
             if not (2 <= len(v.strip()) <= 100):
                 raise ValueError(
-                    "Business name length must be between 2 and 100 characters"
+                    "Business name length must be between 2 and 100 characters",
                 )
             if not re.match(r"^[\w\s\-\.]+$", v):
                 raise ValueError("Business name contains invalid characters")

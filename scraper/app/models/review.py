@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 def validate_google_review(data):
-    required_fields = ["comment", "rating", "username"]
+    required_fields = ["original_text", "translated_text", "date", "rating", "username"]
     missing = [f for f in required_fields if f not in data]
     if missing:
         raise ValueError(f"Google review is missing required fields: {missing}")
@@ -38,6 +38,7 @@ class ProcessedData(BaseModel):
 class ReviewBase(BaseModel):
     user_id: PyObjectId
     business_id: PyObjectId
+    location_id: PyObjectId | None = None
     source_id: PyObjectId
     job_id: PyObjectId
     data: dict
@@ -47,7 +48,6 @@ class ReviewBase(BaseModel):
 
     @model_validator(mode="after")
     def validate_data_based_on_source(self):
-
         if not self.source_type or self.source_type not in SOURCE_VALIDATORS:
             raise ValueError(f"Unsupported or missing source_type: {self.source_type}")
 
@@ -63,13 +63,17 @@ class ReviewBase(BaseModel):
     def validate_source_type(cls, v):
         if v not in settings.ALLOWED_SOURCE_TYPES:
             raise ValueError(
-                f"Invalid source_type. Allowed: {settings.ALLOWED_SOURCE_TYPES}"
+                f"Invalid source_type. Allowed: {settings.ALLOWED_SOURCE_TYPES}",
             )
         return v
 
 
 class ReviewInDB(ReviewBase):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+
+
+class ReviewResponse(ReviewBase):
+    id: PyObjectId
 
 
 class ReviewCreate(ReviewBase):

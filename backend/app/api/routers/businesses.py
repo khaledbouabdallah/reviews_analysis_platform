@@ -14,10 +14,9 @@ business_repo = BusinessRepository()
 
 @router.post("/", response_model=BusinessResponse, status_code=status.HTTP_201_CREATED)
 async def create_business(
-    business_data: dict, current_user: UserInDB = Depends(get_current_active_user)
+    business_data: dict, current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    Create a new business for the authenticated user.
+    """Create a new business for the authenticated user.
     """
     try:
         # Create business with current user's ID as string (will be converted in model)
@@ -55,12 +54,11 @@ async def list_user_businesses(
     limit: int = 100,
     current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    List businesses for the authenticated user only.
+    """List businesses for the authenticated user only.
     """
     try:
         businesses = await business_repo.get_by_user(
-            str(current_user.id), skip=skip, limit=limit
+            str(current_user.id), skip=skip, limit=limit,
         )
         return [
             BusinessResponse.model_validate(business.model_dump())
@@ -76,16 +74,15 @@ async def list_user_businesses(
 
 @router.get("/{business_id}", response_model=BusinessResponse)
 async def get_business(
-    business_id: str, current_user: UserInDB = Depends(get_current_active_user)
+    business_id: str, current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    Get a business by ID (only if user owns it).
+    """Get a business by ID (only if user owns it).
     """
     try:
         business = await business_repo.get_by_id(business_id)
         if not business:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Business not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Business not found",
             )
 
         # Check if user owns this business
@@ -114,15 +111,14 @@ async def update_business(
     business_update: BusinessUpdate,
     current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    Update a business by ID (only if user owns it).
+    """Update a business by ID (only if user owns it).
     """
     try:
         # First check if business exists and user owns it
         business = await business_repo.get_by_id(business_id)
         if not business:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Business not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Business not found",
             )
 
         if business.user_id != current_user.id:
@@ -147,17 +143,16 @@ async def update_business(
 
 @router.delete("/{business_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_business(
-    business_id: str, current_user: UserInDB = Depends(get_current_active_user)
+    business_id: str, current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    Delete a business by ID (only if user owns it).
+    """Delete a business by ID (only if user owns it).
     """
     try:
         # First check if business exists and user owns it
         business = await business_repo.get_by_id(business_id)
         if not business:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Business not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Business not found",
             )
 
         if business.user_id != current_user.id:

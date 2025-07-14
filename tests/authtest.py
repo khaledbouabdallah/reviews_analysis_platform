@@ -11,7 +11,7 @@ def test_auth_flow():
     user_data = {
         "username": "testuser16",
         "email": "test16@example.com",
-        "password": "password123"
+        "password": "password123",
     }
 
     # 1. Test Registration
@@ -36,13 +36,13 @@ def test_auth_flow():
     try:
         login_data = {
             "username": user_data["username"],
-            "password": user_data["password"]
+            "password": user_data["password"],
         }
 
         response = requests.post(
             f"{BASE_URL}/auth/login",
             data=login_data,  # Note: form data, not JSON
-            headers={"Content-Type": "application/x-www-form-urlencoded"}
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
 
         if response.status_code == 200:
@@ -86,7 +86,7 @@ def test_auth_flow():
         response = requests.post(
             f"{BASE_URL}/businesses",
             json=business_data,
-            headers=headers
+            headers=headers,
         )
 
         if response.status_code == 201:

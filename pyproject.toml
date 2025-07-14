@@ -8,10 +8,10 @@ python_files = "test_*.py"
 python_functions = "test_*"
 # Add these useful options:
 addopts = [
-    "-v",                    # Verbose output
-    "--strict-markers",      # Fail on unknown markers
-    "--tb=short",           # Shorter traceback format
-    "--disable-warnings",   # Clean output (optional)
+    "-v",                 # Verbose output
+    "--strict-markers",   # Fail on unknown markers
+    "--tb=short",         # Shorter traceback format
+    "--disable-warnings", # Clean output (optional)
 ]
 # Define custom markers for organizing tests
 markers = [
@@ -37,12 +37,7 @@ line_length = 88
 # Add coverage configuration
 [tool.coverage.run]
 source = ["backend/app"]
-omit = [
-    "tests/*",
-    "*/venv/*",
-    "*/__pycache__/*",
-    "*/migrations/*",
-]
+omit = ["tests/*", "*/venv/*", "*/__pycache__/*", "*/migrations/*"]
 
 [tool.coverage.report]
 exclude_lines = [
@@ -55,9 +50,62 @@ exclude_lines = [
 # Linting configuration
 [tool.ruff]
 # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
-select = ["E", "F", "W", "I", "N", "UP", "YTT", "S", "BLE", "FBT", "B", "A", "COM", "C4", "DTZ", "T10", "DJ", "EM", "EXE", "FA", "ISC", "ICN", "G", "INP", "PIE", "T20", "PYI", "PT", "Q", "RSE", "RET", "SLF", "SLOT", "SIM", "TID", "TCH", "INT", "ARG", "PTH", "TD", "FIX", "ERA", "PD", "PGH", "PL", "TRY", "FLY", "NPY", "AIR", "PERF", "FURB", "LOG", "RUF"]
+select = [
+    "E",
+    "F",
+    "W",
+    "I",
+    "N",
+    "UP",
+    "YTT",
+    "S",
+    "BLE",
+    "FBT",
+    "B",
+    "A",
+    "COM",
+    "C4",
+    "DTZ",
+    "T10",
+    "DJ",
+    "EM",
+    "EXE",
+    "FA",
+    "ISC",
+    "ICN",
+    "G",
+    "INP",
+    "PIE",
+    "T20",
+    "PYI",
+    "PT",
+    "Q",
+    "RSE",
+    "RET",
+    "SLF",
+    "SLOT",
+    "SIM",
+    "TID",
+    "INT",
+    "ARG",
+    "PTH",
+    "TD",
+    "FIX",
+    "ERA",
+    "PD",
+    "PGH",
+    "PL",
+    "TRY",
+    "FLY",
+    "NPY",
+    "AIR",
+    "PERF",
+    "FURB",
+    "LOG",
+    "RUF",
+]
 ignore = [
-    "E501",  # Line too long (Black handles this)
+    "E501",   # Line too long (Black handles this)
     "COM812", # Trailing comma (conflicts with Black)
     "ISC001", # Single line implicit string concatenation (conflicts with formatter)
 ]
@@ -112,11 +160,5 @@ show_error_codes = true
 
 # Ignore missing imports for external libraries
 [[tool.mypy.overrides]]
-module = [
-    "motor.*",
-    "pymongo.*",
-    "jose.*",
-    "passlib.*",
-    "httpx.*",
-]
+module = ["motor.*", "pymongo.*", "jose.*", "passlib.*", "httpx.*"]
 ignore_missing_imports = true

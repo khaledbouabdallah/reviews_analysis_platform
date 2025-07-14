@@ -1,6 +1,5 @@
 # backend/app/main.py (UPDATED)
-"""
-FastAPI main application for the Complaint Management Platform.
+"""FastAPI main application for the Complaint Management Platform.
 
 This module sets up the FastAPI application and defines the API endpoints.
 """
@@ -17,8 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
-    """
-    Lifespan context manager for the FastAPI application.
+    """Lifespan context manager for the FastAPI application.
     This is used to perform startup and shutdown tasks.
     """
     # Perform startup tasks

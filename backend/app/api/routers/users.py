@@ -10,8 +10,7 @@ user_repo = UserRepository()
 
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(user: UserCreate):
-    """
-    Create a new user.
+    """Create a new user.
 
     - **username**: required, unique username
     - **email**: required, valid email address
@@ -31,7 +30,7 @@ async def create_user(user: UserCreate):
         existing_email = await user_repo.get_by_email(user.email)
         if existing_email:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail="Email already registered"
+                status_code=status.HTTP_409_CONFLICT, detail="Email already registered",
             )
 
         # Create the user
@@ -48,8 +47,7 @@ async def create_user(user: UserCreate):
 
 @router.get("/", response_model=list[UserResponse])
 async def list_users(skip: int = 0, limit: int = 100):
-    """
-    Retrieve a list of users.
+    """Retrieve a list of users.
 
     - **skip**: number of users to skip (pagination)
     - **limit**: maximum number of users to return
@@ -62,23 +60,21 @@ async def list_users(skip: int = 0, limit: int = 100):
 
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(user_id: str):
-    """
-    Get a specific user by ID.
+    """Get a specific user by ID.
 
     - **user_id**: the ID of the user to retrieve
     """
     user = await user_repo.get_by_id(user_id)
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found",
         )
     return UserResponse.model_validate(user.model_dump(by_alias=True))
 
 
 @router.put("/{user_id}", response_model=UserResponse)
 async def update_user(user_id: str, user_update: dict):
-    """
-    Update a user.
+    """Update a user.
 
     - **user_id**: the ID of the user to update
     - **user_update**: the fields to update
@@ -87,7 +83,7 @@ async def update_user(user_id: str, user_update: dict):
     existing_user = await user_repo.get_by_id(user_id)
     if not existing_user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found",
         )
 
     # Update the user
@@ -97,8 +93,7 @@ async def update_user(user_id: str, user_update: dict):
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user_id: str):
-    """
-    Delete a user.
+    """Delete a user.
 
     - **user_id**: the ID of the user to delete
     """
@@ -106,7 +101,7 @@ async def delete_user(user_id: str):
     existing_user = await user_repo.get_by_id(user_id)
     if not existing_user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found",
         )
 
     # Delete the user

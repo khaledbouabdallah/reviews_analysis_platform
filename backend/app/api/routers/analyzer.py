@@ -17,10 +17,9 @@ router = APIRouter(prefix="/analyzer", tags=["analyzer"])
 
 @router.get("/simple/batch/job/{job_id}")
 async def simple_analyzer_on_job_reviews(
-    job_id: str, current_user: UserInDB = Depends(get_current_active_user)
+    job_id: str, current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    Endpoint to analyze reviews from a scraping job (only if user owns the job).
+    """Endpoint to analyze reviews from a scraping job (only if user owns the job).
     """
     try:
         # First verify the job exists and user owns it
@@ -30,7 +29,7 @@ async def simple_analyzer_on_job_reviews(
             logger.error(error_message)
             # Raise a 404 error if the job does not exist
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=error_message
+                status_code=status.HTTP_404_NOT_FOUND, detail=error_message,
             )
         if job.user_id != current_user.id:
             error_message = (
@@ -75,7 +74,7 @@ async def simple_analyzer_on_job_reviews(
 
     except Exception as e:
         logger.error(
-            f"Unexpected error analyzing reviews for job {job_id}: {e!s}\n{traceback.format_exc()}"
+            f"Unexpected error analyzing reviews for job {job_id}: {e!s}\n{traceback.format_exc()}",
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -85,17 +84,16 @@ async def simple_analyzer_on_job_reviews(
 
 @router.get("/summary/job/{job_id}")
 async def summarize_job_reviews(
-    job_id: str, current_user: UserInDB = Depends(get_current_active_user)
+    job_id: str, current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """
-    Endpoint to summarize reviews from a scraping job (only if user owns the job).
+    """Endpoint to summarize reviews from a scraping job (only if user owns the job).
     """
     try:
         # First verify the job exists and user owns it
         job = await job_repo.get_by_id(job_id)
         if not job:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Job not found",
             )
 
         if job.user_id != current_user.id:

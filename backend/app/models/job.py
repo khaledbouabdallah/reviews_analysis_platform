@@ -33,7 +33,7 @@ class JobBase(BaseModel):
     def validate_status(cls, value):
         if value not in settings.ALLOWED_JOB_STATUSES:
             raise ValueError(
-                f"Invalid status value. Allowed: {settings.ALLOWED_JOB_STATUSES}"
+                f"Invalid status value. Allowed: {settings.ALLOWED_JOB_STATUSES}",
             )
         return value
 
@@ -41,7 +41,7 @@ class JobBase(BaseModel):
     def validate_source_type(cls, v):
         if v not in settings.ALLOWED_SOURCE_TYPES:
             raise ValueError(
-                f"Invalid source_type. Allowed: {settings.ALLOWED_SOURCE_TYPES}"
+                f"Invalid source_type. Allowed: {settings.ALLOWED_SOURCE_TYPES}",
             )
         return v
 

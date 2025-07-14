@@ -12,31 +12,22 @@ services:
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - MONGO_INITDB_DATABASE=reviews_db
     networks:
       - reviews_network
 
-  # Scraper service - API mode
-  scraper:
-    build:
-      context: ./scraper
-      dockerfile: Dockerfile
-    container_name: reviews_scraper_api
+
+  redis:
+    image: redis:7-alpine
+    container_name: reviews_redis
     restart: always
     ports:
-      - "8001:8001"  # API port
-    depends_on:
-      - mongodb
+      - "6379:6379"
+    command: redis-server --appendonly yes
     volumes:
-      - ./scraper/app:/app/app  # Map your code directory (for development)
-    environment:
-      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/reviews_db
-      - PYTHONUNBUFFERED=1
+      - redis_data:/data
     networks:
       - reviews_network
-    shm_size: '2gb'
-    mem_limit: 4g
-    cpus: 2.0
-    #command: api  # Run in API mode
 
   # Backend API service
   backend:
@@ -49,17 +40,42 @@ services:
       - "8000:8000"
     depends_on:
       - mongodb
-      - scraper
+      - redis
     environment:
       - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/reviews_db
-      - SCRAPER_SERVICE_URL=http://scraper:8001
+      - REDIS_URL=redis://redis:6379/0 
       - PYTHONUNBUFFERED=1
     volumes:
       - ./backend/app:/app/app 
     networks:
       - reviews_network
 
-  # Frontend (Streamlit) service
+
+# Scraper: Pure Celery Worker (no API, no ports)
+  scraper_worker:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile  
+    container_name: reviews_scraper_worker
+    restart: always
+    # NO ports - pure worker
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - ./scraper/app:/app/app
+      - ./scraper/logs:/app/logs
+    environment:
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/reviews_db
+      - REDIS_URL=redis://redis:6379/0
+      - PYTHONUNBUFFERED=1
+    networks:
+      - reviews_network
+    shm_size: '2gb'
+    mem_limit: 4g
+    cpus: 2.0
+  
+  # Frontend Next.js
   frontend:
     build:
       context: ./frontend
@@ -70,6 +86,7 @@ services:
       - "3000:3000"  # Only change the port
     depends_on:
       - backend
+      
     environment:
       #- NEXT_PUBLIC_API_URL=http://backend:8000  # Keep internal container communication
       - NODE_ENV=development
@@ -86,4 +103,6 @@ networks:
 
 volumes:
   mongodb_data:
+    driver: local
+  redis_data:
     driver: local

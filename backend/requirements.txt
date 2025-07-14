@@ -21,15 +21,15 @@ fast-langdetect
 textblob>=0.19.0
 
 # Web scraping libraries
-urllib3==1.26.16
-selenium==3.141.0
+# urllib3==1.26.16
+# selenium==3.141.0
 
 # Development tools
-pytest>=7.3.1
-pytest-cov>=4.1.0
-black>=23.3.0
-pylint>=2.17.0
-isort>=5.12.0
+# pytest>=7.3.1
+# pytest-cov>=4.1.0
+# black>=23.3.0
+# pylint>=2.17.0
+# isort>=5.12.0
 
 # Database libraries
 motor>=3.1.1
@@ -45,3 +45,11 @@ langchain-core>=0.3.65
 langchain-ollama>=0.3.3
 langchain-text-splitters>=0.3.8
 langcodes>=3.5.0
+
+# NEW: Celery and Redis dependencies
+celery==5.4.0
+redis==4.6.0
+kombu==5.4.0
+
+#Flower for Celery monitoring
+flower==2.0.1

@@ -24,7 +24,7 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             )
 
             result = await self.collection.insert_one(
-                review_create.model_dump(by_alias=True)
+                review_create.model_dump(by_alias=True),
             )
 
             created_review = await self.collection.find_one({"_id": result.inserted_id})
@@ -72,7 +72,7 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             raise RuntimeError("Database error while updating review")
 
     async def get_by_user(
-        self, user_id: str, skip: int = 0, limit: int = 100
+        self, user_id: str, skip: int = 0, limit: int = 100,
     ) -> list[ReviewInDB]:
         try:
             oid = PyObjectId(user_id)
@@ -90,7 +90,7 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             raise RuntimeError("Database error")
 
     async def get_by_business(
-        self, business_id: str, skip: int = 0, limit: int = 100
+        self, business_id: str, skip: int = 0, limit: int = 100,
     ) -> list[ReviewInDB]:
         try:
             oid = PyObjectId(business_id)
@@ -108,7 +108,7 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             raise RuntimeError("Database error")
 
     async def get_by_source(
-        self, source_id: str, skip: int = 0, limit: int = 100
+        self, source_id: str, skip: int = 0, limit: int = 100,
     ) -> list[ReviewInDB]:
         """Get all reviews from a specific source."""
         try:
@@ -128,7 +128,7 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             raise RuntimeError("Database error")
 
     async def get_by_job(
-        self, job_id: str, skip: int = 0, limit: int = 100
+        self, job_id: str, skip: int = 0, limit: int = 100,
     ) -> list[ReviewInDB]:
         """Get all reviews linked to a specific scraping job."""
         try:

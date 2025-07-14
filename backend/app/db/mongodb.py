@@ -17,7 +17,7 @@ reviews_collection = db["reviews"]
 async def init_indexes():
     # Businesses: ensure (user_id, name) is unique
     await busniesses_collection.create_index(
-        [("user_id", 1), ("name", 1)], unique=True, name="user_name_unique_idx"
+        [("user_id", 1), ("name", 1)], unique=True, name="user_name_unique_idx",
     )
 
     # Sources: ensure (user_id, business_id, name) is unique

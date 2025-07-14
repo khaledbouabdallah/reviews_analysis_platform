@@ -19,6 +19,7 @@ class JobBase(BaseModel):
     error: str | None = None
     user_id: PyObjectId
     business_id: PyObjectId
+    location_id: PyObjectId | None = None
     source_id: PyObjectId
     source_type: str
 
@@ -32,7 +33,7 @@ class JobBase(BaseModel):
     def validate_status(cls, value):
         if value not in settings.ALLOWED_JOB_STATUSES:
             raise ValueError(
-                f"Invalid status value. Allowed: {settings.ALLOWED_JOB_STATUSES}"
+                f"Invalid status value. Allowed: {settings.ALLOWED_JOB_STATUSES}",
             )
         return value
 
@@ -40,7 +41,7 @@ class JobBase(BaseModel):
     def validate_source_type(cls, v):
         if v not in settings.ALLOWED_SOURCE_TYPES:
             raise ValueError(
-                f"Invalid source_type. Allowed: {settings.ALLOWED_SOURCE_TYPES}"
+                f"Invalid source_type. Allowed: {settings.ALLOWED_SOURCE_TYPES}",
             )
         return v
 
@@ -92,11 +93,10 @@ class JobCreate(JobBase):
     """Used for creating a new job."""
 
 
-
 class JobInDB(JobBase):
     """Used internally and for DB storage."""
 
-    job_id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
 
 
 class JobUpdate(BaseModel):
@@ -123,4 +123,4 @@ class JobUpdateInternal(BaseModel):
 class JobResponse(JobBase):
     """Used for returning job data in API responses."""
 
-    job_id: PyObjectId = Field(alias="_id")
+    id: PyObjectId

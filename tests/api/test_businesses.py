@@ -36,7 +36,7 @@ class TestBusinesses:
 
         # List businesses
         response = requests.get(
-            f"{base_url}/businesses", headers=authenticated_user["headers"]
+            f"{base_url}/businesses", headers=authenticated_user["headers"],
         )
 
         assert response.status_code == 200
@@ -114,7 +114,7 @@ class TestBusinesses:
         assert get_response.status_code == 404
 
     def test_access_other_user_business(
-        self, base_url, authenticated_user, business_data
+        self, base_url, authenticated_user, business_data,
     ):
         """Test that users cannot access other users' businesses"""
         # This would require creating two users - simplified version

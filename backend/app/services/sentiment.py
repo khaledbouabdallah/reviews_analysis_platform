@@ -1,5 +1,4 @@
-"""
-Sentiment analysis module for the Complaint Management Platform.
+"""Sentiment analysis module for the Complaint Management Platform.
 
 This module provides functionality to analyze sentiment in text content.
 Uses NLTK's VADER for English and multi-language support via TextBlob.
@@ -26,8 +25,7 @@ class SentimentAnalyzer:
         self.vader = SentimentIntensityAnalyzer()
 
     def analyze(self, text: str, language: str = "en") -> dict[str, Any]:
-        """
-        Analyze the sentiment of the given text.
+        """Analyze the sentiment of the given text.
 
         Args:
             text (str): Text to analyze
@@ -38,6 +36,7 @@ class SentimentAnalyzer:
                 - compound: Overall sentiment score (-1 to 1)
                 - sentiment: Categorical sentiment (positive, negative, neutral)
                 - scores: Detailed scores for different sentiments
+
         """
         if not text or len(text.strip()) == 0:
             return {
@@ -57,7 +56,7 @@ class SentimentAnalyzer:
         """Analyze sentiment using VADER (optimized for English)."""
         scores = self.vader.polarity_scores(text)
         sentiment, confidence = self._interpret_scores(
-            scores["compound"], (scores["pos"], scores["neg"], scores["neu"])
+            scores["compound"], (scores["pos"], scores["neg"], scores["neu"]),
         )
 
         return {
@@ -99,10 +98,9 @@ class SentimentAnalyzer:
         }
 
     def _interpret_scores(
-        self, compound: float, detailed_scores: tuple[float, float, float]
+        self, compound: float, detailed_scores: tuple[float, float, float],
     ) -> tuple[str, float]:
-        """
-        Interpret sentiment scores and determine category and confidence.
+        """Interpret sentiment scores and determine category and confidence.
 
         Args:
             compound (float): Overall sentiment score
@@ -110,6 +108,7 @@ class SentimentAnalyzer:
 
         Returns:
             Tuple[str, float]: Sentiment category and confidence
+
         """
         pos, neg, neu = detailed_scores
 

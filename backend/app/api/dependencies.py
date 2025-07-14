@@ -9,8 +9,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserInDB:
-    """
-    Get current user from JWT token
+    """Get current user from JWT token
     """
     from db.repositories.users import (
         UserRepository,  # Import here to avoid circular imports
@@ -46,12 +45,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserInDB:
 async def get_current_active_user(
     current_user: UserInDB = Depends(get_current_user),
 ) -> UserInDB:
-    """
-    Get current active user (not disabled)
+    """Get current active user (not disabled)
     """
     if current_user.disabled:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user",
         )
     return current_user
 
@@ -59,8 +57,7 @@ async def get_current_active_user(
 async def get_current_admin_user(
     current_user: UserInDB = Depends(get_current_active_user),
 ) -> UserInDB:
-    """
-    Get current admin user (for future role-based access)
+    """Get current admin user (for future role-based access)
     """
     # For now, all active users are admins
     # Later you can add role field to User model

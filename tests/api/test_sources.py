@@ -7,7 +7,7 @@ class TestSources:
 
     @pytest.fixture
     def business_with_source(
-        self, base_url, authenticated_user, business_data, source_data
+        self, base_url, authenticated_user, business_data, source_data,
     ):
         """Create a business and return it with source data"""
         # Create business
@@ -54,7 +54,7 @@ class TestSources:
 
         # List sources
         response = requests.get(
-            f"{base_url}/sources", headers=business_with_source["headers"], timeout=3
+            f"{base_url}/sources", headers=business_with_source["headers"], timeout=3,
         )
 
         assert response.status_code == 200
