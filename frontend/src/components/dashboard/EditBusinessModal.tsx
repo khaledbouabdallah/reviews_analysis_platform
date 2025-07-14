@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Building2, Loader2 } from 'lucide-react';
+import { X, Building2, Loader2, Plus, Tag } from 'lucide-react';
 import { BusinessWithStats, dashboardService } from '@/services/dashboard';
 
 interface EditBusinessModalProps {
@@ -14,12 +14,17 @@ interface EditBusinessModalProps {
 
 interface BusinessFormData {
   name: string;
+  description: string;
+  segments: string[];
 }
 
 export function EditBusinessModal({ isOpen, onClose, onBusinessUpdated, business }: EditBusinessModalProps) {
   const [formData, setFormData] = useState<BusinessFormData>({
     name: '',
+    description: '',
+    segments: [],
   });
+  const [newSegment, setNewSegment] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
@@ -29,6 +34,8 @@ export function EditBusinessModal({ isOpen, onClose, onBusinessUpdated, business
     if (business && isOpen) {
       setFormData({
         name: business.name,
+        description: business.description || '',
+        segments: business.segments || [],
       });
     }
   }, [business, isOpen]);
@@ -48,8 +55,15 @@ const handleSubmit = async (e: React.FormEvent) => {
   setLoading(true);
 
   try {
+    // Prepare the data to send
+    const businessData = {
+      name: formData.name,
+      description: formData.description || undefined, // Don't send empty string
+      segments: formData.segments.length > 0 ? formData.segments : undefined, // Don't send empty array
+    };
+
     // Use the dashboardService instead of direct fetch
-    await dashboardService.updateBusiness(business.id, formData);
+    await dashboardService.updateBusiness(business.id, businessData);
 
     // Success!
     onBusinessUpdated(); // Refresh the dashboard data
@@ -61,11 +75,35 @@ const handleSubmit = async (e: React.FormEvent) => {
   }
 };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const handleAddSegment = () => {
+    if (newSegment.trim() && !formData.segments.includes(newSegment.trim())) {
+      setFormData({
+        ...formData,
+        segments: [...formData.segments, newSegment.trim()],
+      });
+      setNewSegment('');
+    }
+  };
+
+  const handleRemoveSegment = (segmentToRemove: string) => {
+    setFormData({
+      ...formData,
+      segments: formData.segments.filter(segment => segment !== segmentToRemove),
+    });
+  };
+
+  const handleSegmentKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddSegment();
+    }
   };
 
   const handleClose = () => {
@@ -73,7 +111,8 @@ const handleSubmit = async (e: React.FormEvent) => {
       setIsAnimating(false);
       // Wait for animation to complete before actually closing
       setTimeout(() => {
-        setFormData({ name: '' });
+        setFormData({ name: '', description: '', segments: [] });
+        setNewSegment('');
         setError('');
         onClose();
       }, 200);
@@ -99,6 +138,13 @@ const handleSubmit = async (e: React.FormEvent) => {
     };
   }, [isOpen]);
 
+  // Check if form has changes
+  const hasChanges = business && (
+    formData.name !== business.name ||
+    formData.description !== (business.description || '') ||
+    JSON.stringify(formData.segments) !== JSON.stringify(business.segments || [])
+  );
+
   if (!isOpen || !business) return null;
 
   return (
@@ -114,7 +160,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       {/* Modal container */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div 
-          className={`relative bg-white rounded-3xl shadow-2xl w-full max-w-lg transform transition-all duration-300 ease-out ${
+          className={`relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 ease-out ${
             isAnimating 
               ? 'scale-100 opacity-100 translate-y-0' 
               : 'scale-95 opacity-0 translate-y-4'
@@ -141,7 +187,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   <h2 className="text-2xl font-bold text-gray-900 bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text">
                     Edit Business
                   </h2>
-                  <p className="text-sm text-gray-500 mt-1">Update your business information</p>
+                  <p className="text-sm text-gray-500 mt-1">Update your business information and segments</p>
                 </div>
               </div>
               
@@ -172,9 +218,10 @@ const handleSubmit = async (e: React.FormEvent) => {
 
             {/* Form with smooth focus animations */}
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Business Name */}
               <div className="space-y-2">
                 <label htmlFor="name" className="block text-sm font-semibold text-gray-700">
-                  Business Name
+                  Business Name <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -192,6 +239,86 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </div>
                 <p className="text-xs text-gray-500 pl-1">
                   This change will be reflected across your entire dashboard
+                </p>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <label htmlFor="description" className="block text-sm font-semibold text-gray-700">
+                  Business Description
+                </label>
+                <div className="relative">
+                  <textarea
+                    id="description"
+                    name="description"
+                    rows={3}
+                    value={formData.description}
+                    onChange={handleChange}
+                    disabled={loading}
+                    className="w-full px-4 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 focus:bg-white transition-all duration-300 text-gray-900 placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed resize-none"
+                    placeholder="Describe your business (optional)..."
+                  />
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-orange-500/10 to-red-500/10 opacity-0 focus-within:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                </div>
+                <p className="text-xs text-gray-500 pl-1">
+                  Help AI understand your business better for more accurate review analysis
+                </p>
+              </div>
+
+              {/* Segments */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">
+                  Review Segments
+                </label>
+                
+                {/* Segments Input */}
+                <div className="flex space-x-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={newSegment}
+                      onChange={(e) => setNewSegment(e.target.value)}
+                      onKeyPress={handleSegmentKeyPress}
+                      disabled={loading}
+                      className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 focus:bg-white transition-all duration-300 text-gray-900 placeholder-gray-400 disabled:opacity-50"
+                      placeholder="Add segment (e.g., food_quality, service, ambiance)..."
+                    />
+                    <Tag className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddSegment}
+                    disabled={loading || !newSegment.trim()}
+                    className="px-4 py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-all duration-200 flex items-center"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Segments List */}
+                {formData.segments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
+                    {formData.segments.map((segment, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-3 py-1 bg-orange-100 text-orange-800 text-sm font-medium rounded-full"
+                      >
+                        {segment}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSegment(segment)}
+                          disabled={loading}
+                          className="ml-2 text-orange-600 hover:text-orange-800 disabled:opacity-50"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <p className="text-xs text-gray-500 pl-1">
+                  Update segments for AI to classify reviews (e.g., food_quality, service_speed, cleanliness)
                 </p>
               </div>
 
@@ -217,7 +344,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading || !formData.name.trim() || formData.name === business.name}
+                  disabled={loading || !formData.name.trim() || !hasChanges}
                   className="flex-1 px-6 py-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
                 >
                   {loading ? (
@@ -246,7 +373,8 @@ const handleSubmit = async (e: React.FormEvent) => {
                 <p className="text-xs text-orange-700 leading-relaxed">
                   🔄 Changes are instant across your dashboard<br/>
                   📊 All existing data remains unchanged<br/>
-                  🏷️ Only the display name will be updated
+                  🏷️ Only the display information will be updated<br/>
+                  🤖 New segments will apply to future review analysis
                 </p>
               </div>
             </div>

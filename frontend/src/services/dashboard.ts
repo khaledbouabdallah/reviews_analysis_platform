@@ -15,6 +15,8 @@ export interface Business {
   created_at: string;
   updated_at?: string;
   user_id: string;
+  description?: string;
+  segments?: string[];
 }
 
 export interface BusinessWithStats extends Business {

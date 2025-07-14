@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Building2, Loader2 } from 'lucide-react';
+import { X, Building2, Loader2, Plus, Tag } from 'lucide-react';
 
 interface AddBusinessModalProps {
   isOpen: boolean;
@@ -12,12 +12,17 @@ interface AddBusinessModalProps {
 
 interface BusinessFormData {
   name: string;
+  description: string;
+  segments: string[];
 }
 
 export function AddBusinessModal({ isOpen, onClose, onBusinessCreated }: AddBusinessModalProps) {
   const [formData, setFormData] = useState<BusinessFormData>({
     name: '',
+    description: '',
+    segments: [],
   });
+  const [newSegment, setNewSegment] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
@@ -42,13 +47,20 @@ export function AddBusinessModal({ isOpen, onClose, onBusinessCreated }: AddBusi
         throw new Error('No authentication token found');
       }
 
+      // Prepare the data to send
+      const businessData = {
+        name: formData.name,
+        description: formData.description || undefined, // Don't send empty string
+        segments: formData.segments.length > 0 ? formData.segments : undefined, // Don't send empty array
+      };
+
       const response = await fetch(`${API_URL}/api/businesses/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(businessData),
       });
 
       if (!response.ok) {
@@ -57,7 +69,8 @@ export function AddBusinessModal({ isOpen, onClose, onBusinessCreated }: AddBusi
       }
 
       // Success animation
-      setFormData({ name: '' });
+      setFormData({ name: '', description: '', segments: [] });
+      setNewSegment('');
       onBusinessCreated();
       handleClose();
     } catch (err: any) {
@@ -67,11 +80,35 @@ export function AddBusinessModal({ isOpen, onClose, onBusinessCreated }: AddBusi
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const handleAddSegment = () => {
+    if (newSegment.trim() && !formData.segments.includes(newSegment.trim())) {
+      setFormData({
+        ...formData,
+        segments: [...formData.segments, newSegment.trim()],
+      });
+      setNewSegment('');
+    }
+  };
+
+  const handleRemoveSegment = (segmentToRemove: string) => {
+    setFormData({
+      ...formData,
+      segments: formData.segments.filter(segment => segment !== segmentToRemove),
+    });
+  };
+
+  const handleSegmentKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddSegment();
+    }
   };
 
   const handleClose = () => {
@@ -79,7 +116,8 @@ export function AddBusinessModal({ isOpen, onClose, onBusinessCreated }: AddBusi
       setIsAnimating(false);
       // Wait for animation to complete before actually closing
       setTimeout(() => {
-        setFormData({ name: '' });
+        setFormData({ name: '', description: '', segments: [] });
+        setNewSegment('');
         setError('');
         onClose();
       }, 200);
@@ -120,7 +158,7 @@ export function AddBusinessModal({ isOpen, onClose, onBusinessCreated }: AddBusi
       {/* Modal container */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div 
-          className={`relative bg-white rounded-3xl shadow-2xl w-full max-w-lg transform transition-all duration-300 ease-out ${
+          className={`relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 ease-out ${
             isAnimating 
               ? 'scale-100 opacity-100 translate-y-0' 
               : 'scale-95 opacity-0 translate-y-4'
@@ -147,7 +185,7 @@ export function AddBusinessModal({ isOpen, onClose, onBusinessCreated }: AddBusi
                   <h2 className="text-2xl font-bold text-gray-900 bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text">
                     Create New Business
                   </h2>
-                  <p className="text-sm text-gray-500 mt-1">Let's get your business set up</p>
+                  <p className="text-sm text-gray-500 mt-1">Set up your business for review analysis</p>
                 </div>
               </div>
               
@@ -162,9 +200,10 @@ export function AddBusinessModal({ isOpen, onClose, onBusinessCreated }: AddBusi
 
             {/* Form with smooth focus animations */}
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Business Name */}
               <div className="space-y-2">
                 <label htmlFor="name" className="block text-sm font-semibold text-gray-700">
-                  Business Name
+                  Business Name <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -176,12 +215,89 @@ export function AddBusinessModal({ isOpen, onClose, onBusinessCreated }: AddBusi
                     onChange={handleChange}
                     disabled={loading}
                     className="w-full px-4 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all duration-300 text-gray-900 placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
-                    placeholder="Enter your amazing business name..."
+                    placeholder="Enter your business name..."
+                  />
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 focus-within:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <label htmlFor="description" className="block text-sm font-semibold text-gray-700">
+                  Business Description
+                </label>
+                <div className="relative">
+                  <textarea
+                    id="description"
+                    name="description"
+                    rows={3}
+                    value={formData.description}
+                    onChange={handleChange}
+                    disabled={loading}
+                    className="w-full px-4 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all duration-300 text-gray-900 placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed resize-none"
+                    placeholder="Describe your business (optional)..."
                   />
                   <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 focus-within:opacity-100 transition-opacity duration-300 pointer-events-none" />
                 </div>
                 <p className="text-xs text-gray-500 pl-1">
-                  This will be the foundation of your review analytics dashboard
+                  Help AI understand your business better for more accurate review analysis
+                </p>
+              </div>
+
+              {/* Segments */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">
+                  Review Segments
+                </label>
+                
+                {/* Segments Input */}
+                <div className="flex space-x-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={newSegment}
+                      onChange={(e) => setNewSegment(e.target.value)}
+                      onKeyPress={handleSegmentKeyPress}
+                      disabled={loading}
+                      className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all duration-300 text-gray-900 placeholder-gray-400 disabled:opacity-50"
+                      placeholder="Add segment (e.g., food_quality, service, ambiance)..."
+                    />
+                    <Tag className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddSegment}
+                    disabled={loading || !newSegment.trim()}
+                    className="px-4 py-3 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-all duration-200 flex items-center"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Segments List */}
+                {formData.segments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
+                    {formData.segments.map((segment, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full"
+                      >
+                        {segment}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSegment(segment)}
+                          disabled={loading}
+                          className="ml-2 text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <p className="text-xs text-gray-500 pl-1">
+                  Add segments for AI to classify reviews (e.g., food_quality, service_speed, cleanliness)
                 </p>
               </div>
 
@@ -213,7 +329,7 @@ export function AddBusinessModal({ isOpen, onClose, onBusinessCreated }: AddBusi
                   {loading ? (
                     <>
                       <Loader2 className="h-5 w-5 animate-spin mr-3" />
-                      <span className="animate-pulse">Creating magic...</span>
+                      <span className="animate-pulse">Creating...</span>
                     </>
                   ) : (
                     <>
@@ -236,7 +352,7 @@ export function AddBusinessModal({ isOpen, onClose, onBusinessCreated }: AddBusi
                 <p className="text-xs text-blue-700 leading-relaxed">
                   ✨ Your business dashboard will be ready instantly<br/>
                   🎯 Add locations and start collecting reviews<br/>
-                  📊 Watch your analytics come to life
+                  📊 AI will analyze reviews using your custom segments
                 </p>
               </div>
             </div>
