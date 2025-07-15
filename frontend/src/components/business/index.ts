@@ -1,7 +1,8 @@
 // src/components/business/index.ts
-export { BusinessHeader } from './BusinessHeader';
+
 export { DashboardSections } from './DashboardSections';
 export { BusinessSkeleton } from './BusinessSkeleton';
+export { BusinessHeader } from './BusinessHeader';
 
 // Section components
 export { LocationsSection } from './sections/LocationsSection';

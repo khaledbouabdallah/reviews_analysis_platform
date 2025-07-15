@@ -2,23 +2,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  MapPin,
-  Database,
-  Play,
-  Brain,
-  BarChart3,
+import { 
+  MapPin, 
+  Database, 
+  Play, 
+  Brain, 
+  BarChart3, 
   Activity,
   ChevronDown,
   ChevronUp,
-  GripVertical,
-  Plus,
-  Edit,
-  Trash2,
-  CheckCircle,
-  Clock,
-  TrendingUp
+  GripVertical
 } from 'lucide-react';
+import { LocationsSection } from './sections/LocationsSection';
+import { SourcesSection } from './sections/SourcesSection';
+import { JobsSection } from './sections/JobsSection';
+import { AnalysisSection } from './sections/AnalysisSection';
+import { StatisticsSection } from './sections/StatisticsSection';
+import { ActivitySection } from './sections/ActivitySection';
 
 interface DashboardSection {
   id: string;
@@ -46,7 +46,7 @@ interface DashboardSectionsProps {
   onDataUpdate: () => void;
 }
 
-// Icon mapping
+// Icon mapping - using the bulletproof solution
 const iconMap = {
   'MapPin': MapPin,
   'Database': Database,
@@ -56,12 +56,12 @@ const iconMap = {
   'Activity': Activity
 } as const;
 
-export function DashboardSections({
-  businessId,
-  locations,
-  sources,
-  jobs,
-  onDataUpdate
+export function DashboardSections({ 
+  businessId, 
+  locations, 
+  sources, 
+  jobs, 
+  onDataUpdate 
 }: DashboardSectionsProps) {
   const [sections, setSections] = useState<DashboardSection[]>(defaultSections);
   const [draggedSection, setDraggedSection] = useState<string | null>(null);
@@ -108,7 +108,7 @@ export function DashboardSections({
   // Handle drop
   const handleDrop = (e: React.DragEvent, targetSectionId: string) => {
     e.preventDefault();
-
+    
     if (!draggedSection || draggedSection === targetSectionId) {
       setDragOverSection(null);
       return;
@@ -146,178 +146,33 @@ export function DashboardSections({
     saveDashboardPreferences(updatedSections);
   };
 
-  // Render section content (inline for now to avoid import issues)
+  // Render section content
   const renderSectionContent = (section: DashboardSection) => {
     if (section.collapsed) return null;
 
+    const commonProps = {
+      businessId,
+      locations,
+      sources,
+      jobs,
+      onUpdate: onDataUpdate
+    };
+
     switch (section.component) {
       case 'LocationsSection':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-gray-600">
-                  {locations.length} location{locations.length !== 1 ? 's' : ''} configured
-                </p>
-                <div className="w-12 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full" />
-              </div>
-
-              <button className="group bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center space-x-2">
-                <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform duration-300" />
-                <span className="font-medium">Add Location</span>
-              </button>
-            </div>
-
-            {locations.length === 0 ? (
-              <div className="text-center py-12">
-                <MapPin className="h-16 w-16 mx-auto text-emerald-500/60 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No locations yet</h3>
-                <p className="text-gray-600">Add your first location to start organizing your review sources</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {locations.slice(0, 3).map((location, index) => (
-                  <div key={location.id} className="group relative">
-                    <div className="absolute inset-0 bg-white/50 backdrop-blur-sm rounded-2xl border border-white/40 group-hover:bg-white/70 transition-all duration-300" />
-                    <div className="relative p-6 flex items-center justify-between">
-                      <div>
-                        <h4 className="font-semibold text-gray-900">{location.name}</h4>
-                        <p className="text-sm text-gray-600">{location.address}</p>
-                      </div>
-                      <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                        <button className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg">
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-
+        return <LocationsSection {...commonProps} />;
       case 'SourcesSection':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-gray-600">
-                  {sources.length} source{sources.length !== 1 ? 's' : ''} configured
-                </p>
-                <div className="w-12 h-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full" />
-              </div>
-
-              <button className="group bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center space-x-2">
-                <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform duration-300" />
-                <span className="font-medium">Add Source</span>
-              </button>
-            </div>
-
-            {sources.length === 0 ? (
-              <div className="text-center py-12">
-                <Database className="h-16 w-16 mx-auto text-blue-500/60 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No sources configured</h3>
-                <p className="text-gray-600">Connect Google Maps or upload CSV files to start collecting reviews</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {sources.slice(0, 3).map((source, index) => (
-                  <div key={source.id} className="group relative">
-                    <div className="absolute inset-0 bg-white/50 backdrop-blur-sm rounded-2xl border border-white/40 group-hover:bg-white/70 transition-all duration-300" />
-                    <div className="relative p-6 flex items-center justify-between">
-                      <div>
-                        <h4 className="font-semibold text-gray-900">{source.name}</h4>
-                        <p className="text-sm text-gray-600 capitalize">{source.type}</p>
-                      </div>
-                      <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                        <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-
+        return <SourcesSection {...commonProps} />;
       case 'JobsSection':
-        const runningJobs = jobs.filter(job => job.status === 'running');
-
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-gray-600">
-                  {runningJobs.length} running • {jobs.length} total jobs
-                </p>
-                <div className="w-12 h-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" />
-              </div>
-
-              <button className="group bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center space-x-2">
-                <Play className="h-4 w-4" />
-                <span className="font-medium">Start Job</span>
-              </button>
-            </div>
-
-            {jobs.length === 0 ? (
-              <div className="text-center py-12">
-                <Play className="h-16 w-16 mx-auto text-purple-500/60 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No scraping jobs yet</h3>
-                <p className="text-gray-600">Start your first job to begin collecting reviews</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {jobs.slice(0, 3).map((job, index) => (
-                  <div key={job.id} className="group relative">
-                    <div className="absolute inset-0 bg-white/50 backdrop-blur-sm rounded-2xl border border-white/40 group-hover:bg-white/70 transition-all duration-300" />
-                    <div className="relative p-6">
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <h4 className="font-semibold text-gray-900">{job.name}</h4>
-                          <p className="text-sm text-gray-600">Job #{job.id.slice(0, 8)}</p>
-                        </div>
-
-                        <div className={`px-3 py-1 rounded-full flex items-center space-x-2 text-white text-sm font-medium ${
-                          job.status === 'running' ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
-                          job.status === 'completed' ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
-                          job.status === 'failed' ? 'bg-gradient-to-r from-red-500 to-pink-500' :
-                          'bg-gradient-to-r from-gray-500 to-slate-500'
-                        }`}>
-                          {job.status === 'running' ? <Clock className="h-4 w-4 animate-spin" /> :
-                           job.status === 'completed' ? <CheckCircle className="h-4 w-4" /> :
-                           <Clock className="h-4 w-4" />}
-                          <span className="capitalize">{job.status}</span>
-                        </div>
-                      </div>
-
-                      {job.status === 'completed' && job.reviews_scraped && (
-                        <p className="text-sm text-green-600 font-medium">
-                          ✅ {job.reviews_scraped} reviews collected
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-
+        return <JobsSection {...commonProps} />;
+      case 'AnalysisSection':
+        return <AnalysisSection {...commonProps} />;
+      case 'StatisticsSection':
+        return <StatisticsSection {...commonProps} />;
+      case 'ActivitySection':
+        return <ActivitySection {...commonProps} />;
       default:
-        return (
-          <div className="text-center py-8 text-gray-500">
-            <p>Section content coming soon...</p>
-          </div>
-        );
+        return null;
     }
   };
 
@@ -328,8 +183,21 @@ export function DashboardSections({
         const isDraggedOver = dragOverSection === section.id;
         const isDragged = draggedSection === section.id;
 
-        // Safety check - if icon is not found, use a default
-        const SafeIcon = IconComponent || BarChart3;
+        // Debug: Let's see what's happening with icons
+        console.log(`Section: ${section.id}, Icon: ${section.icon}, Component:`, IconComponent);
+
+        // Safety check - if icon is not found, use a default based on section type
+        const SafeIcon = IconComponent || (() => {
+          switch (section.id) {
+            case 'locations': return MapPin;
+            case 'sources': return Database;
+            case 'jobs': return Play;
+            case 'analysis': return Brain;
+            case 'statistics': return BarChart3;
+            case 'activity': return Activity;
+            default: return BarChart3;
+          }
+        })();
 
         return (
           <div
@@ -339,12 +207,15 @@ export function DashboardSections({
             onDragEnd={handleDragEnd}
             onDragOver={(e) => handleDragOver(e, section.id)}
             onDrop={(e) => handleDrop(e, section.id)}
-            className={`group relative transition-all duration-500 transform ${
+            className={`group relative transition-all duration-500 transform animate-in slide-in-from-bottom ${
+              section.collapsed ? 'col-span-1' : 'col-span-1'
+            } ${
               isDraggedOver ? 'scale-105 rotate-1' : ''
             } ${
               isDragged ? 'scale-95 rotate-2 z-50' : ''
             }`}
-            style={{
+            style={{ 
+              animationDelay: `${index * 0.1}s`,
               cursor: 'move'
             }}
           >
@@ -353,7 +224,7 @@ export function DashboardSections({
               isDraggedOver ? 'bg-blue-500/20 border-blue-500/50 shadow-blue-500/25' : ''
             }`} />
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 rounded-3xl opacity-60" />
-
+            
             <div className="relative">
               {/* Section Header */}
               <div className="flex items-center justify-between p-6 border-b border-white/20">
@@ -361,19 +232,19 @@ export function DashboardSections({
                   <div className="cursor-grab active:cursor-grabbing p-2 hover:bg-white/30 rounded-xl transition-all duration-300 group/drag">
                     <GripVertical className="h-5 w-5 text-gray-400 group-hover/drag:text-gray-600 group-hover/drag:scale-110 transition-all duration-300" />
                   </div>
-
+                  
                   <div className="relative">
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
                     <div className="relative p-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl group-hover:scale-110 transition-all duration-300">
                       <SafeIcon className="h-6 w-6 text-white" />
                     </div>
                   </div>
-
+                  
                   <h3 className="text-xl font-semibold text-gray-900 group-hover:text-blue-700 transition-colors duration-300">
                     {section.title}
                   </h3>
                 </div>
-
+                
                 <button
                   onClick={() => toggleSection(section.id)}
                   className="p-3 hover:bg-white/30 rounded-xl transition-all duration-300 group/toggle"
@@ -388,14 +259,14 @@ export function DashboardSections({
 
               {/* Section Content */}
               {!section.collapsed && (
-                <div className="p-6">
+                <div className="p-6 animate-in slide-in-from-top duration-500">
                   {renderSectionContent(section)}
                 </div>
               )}
 
               {/* Collapsed State - Show Icon Only */}
               {section.collapsed && (
-                <div className="p-6 flex items-center justify-center">
+                <div className="p-6 flex items-center justify-center animate-in fade-in duration-300">
                   <SafeIcon className="h-8 w-8 text-gray-400 group-hover:text-gray-600 group-hover:scale-125 transition-all duration-500" />
                 </div>
               )}
