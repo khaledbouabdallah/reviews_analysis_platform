@@ -6,7 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { authService } from '@/services/auth';
 import { DashboardNavigation } from '@/components/dashboard/DashboardNavigation';
-import { BusinessHeader, DashboardSections, BusinessSkeleton,} from '@/components/business';
+import { BusinessHeader, DashboardSections, BusinessSkeleton, } from '@/components/business';
 import '@/styles/business-page.css';
 interface Business {
   id: string;

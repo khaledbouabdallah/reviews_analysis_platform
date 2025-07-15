@@ -1,6 +1,78 @@
 /* Add this to your global CSS file or create a new CSS module */
 /* src/styles/business-page.css */
 
+/* TEST - Remove after debugging */
+
+
+.scrollable-container {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: auto; /* Firefox - make visible */
+  scrollbar-color: #6b7280 #f3f4f6; /* Firefox - gray thumb, light track */
+}
+
+/* Webkit scrollbars - INSIDE the container */
+.scrollable-container::-webkit-scrollbar {
+  width: 12px; /* Visible width */
+}
+
+.scrollable-container::-webkit-scrollbar-track {
+  background: #f3f4f6; /* Light gray track */
+  border-radius: 6px;
+}
+
+.scrollable-container::-webkit-scrollbar-thumb {
+  background: #6b7280; /* Solid gray thumb */
+  border-radius: 6px;
+  border: 2px solid #f3f4f6; /* Creates inset effect */
+}
+
+.scrollable-container::-webkit-scrollbar-thumb:hover {
+  background: #4b5563; /* Darker on hover */
+}
+
+/* Table scrollbars */
+.table-scrollable {
+  overflow: auto;
+  scrollbar-width: auto;
+  scrollbar-color: #6b7280 #f9fafb;
+}
+
+.table-scrollable::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.table-scrollable::-webkit-scrollbar-track {
+  background: #f9fafb;
+  border-radius: 5px;
+}
+
+.table-scrollable::-webkit-scrollbar-thumb {
+  background: #6b7280;
+  border-radius: 5px;
+  border: 1px solid #f9fafb;
+}
+
+.table-scrollable::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+}
+
+
+/* Make scrollbars actually visible */
+.scrollable-container {
+  scrollbar-color: #374151 #e5e7eb; /* Solid gray colors for Firefox */
+}
+
+.scrollable-container::-webkit-scrollbar-thumb {
+  background: #374151 !important; /* Solid dark gray */
+}
+
+.scrollable-container::-webkit-scrollbar-track {
+  background: #e5e7eb !important; /* Solid light gray */
+}
+
+
 @keyframes slide-in-from-top {
   from {
     opacity: 0;
@@ -189,7 +261,7 @@
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
 }
 
-/* Custom scrollbar for webkit browsers */
+/* Custom scrollbar for webkit browsers
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
@@ -206,4 +278,5 @@
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(59, 130, 246, 0.7);
-}
+} */
+
