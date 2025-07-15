@@ -1,25 +1,71 @@
 // src/components/business/sections/LocationsSection.tsx
 'use client';
 
-import { useState } from 'react';
-import { MapPin, Plus, Edit, Trash2, Calendar } from 'lucide-react';
-
-interface Location {
-  id: string;
-  name: string;
-  address: string;
-  business_id: string;
-  created_at: string;
-}
+import { useState, useEffect } from 'react';
+import { MapPin, Plus, Edit, Trash2, Calendar, Loader2, AlertCircle } from 'lucide-react';
+import { Location, locationService } from '@/services/location';
+import { AddLocationModal, EditLocationModal, DeleteConfirmationModal } from '../modals/LocationModals';
 
 interface LocationsSectionProps {
   businessId: string;
-  locations: Location[];
-  onUpdate: () => void;
 }
 
-export function LocationsSection({ businessId, locations, onUpdate }: LocationsSectionProps) {
-  const [showAddForm, setShowAddForm] = useState(false);
+export function LocationsSection({ businessId }: LocationsSectionProps) {
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showAllLocations, setShowAllLocations] = useState(false);
+
+  // Load locations
+  const loadLocations = async () => {
+    try {
+      setError('');
+      const data = await locationService.getLocationsByBusiness(businessId);
+      setLocations(data);
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Error loading locations:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (businessId) {
+      loadLocations();
+    }
+  }, [businessId]);
+
+  const handleEdit = (location: Location) => {
+    setSelectedLocation(location);
+    setShowEditModal(true);
+  };
+
+  const handleDelete = (location: Location) => {
+    setSelectedLocation(location);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedLocation) return;
+
+    setDeleteLoading(true);
+    try {
+      await locationService.deleteLocation(selectedLocation.id);
+      await loadLocations(); // Refresh the list
+      setShowDeleteModal(false);
+      setSelectedLocation(null);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -29,28 +75,52 @@ export function LocationsSection({ businessId, locations, onUpdate }: LocationsS
     });
   };
 
+  // Get locations to display
+  const displayedLocations = showAllLocations ? locations : locations.slice(0, 3);
+
   return (
     <div className="space-y-6">
       {/* Header with action button */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <p className="text-sm font-medium text-gray-600">
-            {locations.length} location{locations.length !== 1 ? 's' : ''} configured
+            {loading ? 'Loading locations...' : `${locations.length} location${locations.length !== 1 ? 's' : ''} configured`}
           </p>
           <div className="w-12 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full" />
         </div>
 
         <button
-          onClick={() => setShowAddForm(true)}
-          className="group bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center space-x-2"
+          onClick={() => setShowAddModal(true)}
+          disabled={loading}
+          className="group bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform duration-300" />
           <span className="font-medium">Add Location</span>
         </button>
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl animate-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center space-x-2">
+            <AlertCircle className="h-4 w-4" />
+            <span className="text-sm">{error}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="flex items-center space-x-3 text-gray-600">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>Loading locations...</span>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
-      {locations.length === 0 ? (
+      {!loading && locations.length === 0 ? (
         <div className="text-center py-12 animate-in fade-in duration-700">
           <div className="relative mb-6">
             <div className="absolute inset-0 bg-emerald-500/10 rounded-full blur-3xl" />
@@ -59,15 +129,15 @@ export function LocationsSection({ businessId, locations, onUpdate }: LocationsS
           <h3 className="text-lg font-medium text-gray-900 mb-2">No locations yet</h3>
           <p className="text-gray-600 mb-6">Add your first location to start organizing your review sources</p>
           <button
-            onClick={() => setShowAddForm(true)}
+            onClick={() => setShowAddModal(true)}
             className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 font-medium"
           >
             Add First Location
           </button>
         </div>
-      ) : (
+      ) : !loading && (
         <div className="space-y-4">
-          {locations.slice(0, 3).map((location, index) => (
+          {displayedLocations.map((location, index) => (
             <div
               key={location.id}
               className="group relative animate-in slide-in-from-left duration-500"
@@ -90,7 +160,7 @@ export function LocationsSection({ businessId, locations, onUpdate }: LocationsS
                     </div>
 
                     <p className="text-gray-600 text-sm leading-relaxed pl-9">
-                      {location.address}
+                      {location.adresse}
                     </p>
 
                     <div className="flex items-center space-x-2 text-xs text-gray-500 pl-9">
@@ -100,42 +170,85 @@ export function LocationsSection({ businessId, locations, onUpdate }: LocationsS
                   </div>
 
                   <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                    <button className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200 hover:scale-110">
+                    <button
+                      onClick={() => handleEdit(location)}
+                      className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200 hover:scale-110"
+                      title="Edit location"
+                    >
                       <Edit className="h-4 w-4" />
                     </button>
-                    <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 hover:scale-110">
+                    <button
+                      onClick={() => handleDelete(location)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 hover:scale-110"
+                      title="Delete location"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
               </div>
-
             </div>
-
           ))}
 
           {locations.length > 3 && (
-            <button className="w-full text-center py-4 text-emerald-600 hover:text-emerald-800 transition-colors font-medium hover:bg-white/30 rounded-xl">
-              View all {locations.length} locations →
+            <button
+              onClick={() => setShowAllLocations(!showAllLocations)}
+              className="w-full text-center py-4 text-emerald-600 hover:text-emerald-800 transition-colors font-medium hover:bg-white/30 rounded-xl"
+            >
+              {showAllLocations
+                ? '← Show less'
+                : `View all ${locations.length} locations →`
+              }
             </button>
           )}
         </div>
       )}
 
       {/* Quick tip */}
-      <div className="mt-6 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl animate-in fade-in duration-700" style={{ animationDelay: '0.5s' }}>
-        <div className="flex items-start space-x-3">
-          <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-emerald-600 text-sm font-bold">💡</span>
-          </div>
-          <div>
-            <h4 className="text-sm font-medium text-emerald-800 mb-1">Pro Tip</h4>
-            <p className="text-xs text-emerald-700 leading-relaxed">
-              Add specific locations to organize reviews by physical store, restaurant branch, or service area. This helps you track performance across different venues.
-            </p>
+      {!loading && (
+        <div className="mt-6 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl animate-in fade-in duration-700" style={{ animationDelay: '0.5s' }}>
+          <div className="flex items-start space-x-3">
+            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-emerald-600 text-sm font-bold">💡</span>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-emerald-800 mb-1">Pro Tip</h4>
+              <p className="text-xs text-emerald-700 leading-relaxed">
+                Add specific locations to organize reviews by physical store, restaurant branch, or service area. This helps you track performance across different venues.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Modals */}
+      <AddLocationModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onLocationCreated={loadLocations}
+        businessId={businessId}
+      />
+
+      <EditLocationModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedLocation(null);
+        }}
+        onLocationUpdated={loadLocations}
+        location={selectedLocation}
+      />
+
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setSelectedLocation(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        locationName={selectedLocation?.name || ''}
+        loading={deleteLoading}
+      />
     </div>
   );
 }
