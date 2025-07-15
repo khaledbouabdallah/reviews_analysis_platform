@@ -109,7 +109,9 @@ export function LocationsSection({ businessId, locations, onUpdate }: LocationsS
                   </div>
                 </div>
               </div>
+
             </div>
+
           ))}
 
           {locations.length > 3 && (

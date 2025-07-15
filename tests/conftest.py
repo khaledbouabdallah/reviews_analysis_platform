@@ -30,7 +30,8 @@ def test_user_data():
 
 @pytest.fixture
 def authenticated_user(
-    base_url: str, test_user_data: dict,
+    base_url: str,
+    test_user_data: dict,
 ) -> Generator[dict, None, None]:
     """Create a test user, authenticate, and provide auth headers.
     Cleans up the user after the test.
@@ -92,7 +93,11 @@ def location_data():
 def source_data():
     """Sample source data"""
     unique_id = str(uuid.uuid4())[:8]
-    return {"name": f"Test Source {unique_id}", "type": "google"}
+    return {
+        "name": f"Test Source {unique_id}",
+        "type": "google",
+        "url": "https://www.google.com/maps/place/Restaurant+Test/@40.7128,-74.0060,15z",
+    }
 
 
 @pytest.fixture

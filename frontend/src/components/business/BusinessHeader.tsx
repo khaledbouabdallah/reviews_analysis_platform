@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Edit, MapPin, Database, Play } from 'lucide-react';
+import { Edit, MapPin, Database, Play, Plus, X } from 'lucide-react';
 
 interface Business {
   id: string;
@@ -51,9 +51,12 @@ export function BusinessHeader({
   onBusinessUpdate
 }: BusinessHeaderProps) {
   const [editingBusiness, setEditingBusiness] = useState(false);
+  const [editingSegments, setEditingSegments] = useState(false);  // ADD THIS
+  const [newSegment, setNewSegment] = useState('');              // ADD THIS
   const [businessForm, setBusinessForm] = useState({
     name: business.name,
-    description: business.description || ''
+    description: business.description || '',
+    segments: business.segments || [] // ADD THIS
   });
 
   const handleBusinessUpdate = async () => {
@@ -76,6 +79,30 @@ export function BusinessHeader({
       onBusinessUpdate();
     } catch (err: any) {
       console.error('Error updating business:', err);
+    }
+  };
+
+  const addSegment = () => {
+    if (newSegment.trim() && !businessForm.segments.includes(newSegment.trim())) {
+      setBusinessForm({
+        ...businessForm,
+        segments: [...businessForm.segments, newSegment.trim()]
+      });
+      setNewSegment('');
+    }
+  };
+
+  const removeSegment = (segmentToRemove: string) => {
+    setBusinessForm({
+      ...businessForm,
+      segments: businessForm.segments.filter(segment => segment !== segmentToRemove)
+    });
+  };
+
+  const handleSegmentKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addSegment();
     }
   };
 
@@ -145,7 +172,7 @@ export function BusinessHeader({
                   <button
                     onClick={() => {
                       setEditingBusiness(false);
-                      setBusinessForm({ name: business.name, description: business.description || '' });
+                      setBusinessForm({ name: business.name, description: business.description || '', segments: business.segments || [] });
                     }}
                     className="bg-white/50 hover:bg-white/70 text-gray-800 px-8 py-3 rounded-2xl transition-all duration-300 backdrop-blur-sm border border-white/30 font-medium"
                   >
@@ -177,19 +204,90 @@ export function BusinessHeader({
                   </p>
                 )}
 
-                {business.segments && business.segments.length > 0 && (
-                  <div className="flex flex-wrap gap-3 animate-in fade-in duration-700" style={{ animationDelay: '0.4s' }}>
-                    {business.segments.map((segment: string, index: number) => (
-                      <span
-                        key={segment}
-                        className="px-4 py-2 bg-gradient-to-r from-blue-100/80 to-purple-100/80 text-blue-800 rounded-full text-sm font-medium backdrop-blur-sm border border-blue-200/50 hover:scale-105 transition-all duration-300 animate-in slide-in-from-bottom"
-                        style={{ animationDelay: `${0.1 * index}s` }}
-                      >
-                        {segment}
-                      </span>
-                    ))}
+                <div className="animate-in fade-in duration-700" style={{ animationDelay: '0.4s' }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-gray-600">Business Segments</h3>
+                    <button
+                      onClick={() => setEditingSegments(true)}
+                      className="group/segments p-2 text-gray-500 hover:text-gray-700 hover:bg-white/50 rounded-lg transition-all duration-300"
+                    >
+                      <Edit className="h-4 w-4 group-hover/segments:rotate-12 transition-transform duration-300" />
+                    </button>
                   </div>
-                )}
+
+                  {editingSegments ? (
+                    <div className="space-y-4 p-4 bg-white/30 backdrop-blur-sm rounded-2xl border border-white/40">
+                      <div className="flex space-x-2">
+                        <input
+                          type="text"
+                          value={newSegment}
+                          onChange={(e) => setNewSegment(e.target.value)}
+                          onKeyPress={handleSegmentKeyPress}
+                          placeholder="Add segment (e.g., food_quality, service)"
+                          className="flex-1 px-4 py-2 bg-white/50 border border-white/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-700 placeholder-gray-500"
+                        />
+                        <button
+                          onClick={addSegment}
+                          className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl hover:scale-105 transition-transform"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {businessForm.segments.map((segment: string) => (
+                          <span
+                            key={segment}
+                            className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+                          >
+                            {segment}
+                            <button
+                              onClick={() => removeSegment(segment)}
+                              className="ml-2 text-blue-600 hover:text-blue-800"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={handleBusinessUpdate}
+                          className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 py-2 rounded-xl text-sm font-medium"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingSegments(false)}
+                          className="bg-white/50 text-gray-800 px-4 py-2 rounded-xl text-sm font-medium"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-3">
+                      {business.segments && business.segments.length > 0 ? (
+                        business.segments.map((segment: string) => (
+                          <span
+                            key={segment}
+                            className="px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 rounded-full text-sm font-medium"
+                          >
+                            {segment}
+                          </span>
+                        ))
+                      ) : (
+                        <button
+                          onClick={() => setEditingSegments(true)}
+                          className="px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-sm font-medium flex items-center space-x-2"
+                        >
+                          <Plus className="h-3 w-3" />
+                          <span>Add segments</span>
+                        </button>
+                      )}
+                    </div>
+                  )} </div>
               </div>
             )}
           </div>
