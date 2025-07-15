@@ -39,8 +39,8 @@ export function LocationsSection({ businessId, locations, onUpdate }: LocationsS
           </p>
           <div className="w-12 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full" />
         </div>
-        
-        <button 
+
+        <button
           onClick={() => setShowAddForm(true)}
           className="group bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center space-x-2"
         >
@@ -48,7 +48,7 @@ export function LocationsSection({ businessId, locations, onUpdate }: LocationsS
           <span className="font-medium">Add Location</span>
         </button>
       </div>
-      
+
       {/* Content */}
       {locations.length === 0 ? (
         <div className="text-center py-12 animate-in fade-in duration-700">
@@ -68,15 +68,15 @@ export function LocationsSection({ businessId, locations, onUpdate }: LocationsS
       ) : (
         <div className="space-y-4">
           {locations.slice(0, 3).map((location, index) => (
-            <div 
-              key={location.id} 
+            <div
+              key={location.id}
               className="group relative animate-in slide-in-from-left duration-500"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               {/* Card background */}
               <div className="absolute inset-0 bg-white/50 backdrop-blur-sm rounded-2xl border border-white/40 group-hover:bg-white/70 group-hover:shadow-xl transition-all duration-300" />
               <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-teal-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              
+
               <div className="relative p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 space-y-3">
@@ -88,17 +88,17 @@ export function LocationsSection({ businessId, locations, onUpdate }: LocationsS
                         {location.name}
                       </h4>
                     </div>
-                    
+
                     <p className="text-gray-600 text-sm leading-relaxed pl-9">
                       {location.address}
                     </p>
-                    
+
                     <div className="flex items-center space-x-2 text-xs text-gray-500 pl-9">
                       <Calendar className="h-3 w-3" />
                       <span>Added {formatDate(location.created_at)}</span>
                     </div>
                   </div>
-                  
+
                   <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
                     <button className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all duration-200 hover:scale-110">
                       <Edit className="h-4 w-4" />
@@ -111,7 +111,7 @@ export function LocationsSection({ businessId, locations, onUpdate }: LocationsS
               </div>
             </div>
           ))}
-          
+
           {locations.length > 3 && (
             <button className="w-full text-center py-4 text-emerald-600 hover:text-emerald-800 transition-colors font-medium hover:bg-white/30 rounded-xl">
               View all {locations.length} locations →

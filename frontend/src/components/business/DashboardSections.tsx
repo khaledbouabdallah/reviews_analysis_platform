@@ -2,12 +2,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  MapPin, 
-  Database, 
-  Play, 
-  Brain, 
-  BarChart3, 
+import {
+  MapPin,
+  Database,
+  Play,
+  Brain,
+  BarChart3,
   Activity,
   ChevronDown,
   ChevronUp,
@@ -56,12 +56,12 @@ const iconMap = {
   'Activity': Activity
 } as const;
 
-export function DashboardSections({ 
-  businessId, 
-  locations, 
-  sources, 
-  jobs, 
-  onDataUpdate 
+export function DashboardSections({
+  businessId,
+  locations,
+  sources,
+  jobs,
+  onDataUpdate
 }: DashboardSectionsProps) {
   const [sections, setSections] = useState<DashboardSection[]>(defaultSections);
   const [draggedSection, setDraggedSection] = useState<string | null>(null);
@@ -108,7 +108,7 @@ export function DashboardSections({
   // Handle drop
   const handleDrop = (e: React.DragEvent, targetSectionId: string) => {
     e.preventDefault();
-    
+
     if (!draggedSection || draggedSection === targetSectionId) {
       setDragOverSection(null);
       return;
@@ -161,13 +161,13 @@ export function DashboardSections({
                 </p>
                 <div className="w-12 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full" />
               </div>
-              
+
               <button className="group bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center space-x-2">
                 <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform duration-300" />
                 <span className="font-medium">Add Location</span>
               </button>
             </div>
-            
+
             {locations.length === 0 ? (
               <div className="text-center py-12">
                 <MapPin className="h-16 w-16 mx-auto text-emerald-500/60 mb-4" />
@@ -210,13 +210,13 @@ export function DashboardSections({
                 </p>
                 <div className="w-12 h-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full" />
               </div>
-              
+
               <button className="group bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center space-x-2">
                 <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform duration-300" />
                 <span className="font-medium">Add Source</span>
               </button>
             </div>
-            
+
             {sources.length === 0 ? (
               <div className="text-center py-12">
                 <Database className="h-16 w-16 mx-auto text-blue-500/60 mb-4" />
@@ -251,7 +251,7 @@ export function DashboardSections({
 
       case 'JobsSection':
         const runningJobs = jobs.filter(job => job.status === 'running');
-        
+
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -261,13 +261,13 @@ export function DashboardSections({
                 </p>
                 <div className="w-12 h-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" />
               </div>
-              
+
               <button className="group bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center space-x-2">
                 <Play className="h-4 w-4" />
                 <span className="font-medium">Start Job</span>
               </button>
             </div>
-            
+
             {jobs.length === 0 ? (
               <div className="text-center py-12">
                 <Play className="h-16 w-16 mx-auto text-purple-500/60 mb-4" />
@@ -285,7 +285,7 @@ export function DashboardSections({
                           <h4 className="font-semibold text-gray-900">{job.name}</h4>
                           <p className="text-sm text-gray-600">Job #{job.id.slice(0, 8)}</p>
                         </div>
-                        
+
                         <div className={`px-3 py-1 rounded-full flex items-center space-x-2 text-white text-sm font-medium ${
                           job.status === 'running' ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
                           job.status === 'completed' ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
@@ -298,7 +298,7 @@ export function DashboardSections({
                           <span className="capitalize">{job.status}</span>
                         </div>
                       </div>
-                      
+
                       {job.status === 'completed' && job.reviews_scraped && (
                         <p className="text-sm text-green-600 font-medium">
                           ✅ {job.reviews_scraped} reviews collected
@@ -344,7 +344,7 @@ export function DashboardSections({
             } ${
               isDragged ? 'scale-95 rotate-2 z-50' : ''
             }`}
-            style={{ 
+            style={{
               cursor: 'move'
             }}
           >
@@ -353,7 +353,7 @@ export function DashboardSections({
               isDraggedOver ? 'bg-blue-500/20 border-blue-500/50 shadow-blue-500/25' : ''
             }`} />
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 rounded-3xl opacity-60" />
-            
+
             <div className="relative">
               {/* Section Header */}
               <div className="flex items-center justify-between p-6 border-b border-white/20">
@@ -361,19 +361,19 @@ export function DashboardSections({
                   <div className="cursor-grab active:cursor-grabbing p-2 hover:bg-white/30 rounded-xl transition-all duration-300 group/drag">
                     <GripVertical className="h-5 w-5 text-gray-400 group-hover/drag:text-gray-600 group-hover/drag:scale-110 transition-all duration-300" />
                   </div>
-                  
+
                   <div className="relative">
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
                     <div className="relative p-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl group-hover:scale-110 transition-all duration-300">
                       <SafeIcon className="h-6 w-6 text-white" />
                     </div>
                   </div>
-                  
+
                   <h3 className="text-xl font-semibold text-gray-900 group-hover:text-blue-700 transition-colors duration-300">
                     {section.title}
                   </h3>
                 </div>
-                
+
                 <button
                   onClick={() => toggleSection(section.id)}
                   className="p-3 hover:bg-white/30 rounded-xl transition-all duration-300 group/toggle"

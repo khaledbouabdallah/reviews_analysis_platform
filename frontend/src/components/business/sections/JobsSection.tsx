@@ -56,13 +56,13 @@ export function JobsSection({ businessId, jobs, sources, onUpdate }: JobsSection
           </p>
           <div className="w-12 h-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" />
         </div>
-        
+
         <button className="group bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center space-x-2">
           <Play className="h-4 w-4 group-hover:scale-110 transition-transform duration-300" />
           <span className="font-medium">Start Job</span>
         </button>
       </div>
-      
+
       {jobs.length === 0 ? (
         <div className="text-center py-12 animate-in fade-in duration-700">
           <div className="relative mb-6">
@@ -76,15 +76,15 @@ export function JobsSection({ businessId, jobs, sources, onUpdate }: JobsSection
         <div className="space-y-4">
           {recentJobs.map((job, index) => {
             const progress = job.total_reviews ? (job.reviews_scraped || 0) / job.total_reviews * 100 : 0;
-            
+
             return (
-              <div 
-                key={job.id} 
+              <div
+                key={job.id}
                 className="group relative animate-in slide-in-from-left duration-500"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <div className="absolute inset-0 bg-white/50 backdrop-blur-sm rounded-2xl border border-white/40 group-hover:bg-white/70 group-hover:shadow-xl transition-all duration-300" />
-                
+
                 <div className="relative p-6">
                   <div className="flex items-center justify-between mb-3">
                     <div>
@@ -95,13 +95,13 @@ export function JobsSection({ businessId, jobs, sources, onUpdate }: JobsSection
                         {sources.find(s => s.id === job.source_id)?.name || 'Unknown source'}
                       </p>
                     </div>
-                    
+
                     <div className={`px-3 py-1 bg-gradient-to-r ${getStatusColor(job.status)} text-white rounded-full flex items-center space-x-2 group-hover:scale-105 transition-transform duration-300`}>
                       {getStatusIcon(job.status)}
                       <span className="text-sm font-medium capitalize">{job.status}</span>
                     </div>
                   </div>
-                  
+
                   {job.status === 'running' && job.total_reviews && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm text-gray-600">
@@ -109,7 +109,7 @@ export function JobsSection({ businessId, jobs, sources, onUpdate }: JobsSection
                         <span>{Math.round(progress)}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                        <div 
+                        <div
                           className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500 ease-out"
                           style={{ width: `${progress}%` }}
                         />

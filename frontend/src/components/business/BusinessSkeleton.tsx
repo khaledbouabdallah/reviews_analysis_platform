@@ -21,7 +21,7 @@ export function BusinessSkeleton() {
               ))}
             </div>
           </div>
-          
+
           {/* Stats skeleton */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
             {[1, 2, 3].map((i) => (
@@ -58,14 +58,14 @@ export function BusinessSkeleton() {
                 </div>
                 <div className="w-6 h-6 bg-gray-200 rounded" />
               </div>
-              
+
               {/* Section content skeleton */}
               <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="h-4 bg-gray-200 rounded w-24" />
                   <div className="h-8 bg-gradient-to-r from-gray-200 to-gray-300 rounded-lg w-28" />
                 </div>
-                
+
                 <div className="space-y-3">
                   {[1, 2, 3].map((j) => (
                     <div key={j} className="relative">

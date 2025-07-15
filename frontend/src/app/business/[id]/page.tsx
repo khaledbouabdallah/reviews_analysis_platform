@@ -148,9 +148,9 @@ export default function BusinessPage() {
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-cyan-400/10 to-blue-400/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }} />
       </div>
-      
+
       <DashboardNavigation />
-      
+
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
         <button
@@ -163,7 +163,7 @@ export default function BusinessPage() {
 
         {/* Business Header */}
         <div className="animate-in slide-in-from-top duration-700">
-          <BusinessHeader 
+          <BusinessHeader
             business={business}
             locations={locations}
             sources={sources}

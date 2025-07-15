@@ -30,13 +30,13 @@ export function SourcesSection({ businessId, sources, locations, onUpdate }: Sou
           </p>
           <div className="w-12 h-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full" />
         </div>
-        
+
         <button className="group bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center space-x-2">
           <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform duration-300" />
           <span className="font-medium">Add Source</span>
         </button>
       </div>
-      
+
       {sources.length === 0 ? (
         <div className="text-center py-12 animate-in fade-in duration-700">
           <div className="relative mb-6">
@@ -49,13 +49,13 @@ export function SourcesSection({ businessId, sources, locations, onUpdate }: Sou
       ) : (
         <div className="space-y-4">
           {sources.slice(0, 3).map((source, index) => (
-            <div 
-              key={source.id} 
+            <div
+              key={source.id}
               className="group relative animate-in slide-in-from-left duration-500"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               <div className="absolute inset-0 bg-white/50 backdrop-blur-sm rounded-2xl border border-white/40 group-hover:bg-white/70 group-hover:shadow-xl transition-all duration-300" />
-              
+
               <div className="relative p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
@@ -74,7 +74,7 @@ export function SourcesSection({ businessId, sources, locations, onUpdate }: Sou
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
                     <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 hover:scale-110">
                       <Edit className="h-4 w-4" />

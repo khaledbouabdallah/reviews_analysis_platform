@@ -43,12 +43,12 @@ interface BusinessHeaderProps {
   onBusinessUpdate: () => void;
 }
 
-export function BusinessHeader({ 
-  business, 
-  locations, 
-  sources, 
-  jobs, 
-  onBusinessUpdate 
+export function BusinessHeader({
+  business,
+  locations,
+  sources,
+  jobs,
+  onBusinessUpdate
 }: BusinessHeaderProps) {
   const [editingBusiness, setEditingBusiness] = useState(false);
   const [businessForm, setBusinessForm] = useState({
@@ -60,7 +60,7 @@ export function BusinessHeader({
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const token = localStorage.getItem('token');
-      
+
       const response = await fetch(`${API_URL}/api/businesses/${business.id}`, {
         method: 'PUT',
         headers: {
@@ -108,7 +108,7 @@ export function BusinessHeader({
       {/* Glassmorphic background with enhanced effects */}
       <div className="absolute inset-0 bg-gradient-to-r from-white/40 via-white/60 to-white/40 backdrop-blur-xl rounded-3xl border border-white/30 shadow-2xl transform group-hover:scale-[1.01] transition-all duration-700" />
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 rounded-3xl opacity-60" />
-      
+
       <div className="relative p-8">
         <div className="flex items-start justify-between mb-8">
           <div className="flex-1">
@@ -124,7 +124,7 @@ export function BusinessHeader({
                   />
                   <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-300 focus-within:w-full" />
                 </div>
-                
+
                 <div className="relative">
                   <textarea
                     value={businessForm.description}
@@ -134,7 +134,7 @@ export function BusinessHeader({
                     rows={3}
                   />
                 </div>
-                
+
                 <div className="flex space-x-4">
                   <button
                     onClick={handleBusinessUpdate}
@@ -162,7 +162,7 @@ export function BusinessHeader({
                     </h1>
                     <div className="absolute -bottom-2 left-0 w-0 h-1 bg-gradient-to-r from-blue-500 to-purple-500 group-hover/header:w-full transition-all duration-700 rounded-full" />
                   </div>
-                  
+
                   <button
                     onClick={() => setEditingBusiness(true)}
                     className="group/edit p-3 text-gray-500 hover:text-gray-700 hover:bg-white/50 rounded-2xl transition-all duration-300 backdrop-blur-sm border border-transparent hover:border-white/30"
@@ -170,13 +170,13 @@ export function BusinessHeader({
                     <Edit className="h-5 w-5 group-hover/edit:rotate-12 transition-transform duration-300" />
                   </button>
                 </div>
-                
+
                 {business.description && (
                   <p className="text-gray-700 text-lg leading-relaxed max-w-3xl animate-in fade-in duration-700" style={{ animationDelay: '0.2s' }}>
                     {business.description}
                   </p>
                 )}
-                
+
                 {business.segments && business.segments.length > 0 && (
                   <div className="flex flex-wrap gap-3 animate-in fade-in duration-700" style={{ animationDelay: '0.4s' }}>
                     {business.segments.map((segment: string, index: number) => (
@@ -206,7 +206,7 @@ export function BusinessHeader({
               {/* Card background with glassmorphism */}
               <div className="absolute inset-0 bg-white/30 backdrop-blur-md rounded-2xl border border-white/30 shadow-lg group-hover/stat:shadow-2xl transition-all duration-500" />
               <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgColor} rounded-2xl opacity-0 group-hover/stat:opacity-100 transition-all duration-500`} />
-              
+
               <div className="relative p-6 h-full">
                 <div className="flex items-center justify-between mb-4">
                   <div>
@@ -217,17 +217,17 @@ export function BusinessHeader({
                       {stat.value}
                     </p>
                   </div>
-                  
+
                   <div className={`p-4 rounded-2xl bg-gradient-to-r ${stat.color} group-hover/stat:scale-110 group-hover/stat:rotate-12 transition-all duration-500 shadow-lg`}>
                     <stat.icon className="h-6 w-6 text-white" />
                   </div>
                 </div>
-                
+
                 {/* Animated progress bar */}
                 <div className="w-full bg-gray-200/50 rounded-full h-2 overflow-hidden">
-                  <div 
+                  <div
                     className={`h-full bg-gradient-to-r ${stat.color} rounded-full transition-all duration-1000 ease-out`}
-                    style={{ 
+                    style={{
                       width: `${Math.min(100, (stat.value / 10) * 100)}%`,
                       animationDelay: `${0.5 + index * 0.2}s`
                     }}

@@ -9,30 +9,30 @@ interface AnalysisSectionProps {
 
 export function AnalysisSection({ businessId }: AnalysisSectionProps) {
   const analysisOptions = [
-    { 
-      id: 'sentiment', 
-      title: 'Sentiment Analysis', 
+    {
+      id: 'sentiment',
+      title: 'Sentiment Analysis',
       description: 'Analyze positive/negative sentiment',
       icon: TrendingUp,
       color: 'from-green-500 to-emerald-500'
     },
-    { 
-      id: 'segmentation', 
-      title: 'Review Segmentation', 
+    {
+      id: 'segmentation',
+      title: 'Review Segmentation',
       description: 'Classify reviews by business segments',
       icon: BarChart3,
       color: 'from-blue-500 to-cyan-500'
     },
-    { 
-      id: 'summary', 
-      title: 'AI Summary', 
+    {
+      id: 'summary',
+      title: 'AI Summary',
       description: 'Generate review summaries',
       icon: MessageSquare,
       color: 'from-purple-500 to-pink-500'
     },
-    { 
-      id: 'chatbot', 
-      title: 'AI Chatbot', 
+    {
+      id: 'chatbot',
+      title: 'AI Chatbot',
       description: 'Chat with your reviews data',
       icon: Brain,
       color: 'from-orange-500 to-red-500'
@@ -45,7 +45,7 @@ export function AnalysisSection({ businessId }: AnalysisSectionProps) {
         <p className="text-sm font-medium text-gray-600">AI-powered review analysis tools</p>
         <div className="w-12 h-1 bg-gradient-to-r from-orange-500 to-red-500 rounded-full" />
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {analysisOptions.map((option, index) => (
           <button
@@ -60,13 +60,13 @@ export function AnalysisSection({ businessId }: AnalysisSectionProps) {
             <p className="text-sm opacity-90 group-hover:opacity-100 transition-opacity duration-300">
               {option.description}
             </p>
-            
+
             {/* Hover effect overlay */}
             <div className="absolute inset-0 bg-white/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </button>
         ))}
       </div>
-      
+
       {/* Pro tip section */}
       <div className="mt-8 p-6 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-2xl animate-in fade-in duration-700" style={{ animationDelay: '0.5s' }}>
         <div className="flex items-start space-x-4">
