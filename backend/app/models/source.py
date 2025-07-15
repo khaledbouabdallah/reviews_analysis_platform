@@ -12,6 +12,7 @@ class SourceBase(BaseModel):
     business_id: PyObjectId
     user_id: PyObjectId
     location_id: PyObjectId | None = None
+    url: str = Field(..., max_length=500, min_length=5)
 
     model_config = {
         "arbitrary_types_allowed": True,
@@ -50,7 +51,6 @@ class SourceInDB(SourceBase):
 
 class SourceUpdate(BaseModel):
     name: str | None = None
-    type: str | None = None
     location_id: PyObjectId | None = None
 
 

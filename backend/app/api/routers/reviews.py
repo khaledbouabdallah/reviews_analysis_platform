@@ -17,8 +17,7 @@ async def list_user_reviews(
     limit: int = 5000,
     current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """List reviews for the authenticated user only.
-    """
+    """List reviews for the authenticated user only."""
     try:
         reviews = await review_repo.get_by_user(str(current_user.id), skip=skip)
         # Apply limit in Python since get_by_user doesn't have limit param
@@ -32,16 +31,17 @@ async def list_user_reviews(
     except Exception as e:
         logger.error(f"Failed to retrieve reviews: {e!s}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve reviews: {e!s}",
+            status_code=500,
+            detail=f"Failed to retrieve reviews: {e!s}",
         )
 
 
 @router.get("/{review_id}", response_model=ReviewResponse)
 async def get_review(
-    review_id: str, current_user: UserInDB = Depends(get_current_active_user),
+    review_id: str,
+    current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """Get a review by ID (only if user owns it).
-    """
+    """Get a review by ID (only if user owns it)."""
     try:
         review = await review_repo.get_by_id(review_id)
         if not review:
@@ -69,8 +69,7 @@ async def update_review(
     review_data: ReviewUpdate,
     current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """Update a review by ID (only if user owns it).
-    """
+    """Update a review by ID (only if user owns it)."""
     try:
         # First check if review exists and user owns it
         review = await review_repo.get_by_id(review_id)
@@ -95,10 +94,10 @@ async def update_review(
 
 @router.delete("/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_review(
-    review_id: str, current_user: UserInDB = Depends(get_current_active_user),
+    review_id: str,
+    current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """Delete a review by ID (only if user owns it).
-    """
+    """Delete a review by ID (only if user owns it)."""
     try:
         # First check if review exists and user owns it
         review = await review_repo.get_by_id(review_id)
@@ -127,8 +126,7 @@ async def get_reviews_by_business(
     skip: int = 0,
     current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """Get all reviews of a business (only if user owns the business).
-    """
+    """Get all reviews of a business (only if user owns the business)."""
     try:
         reviews = await review_repo.get_by_business(business_id, skip=skip)
 
@@ -145,7 +143,8 @@ async def get_reviews_by_business(
     except Exception as e:
         logger.error(f"Failed to retrieve business's reviews: {e!s}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve business's reviews: {e!s}",
+            status_code=500,
+            detail=f"Failed to retrieve business's reviews: {e!s}",
         )
 
 
@@ -155,8 +154,7 @@ async def get_reviews_by_source(
     skip: int = 0,
     current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """Get all reviews of a source (only if user owns the source).
-    """
+    """Get all reviews of a source (only if user owns the source)."""
     try:
         reviews = await review_repo.get_by_source(source_id, skip=skip)
 
@@ -173,7 +171,8 @@ async def get_reviews_by_source(
     except Exception as e:
         logger.error(f"Failed to retrieve source's reviews: {e!s}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve source's reviews: {e!s}",
+            status_code=500,
+            detail=f"Failed to retrieve source's reviews: {e!s}",
         )
 
 
@@ -183,8 +182,7 @@ async def get_reviews_by_job(
     skip: int = 0,
     current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """Get all reviews of a job (only if user owns the job).
-    """
+    """Get all reviews of a job (only if user owns the job)."""
     try:
         reviews = await review_repo.get_by_job(job_id, skip=skip)
 
@@ -201,5 +199,6 @@ async def get_reviews_by_job(
     except Exception as e:
         logger.error(f"Failed to retrieve job's reviews: {e!s}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve job's reviews: {e!s}",
+            status_code=500,
+            detail=f"Failed to retrieve job's reviews: {e!s}",
         )

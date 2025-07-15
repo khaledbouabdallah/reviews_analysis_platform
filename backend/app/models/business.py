@@ -9,6 +9,9 @@ from pydantic import BaseModel, Field, field_validator
 class BusinessBase(BaseModel):
     name: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    description: str | None = None
+    segments: list[str] | None = None
+    auto_update_segments: bool = True
 
     model_config = {
         "arbitrary_types_allowed": True,
@@ -41,6 +44,8 @@ class BusinessInDB(BusinessBase):
 
 class BusinessUpdate(BaseModel):
     name: str | None = None
+    description: str | None = None
+    segments: list[str] | None = None
 
     @field_validator("name")
     def validate_name(cls, v):

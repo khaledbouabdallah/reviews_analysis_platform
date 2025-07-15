@@ -14,15 +14,16 @@ source_repo = SourceRepository()
 
 @router.post("/", response_model=SourceResponse, status_code=status.HTTP_201_CREATED)
 async def create_source(
-    source_data: dict, current_user: UserInDB = Depends(get_current_active_user),
+    source_data: dict,
+    current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """Create a new source for the authenticated user.
-    """
+    """Create a new source for the authenticated user."""
     try:
         # Create source with current user's ID
         source_create = SourceCreate(
             name=source_data["name"],
             type=source_data["type"],
+            url=source_data["url"],
             business_id=source_data["business_id"],
             user_id=str(current_user.id),
         )
@@ -56,11 +57,12 @@ async def list_user_sources(
     limit: int = 100,
     current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """List sources for the authenticated user only.
-    """
+    """List sources for the authenticated user only."""
     try:
         sources = await source_repo.get_by_user(
-            str(current_user.id), skip=skip, limit=limit,
+            str(current_user.id),
+            skip=skip,
+            limit=limit,
         )
         return [
             SourceResponse.model_validate(source.model_dump(by_alias=False))
@@ -76,15 +78,16 @@ async def list_user_sources(
 
 @router.get("/{source_id}", response_model=SourceResponse)
 async def get_source(
-    source_id: str, current_user: UserInDB = Depends(get_current_active_user),
+    source_id: str,
+    current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """Get a source by ID (only if user owns it).
-    """
+    """Get a source by ID (only if user owns it)."""
     try:
         source = await source_repo.get_by_id(source_id)
         if not source:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Source not found",
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Source not found",
             )
 
         # Check if user owns this source
@@ -113,14 +116,14 @@ async def update_source(
     source_update: SourceUpdate,
     current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """Update a source by ID (only if user owns it).
-    """
+    """Update a source by ID (only if user owns it)."""
     try:
         # First check if source exists and user owns it
         source = await source_repo.get_by_id(source_id)
         if not source:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Source not found",
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Source not found",
             )
 
         if source.user_id != current_user.id:
@@ -145,16 +148,17 @@ async def update_source(
 
 @router.delete("/{source_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_source(
-    source_id: str, current_user: UserInDB = Depends(get_current_active_user),
+    source_id: str,
+    current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """Delete a source by ID (only if user owns it).
-    """
+    """Delete a source by ID (only if user owns it)."""
     try:
         # First check if source exists and user owns it
         source = await source_repo.get_by_id(source_id)
         if not source:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Source not found",
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Source not found",
             )
 
         if source.user_id != current_user.id:
@@ -184,8 +188,7 @@ async def get_sources_by_business(
     limit: int = 100,
     current_user: UserInDB = Depends(get_current_active_user),
 ):
-    """Get all sources of a business (only if user owns the business).
-    """
+    """Get all sources of a business (only if user owns the business)."""
     try:
         # Verify business ownership through the sources themselves
         sources = await source_repo.get_by_business(business_id, skip=skip, limit=limit)
