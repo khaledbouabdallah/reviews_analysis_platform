@@ -1,20 +1,13 @@
 # backend/app/scrapers/google_reviews/runner.py
 
-import asyncio
 import logging
 import tempfile
 from datetime import datetime, timezone
 from typing import Any
 
-from db.repositories.jobs import JobRepository
-from db.repositories.reviews import ReviewRepository
+from db_sync import sync_db
 from models.job import JobCreate, JobUpdateInternal
-from models.review import ReviewCreate
 from scrapers.google_reviews.scrapper import GoogleMapsReviewScraper, ScraperConfig
-
-# Initialize repositories
-job_repo = JobRepository()
-review_repo = ReviewRepository()
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -23,9 +16,13 @@ logger = logging.getLogger(__name__)
 class ScrapingJobManager:
     """Manages scraping jobs with progress tracking and error handling"""
 
-    def __init__(self, job_id: str, job: JobCreate):
+    def __init__(self):
+        pass
+
+    def set_job(self, job_id: str, job: dict) -> None:
+        """Set job details for the manager"""
         self.job_id = job_id
-        self.job = job
+        self.job = JobCreate.model_validate(job)
         self.total_reviews = 0
         self.reviews_scraped = 0
         self.scraper: GoogleMapsReviewScraper | None = None
@@ -43,6 +40,8 @@ class ScrapingJobManager:
         """Handle progress updates from scraper"""
         try:
             event_type = progress_info.get("event_type")
+
+            logger.info("Handling progress update: %s", progress_info)
 
             if event_type == "connection_complete":
                 self.total_reviews = progress_info.get("total_reviews", 0)
@@ -74,6 +73,7 @@ class ScrapingJobManager:
 
                 # Update job progress every 25 reviews or every 10%
                 if self.reviews_scraped % 25 == 0 or progress_percent % 10 < 1:
+                    logger.info("guess we need to update job progress")
                     self._update_job_progress()
 
             elif event_type == "scraping_complete":
@@ -88,64 +88,55 @@ class ScrapingJobManager:
         except Exception as e:
             logger.warning(f"Job {self.job_id}: Progress callback error: {e}")
 
-    async def _update_job_progress(self) -> None:
+    def _update_job_progress(self) -> None:
         """Update job progress in database"""
         try:
-            update_data = JobUpdateInternal(
+            logger.info(
+                f"Job {self.job_id}: Updating progress in database: {self.progress_data}"
+            )
+
+            sync_db.update_job_status(
+                job_id=self.job_id,
+                status="running",
                 total_reviews=self.progress_data.get("total_reviews"),
                 reviews_scraped=self.progress_data.get("current_reviews"),
             )
-            await job_repo.update_internal(self.job_id, update_data)
+
+            logger.info(f"Job {self.job_id}: Progress updated successfully")
         except Exception as e:
             logger.warning(f"Job {self.job_id}: Failed to update progress: {e}")
 
-    async def save_reviews_batch(
-        self, reviews_data: list[dict[str, Any]], batch_size: int = 50,
-    ) -> int:
+    def save_reviews_batch(
+        self, reviews_data: list[dict[str, Any]], batch_size: int = 50
+    ) -> int:  # Remove async
         """Save reviews to database in batches"""
-        saved_count = 0
-        total_batches = (len(reviews_data) + batch_size - 1) // batch_size
+        # REPLACE entire method with:
+        try:
+            saved_count = sync_db.create_reviews_batch(
+                job_id=self.job_id,
+                user_id=str(self.job.user_id),
+                business_id=str(self.job.business_id),
+                source_id=str(self.job.source_id),
+                source_type=self.job.source_type,
+                reviews_data=reviews_data,
+                batch_size=batch_size,
+            )
 
-        logger.info(
-            f"Job {self.job_id}: Saving {len(reviews_data)} reviews in {total_batches} batches",
-        )
+            logger.info(f"Job {self.job_id}: Saved {saved_count} reviews")
 
-        for batch_idx in range(0, len(reviews_data), batch_size):
-            batch = reviews_data[batch_idx : batch_idx + batch_size]
-            batch_num = (batch_idx // batch_size) + 1
+            # Update progress
+            sync_db.update_job_status(
+                job_id=self.job_id, reviews_scraped=saved_count, status="saving"
+            )
 
-            try:
-                for review_data in batch:
-                    review_create = ReviewCreate(
-                        user_id=self.job.user_id,
-                        business_id=self.job.business_id,
-                        source_id=self.job.source_id,
-                        job_id=self.job_id,  # Use job_id parameter, not job.job_id
-                        data=review_data,
-                        source_type=self.job.source_type,
-                    )
-                    await review_repo.create(review_create)
-                    saved_count += 1
+            return saved_count
 
-                logger.info(
-                    f"Job {self.job_id}: Saved batch {batch_num}/{total_batches} ({len(batch)} reviews)",
-                )
-
-                # Update progress after each batch
-                update_data = JobUpdateInternal(reviews_scraped=saved_count)
-                await job_repo.update_internal(self.job_id, update_data)
-
-            except Exception as e:
-                logger.error(
-                    f"Job {self.job_id}: Failed to save batch {batch_num}: {e}",
-                )
-                # Continue with next batch rather than failing entirely
-                continue
-
-        return saved_count
+        except Exception as e:
+            logger.error(f"Job {self.job_id}: Failed to save reviews: {e}")
+            return 0
 
 
-async def run_scraper_job(job_id: str, job: JobCreate) -> dict[str, Any]:
+def run_scraper_job(job_id: str, job: JobCreate) -> dict[str, Any]:
     """Enhanced scraper job runner with progress tracking and error handling
 
     Args:
@@ -168,10 +159,9 @@ async def run_scraper_job(job_id: str, job: JobCreate) -> dict[str, Any]:
 
     try:
         # Update job status to running
-        update_data = JobUpdateInternal(
-            status="running", started_at=datetime.now(timezone.utc),
+        sync_db.update_job_status(
+            job_id, "running", started_at=datetime.now(timezone.utc)
         )
-        await job_repo.update_internal(job_id, update_data)
         logger.info(f"Job {job_id}: Status updated to running")
 
         # Configure scraper with progress tracking
@@ -223,15 +213,13 @@ async def run_scraper_job(job_id: str, job: JobCreate) -> dict[str, Any]:
 
             status = "saving"
             # Update job status to saving
-            update_data = JobUpdateInternal(
-                status="saving",
-                total_reviews=job_manager.total_reviews,
-                reviews_scraped=job_manager.reviews_scraped,
+
+            sync_db.update_job_status(
+                job_id, "saving", started_at=datetime.now(timezone.utc)
             )
-            await job_repo.update_internal(job_id, update_data)
 
             # Save reviews to database in batches
-            saved_count = await job_manager.save_reviews_batch(data, batch_size=50)
+            saved_count = job_manager.save_reviews_batch(data, batch_size=50)
 
             if saved_count == len(data):
                 status = "completed"
@@ -258,7 +246,14 @@ async def run_scraper_job(job_id: str, job: JobCreate) -> dict[str, Any]:
                 reviews_scraped=job_manager.reviews_scraped,
                 error=error,
             )
-            await job_repo.update_internal(job_id, final_update)
+            sync_db.update_job_status(
+                job_id=job_id,
+                status=status,
+                ended_at=datetime.now(timezone.utc),
+                total_reviews=job_manager.total_reviews,
+                reviews_scraped=job_manager.reviews_scraped,
+                error=error,
+            )
 
             logger.info(
                 f"Job {job_id}: Final status - {status}, "
@@ -304,20 +299,4 @@ def run_scraper_job_sync(job_id: str, job_data: dict) -> dict[str, Any]:
     job = JobCreate.model_validate(job_data)
 
     # Run the async function
-    return asyncio.run(run_scraper_job(job_id, job))
-
-
-# Backward compatibility function (if needed)
-# async def run_scraper_job_simple(job_id: str, job: JobCreate) -> None:
-#     """
-#     Simplified version that maintains the original function signature
-#     """
-#     result = await run_scraper_job(job_id, job)
-
-#     # Log final result
-#     if result["status"] == "completed":
-#         logger.info(f"Job {job_id} completed successfully")
-#     elif result["status"] == "failed":
-#         logger.error(f"Job {job_id} failed: {result['error']}")
-#     else:
-#         logger.warning(f"Job {job_id} finished with status: {result['status']}")
+    return run_scraper_job(job_id, job)

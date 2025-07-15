@@ -115,8 +115,7 @@ def convert_to_google_com(url: str) -> str:
 
 
 class GoogleMapsReviewScraper:
-    """A class to scrape Google Maps reviews for a given location.
-    """
+    """A class to scrape Google Maps reviews for a given location."""
 
     accepted_languages = ["en", "fr", "de", "es", "it", "nl", "ja", "pt", "ru", "zh-CN"]
 
@@ -228,7 +227,9 @@ class GoogleMapsReviewScraper:
                 options.add_argument("--headless")
 
             self.driver = uc.Chrome(
-                headless=self.config.headless, use_subprocess=False, options=options,
+                headless=self.config.headless,
+                use_subprocess=False,
+                options=options,
             )
 
             # Set up WebDriverWait
@@ -306,7 +307,8 @@ class GoogleMapsReviewScraper:
         """Verify that cookies banner is no longer visible"""
         try:
             cookie_banner = self.driver.find_element(
-                By.XPATH, "//*[@id='yDmH0d']/c-wiz/div/div/div/div[2]/div[1]",
+                By.XPATH,
+                "//*[@id='yDmH0d']/c-wiz/div/div/div/div[2]/div[1]",
             )
 
             if cookie_banner.is_displayed():
@@ -394,7 +396,9 @@ class GoogleMapsReviewScraper:
             targets = [("//div[contains(@class, 'jANrlb')]/div[3]", By.XPATH)]
 
             total_reviews_element, _ = self._get_element_(
-                targets, type_=By.XPATH, operation="extract total reviews",
+                targets,
+                type_=By.XPATH,
+                operation="extract total reviews",
             )
 
             total_reviews_text = total_reviews_element.text
@@ -433,7 +437,8 @@ class GoogleMapsReviewScraper:
 
             # Extract reviews with retries
             reviews_data = self._extract_reviews_with_retries(
-                total_reviews, scrollable_div,
+                total_reviews,
+                scrollable_div,
             )
 
             extraction_time = time.time() - extraction_start
@@ -500,7 +505,8 @@ class GoogleMapsReviewScraper:
         ]
         try:
             scrollable_container, selector_idx = self._get_element_(
-                targets, operation="get scrollable container",
+                targets,
+                operation="get scrollable container",
             )
             return scrollable_container
         except TimeoutException:
@@ -508,7 +514,9 @@ class GoogleMapsReviewScraper:
             raise RuntimeError("Could not find scrollable container for reviews")
 
     def _extract_reviews_with_retries(
-        self, total_reviews: int, scrollable_div: WebElement,
+        self,
+        total_reviews: int,
+        scrollable_div: WebElement,
     ) -> list[dict[str, Any]]:
         """Extract reviews with retry logic"""
         max_retries = 3
@@ -543,18 +551,14 @@ class GoogleMapsReviewScraper:
                             operation=f"get review {i}",
                         )
                         if is_hotel:
-                            self.logger.debug(
-                                f"YESSSSSSSSSSSSSSSS Extracting hotel review {i}",
-                            )
                             result = self._extract_review_hotel_(
-                                review_element, concat_extra=self.config.concat_extra,
+                                review_element,
+                                concat_extra=self.config.concat_extra,
                             )
                         else:
-                            self.logger.debug(
-                                f"NOOOOOOOOOOOOOOOOOOOOO Extracting review {i}",
-                            )
                             result = self._extract_review_(
-                                review_element, concat_extra=self.config.concat_extra,
+                                review_element,
+                                concat_extra=self.config.concat_extra,
                             )
                         reviews_data.append(result)
 
@@ -691,7 +695,8 @@ class GoogleMapsReviewScraper:
             scraping_time = time.time() - scraping_start
             self.logger.error(f"Scraping failed after {scraping_time:.2f}s: {e}")
             self._emit_progress(
-                "scraping_failed", {"error": str(e), "scraping_time": scraping_time},
+                "scraping_failed",
+                {"error": str(e), "scraping_time": scraping_time},
             )
             raise
 
@@ -803,7 +808,9 @@ class GoogleMapsReviewScraper:
             self.logger.info(f"Scraper session ended (total time: {total_time:.2f}s)")
 
     def _extract_review_(
-        self, review_container: WebElement, concat_extra: bool = False,
+        self,
+        review_container: WebElement,
+        concat_extra: bool = False,
     ) -> dict[str, Any]:
         """Extract individual review data with improved error handling"""
         review = {}
@@ -811,7 +818,8 @@ class GoogleMapsReviewScraper:
         try:
             # Get username
             review["username"] = review_container.find_element(
-                By.CLASS_NAME, "d4r55",
+                By.CLASS_NAME,
+                "d4r55",
             ).text
 
             # Get rating
@@ -823,7 +831,8 @@ class GoogleMapsReviewScraper:
                 review["rating"] = len(stars)
             except NoSuchElementException:
                 rating_text = review_container.find_element(
-                    By.CLASS_NAME, "fzvQIb",
+                    By.CLASS_NAME,
+                    "fzvQIb",
                 ).text
                 review["rating"] = int(rating_text.split("/")[0])
 
@@ -834,7 +843,8 @@ class GoogleMapsReviewScraper:
             # Get likes (optional)
             try:
                 review["likes"] = review_container.find_element(
-                    By.CLASS_NAME, "pkWtMe",
+                    By.CLASS_NAME,
+                    "pkWtMe",
                 ).text
             except NoSuchElementException:
                 review["likes"] = 0
@@ -848,7 +858,8 @@ class GoogleMapsReviewScraper:
                 except NoSuchElementException:
                     pass
                 review["translated_text"] = comment_section.find_element(
-                    By.CLASS_NAME, "wiI7pd",
+                    By.CLASS_NAME,
+                    "wiI7pd",
                 ).text
             except NoSuchElementException:
                 review["translated_text"] = None
@@ -867,7 +878,9 @@ class GoogleMapsReviewScraper:
             return {"error": f"Extraction failed: {e}"}
 
     def _extract_review_hotel_(
-        self, review_container: WebElement, concat_extra: bool = False,
+        self,
+        review_container: WebElement,
+        concat_extra: bool = False,
     ) -> dict[str, Any]:
         """Extract individual review data for hotel listing"""
         review = {}
@@ -875,13 +888,15 @@ class GoogleMapsReviewScraper:
         try:
             # Get username
             review["username"] = review_container.find_element(
-                By.CLASS_NAME, "d4r55",
+                By.CLASS_NAME,
+                "d4r55",
             ).text
 
             # Get rating
             try:
                 rating_text = review_container.find_element(
-                    By.CLASS_NAME, "fzvQIb",
+                    By.CLASS_NAME,
+                    "fzvQIb",
                 ).text
                 review["rating"] = int(rating_text.split("/")[0])
             except NoSuchElementException:
@@ -894,7 +909,8 @@ class GoogleMapsReviewScraper:
             # Get date
             try:
                 date_text = review_container.find_element(
-                    By.CLASS_NAME, "xRkPPb",
+                    By.CLASS_NAME,
+                    "xRkPPb",
                 ).text.split("\n")[0]
                 review["date"] = parse_relative_date(date_text)
             except NoSuchElementException as e:
@@ -903,7 +919,8 @@ class GoogleMapsReviewScraper:
             # Get likes (optional)
             try:
                 review["likes"] = review_container.find_element(
-                    By.CLASS_NAME, "pkWtMe",
+                    By.CLASS_NAME,
+                    "pkWtMe",
                 ).text
             except NoSuchElementException:
                 review["likes"] = 0
@@ -917,7 +934,8 @@ class GoogleMapsReviewScraper:
                 except NoSuchElementException:
                     pass
                 review["translated_text"] = comment_section.find_element(
-                    By.CLASS_NAME, "wiI7pd",
+                    By.CLASS_NAME,
+                    "wiI7pd",
                 ).text
             except NoSuchElementException:
                 review["translated_text"] = None
@@ -936,7 +954,10 @@ class GoogleMapsReviewScraper:
             return {"error": f"Extraction failed: {e}"}
 
     def _extract_extra_attributes(
-        self, review_container: WebElement, review: dict[str, Any], concat_extra: bool,
+        self,
+        review_container: WebElement,
+        review: dict[str, Any],
+        concat_extra: bool,
     ) -> None:
         """Extract extra review attributes"""
         if concat_extra:
@@ -944,7 +965,8 @@ class GoogleMapsReviewScraper:
 
         try:
             extra = review_container.find_element(
-                By.CSS_SELECTOR, "div[jslog='127691']",
+                By.CSS_SELECTOR,
+                "div[jslog='127691']",
             )
             extras = extra.find_elements(By.CLASS_NAME, "PBK6be")
 
@@ -980,19 +1002,23 @@ class GoogleMapsReviewScraper:
             pass  # No extra attributes found
 
     def _extract_original_text(
-        self, review_container: WebElement, review: dict[str, Any],
+        self,
+        review_container: WebElement,
+        review: dict[str, Any],
     ) -> None:
         """Extract original language text if available"""
         try:
             translate_button = review_container.find_element(
-                By.CLASS_NAME, "oqftme",
+                By.CLASS_NAME,
+                "oqftme",
             ).find_element(By.TAG_NAME, "button")
             translate_button.click()
             time.sleep(0.5)  # Wait for translation
 
             comment_section = review_container.find_element(By.CLASS_NAME, "MyEned")
             review["original_text"] = comment_section.find_element(
-                By.CLASS_NAME, "wiI7pd",
+                By.CLASS_NAME,
+                "wiI7pd",
             ).text
         except NoSuchElementException:
             review["original_text"] = review.get("translated_text")

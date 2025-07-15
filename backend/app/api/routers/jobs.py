@@ -29,7 +29,7 @@ async def scrap_endpoint(
         # Create job with current user's ID
         job = JobCreate(
             name=job_data.get("name"),
-            url=source.get("url"),
+            url=source.url,
             user_id=str(current_user.id),
             business_id=job_data["business_id"],
             location_id=job_data.get("location_id"),

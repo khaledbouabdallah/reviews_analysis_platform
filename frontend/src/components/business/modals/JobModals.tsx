@@ -136,8 +136,8 @@ export function AddJobModal({ isOpen, onClose, onJobCreated, businessId, sources
             <div className="flex min-h-full items-center justify-center p-4">
                 <div
                     className={`relative bg-white rounded-3xl shadow-2xl w-full max-w-lg transform transition-all duration-300 ease-out ${isAnimating
-                            ? 'scale-100 opacity-100 translate-y-0'
-                            : 'scale-95 opacity-0 translate-y-4'
+                        ? 'scale-100 opacity-100 translate-y-0'
+                        : 'scale-95 opacity-0 translate-y-4'
                         }`}
                 >
                     <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 rounded-3xl opacity-20 blur-sm" />
@@ -342,6 +342,24 @@ export function EditJobModal({ isOpen, onClose, onJobUpdated, job }: EditJobModa
         }
     };
 
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && isOpen) {
+                handleClose();
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('keydown', handleEsc);
+            document.body.style.overflow = 'hidden';
+        }
+
+        return () => {
+            document.removeEventListener('keydown', handleEsc);
+            document.body.style.overflow = 'unset';
+        };
+    }, [isOpen]);
+
     if (!isOpen || !job) return null;
 
     return (
@@ -355,8 +373,8 @@ export function EditJobModal({ isOpen, onClose, onJobUpdated, job }: EditJobModa
             <div className="flex min-h-full items-center justify-center p-4">
                 <div
                     className={`relative bg-white rounded-3xl shadow-2xl w-full max-w-lg transform transition-all duration-300 ease-out ${isAnimating
-                            ? 'scale-100 opacity-100 translate-y-0'
-                            : 'scale-95 opacity-0 translate-y-4'
+                        ? 'scale-100 opacity-100 translate-y-0'
+                        : 'scale-95 opacity-0 translate-y-4'
                         }`}
                 >
                     <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 rounded-3xl opacity-20 blur-sm" />
@@ -415,4 +433,486 @@ export function EditJobModal({ isOpen, onClose, onJobUpdated, job }: EditJobModa
                                     value={formData.name}
                                     onChange={handleChange}
                                     disabled={loading}
-                                    className="w-full px-4 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all duration-300 text-gray-900 placeholder-gray-400
+                                    className="w-full px-4 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all duration-300 text-gray-900 placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                                    placeholder="e.g., Weekly Review Collection, Competitor Analysis..."
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label htmlFor="url" className="block text-sm font-semibold text-gray-700">
+                                    Source URL
+                                </label>
+                                <input
+                                    id="url"
+                                    name="url"
+                                    type="url"
+                                    value={formData.url}
+                                    onChange={handleChange}
+                                    disabled={loading}
+                                    className="w-full px-4 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all duration-300 text-gray-900 placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                                    placeholder="https://..."
+                                />
+                            </div>
+
+                            {error && (
+                                <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm animate-in slide-in-from-top-2 duration-300">
+                                    <div className="flex items-center space-x-2">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        <span>{error}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex space-x-4 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={handleClose}
+                                    disabled={loading}
+                                    className="flex-1 px-6 py-4 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={loading || (formData.name === job.name && formData.url === job.url)}
+                                    className="flex-1 px-6 py-4 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
+                                >
+                                    {loading ? (
+                                        <>
+                                            <Loader2 className="h-5 w-5 animate-spin mr-3" />
+                                            <span className="animate-pulse">Updating...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Database className="h-5 w-5 mr-3" />
+                                            Update Job
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+interface JobDetailsModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    job: Job | null;
+    onRetry?: (job: Job) => void;
+    onCancel?: (job: Job) => void;
+}
+
+export function JobDetailsModal({ isOpen, onClose, job, onRetry, onCancel }: JobDetailsModalProps) {
+    const [isAnimating, setIsAnimating] = useState(false);
+    const [jobStatus, setJobStatus] = useState<JobStatusResponse | null>(null);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (job && isOpen) {
+            setIsAnimating(true);
+            // Get latest job status
+            jobService.getJobStatus(job.id)
+                .then(setJobStatus)
+                .catch(console.error);
+        }
+    }, [job, isOpen]);
+
+    const handleClose = () => {
+        setIsAnimating(false);
+        setTimeout(() => {
+            setJobStatus(null);
+            onClose();
+        }, 200);
+    };
+
+    const handleRetry = async () => {
+        if (!job || !onRetry) return;
+        setLoading(true);
+        try {
+            await onRetry(job);
+            handleClose();
+        } catch (error) {
+            console.error('Retry failed:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCancel = async () => {
+        if (!job || !onCancel) return;
+        setLoading(true);
+        try {
+            await onCancel(job);
+            handleClose();
+        } catch (error) {
+            console.error('Cancel failed:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleViewReviews = () => {
+        window.open(`/reviews?job_id=${job?.id}`, '_blank');
+    };
+
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && isOpen) {
+                handleClose();
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('keydown', handleEsc);
+            document.body.style.overflow = 'hidden';
+        }
+
+        return () => {
+            document.removeEventListener('keydown', handleEsc);
+            document.body.style.overflow = 'unset';
+        };
+    }, [isOpen]);
+
+    if (!isOpen || !job) return null;
+
+    const progress = getJobProgress(job);
+    const duration = jobService.getJobDuration(job);
+    const status = jobStatus || job;
+
+    return (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+            <div
+                className={`fixed inset-0 transition-all duration-300 ease-out ${isAnimating ? 'bg-black/20 backdrop-blur-[2px]' : 'bg-black/0'
+                    }`}
+                onClick={handleClose}
+            />
+
+            <div className="flex min-h-full items-center justify-center p-4">
+                <div
+                    className={`relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 ease-out ${isAnimating
+                        ? 'scale-100 opacity-100 translate-y-0'
+                        : 'scale-95 opacity-0 translate-y-4'
+                        }`}
+                >
+                    <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl opacity-20 blur-sm" />
+
+                    <div className="relative bg-white rounded-3xl p-8">
+                        <div className="flex items-center justify-between mb-8">
+                            <div className="flex items-center space-x-4">
+                                <div className="relative">
+                                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl blur opacity-30 animate-pulse" />
+                                    <div className="relative p-3 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl">
+                                        <Eye className="h-7 w-7 text-white" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-gray-900">Job Details</h2>
+                                    <p className="text-sm text-gray-500 mt-1">{job.name || 'Unnamed Job'}</p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleClose}
+                                className="group p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100 transition-all duration-200"
+                            >
+                                <X className="h-6 w-6 group-hover:rotate-90 transition-transform duration-200" />
+                            </button>
+                        </div>
+
+                        {/* Status Overview */}
+                        <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-6 mb-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className={`inline-flex items-center px-3 py-2 rounded-full text-sm font-semibold border ${getJobStatusColor(status.status)}`}>
+                                    {status.status === 'running' && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                                    {status.status === 'completed' && <CheckCircle className="h-4 w-4 mr-2" />}
+                                    {status.status === 'failed' && <XCircle className="h-4 w-4 mr-2" />}
+                                    {status.status === 'cancelled' && <Pause className="h-4 w-4 mr-2" />}
+                                    {getJobStatusLabel(status.status)}
+                                </div>
+
+                                {duration && (
+                                    <div className="flex items-center text-sm text-gray-600">
+                                        <Clock className="h-4 w-4 mr-1" />
+                                        {duration}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Progress Bar */}
+                            {isJobActive(status.status) && (
+                                <div className="mb-4">
+                                    <div className="flex justify-between text-sm text-gray-600 mb-2">
+                                        <span>Progress</span>
+                                        <span>{progress}%</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
+                                            style={{ width: `${progress}%` }}
+                                        >
+                                            <div className="h-full bg-white/20 animate-pulse" />
+                                        </div>
+                                    </div>
+                                    {status.reviews_scraped !== undefined && status.total_reviews && (
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            {status.reviews_scraped} of {status.total_reviews} reviews scraped
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Completed Job Stats */}
+                            {status.status === 'completed' && status.reviews_scraped && (
+                                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="font-semibold text-green-800">
+                                                ✅ {status.reviews_scraped} reviews collected
+                                            </p>
+                                            <p className="text-sm text-green-600">Job completed successfully</p>
+                                        </div>
+                                        <button
+                                            onClick={handleViewReviews}
+                                            className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105"
+                                        >
+                                            <ExternalLink className="h-4 w-4 mr-2" />
+                                            View Reviews
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Failed Job Error */}
+                            {status.status === 'failed' && status.error && (
+                                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                                    <div className="flex items-start space-x-3">
+                                        <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                                        <div className="flex-1">
+                                            <p className="font-semibold text-red-800 mb-1">Job Failed</p>
+                                            <p className="text-sm text-red-700 break-words">{status.error}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Job Information */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                            <div className="space-y-4">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Job Information</h3>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-700">Source Type</p>
+                                            <p className="text-gray-900 capitalize">{job.source_type} Reviews</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-700">Source URL</p>
+                                            <p className="text-gray-900 break-all text-sm">{job.url}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-700">Created</p>
+                                            <p className="text-gray-900">{new Date(job.created_at).toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Timing</h3>
+                                    <div className="space-y-3">
+                                        {job.started_at && (
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-700">Started</p>
+                                                <p className="text-gray-900">{new Date(job.started_at).toLocaleString()}</p>
+                                            </div>
+                                        )}
+                                        {job.ended_at && (
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-700">Ended</p>
+                                                <p className="text-gray-900">{new Date(job.ended_at).toLocaleString()}</p>
+                                            </div>
+                                        )}
+                                        {duration && (
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-700">Duration</p>
+                                                <p className="text-gray-900">{duration}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-wrap gap-3">
+                            <button
+                                onClick={handleClose}
+                                className="px-6 py-3 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+                            >
+                                Close
+                            </button>
+
+                            {/* View Reviews Button */}
+                            {(status.status === 'completed' || status.status === 'partially_completed') && status.reviews_scraped && (
+                                <button
+                                    onClick={handleViewReviews}
+                                    className="flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl font-semibold transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
+                                >
+                                    <ExternalLink className="h-5 w-5 mr-2" />
+                                    View {status.reviews_scraped} Reviews
+                                </button>
+                            )}
+
+                            {/* Cancel Button */}
+                            {isJobActive(status.status) && onCancel && (
+                                <button
+                                    onClick={handleCancel}
+                                    disabled={loading}
+                                    className="flex items-center px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 hover:scale-105 active:scale-95"
+                                >
+                                    {loading ? (
+                                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                                    ) : (
+                                        <Pause className="h-5 w-5 mr-2" />
+                                    )}
+                                    Cancel Job
+                                </button>
+                            )}
+
+                            {/* Retry Button */}
+                            {(status.status === 'failed' || status.status === 'cancelled') && onRetry && (
+                                <button
+                                    onClick={handleRetry}
+                                    disabled={loading}
+                                    className="flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
+                                >
+                                    {loading ? (
+                                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                                    ) : (
+                                        <RotateCcw className="h-5 w-5 mr-2" />
+                                    )}
+                                    Retry Job
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+interface DeleteJobConfirmationModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    jobName: string;
+    loading: boolean;
+}
+
+export function DeleteJobConfirmationModal({
+    isOpen,
+    onClose,
+    onConfirm,
+    jobName,
+    loading
+}: DeleteJobConfirmationModalProps) {
+    const [isAnimating, setIsAnimating] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            setIsAnimating(true);
+        }
+    }, [isOpen]);
+
+    const handleClose = () => {
+        if (!loading) {
+            setIsAnimating(false);
+            setTimeout(onClose, 200);
+        }
+    };
+
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && isOpen) {
+                handleClose();
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('keydown', handleEsc);
+            document.body.style.overflow = 'hidden';
+        }
+
+        return () => {
+            document.removeEventListener('keydown', handleEsc);
+            document.body.style.overflow = 'unset';
+        };
+    }, [isOpen]);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+            <div
+                className={`fixed inset-0 transition-all duration-300 ease-out ${isAnimating ? 'bg-black/20 backdrop-blur-[2px]' : 'bg-black/0'
+                    }`}
+                onClick={handleClose}
+            />
+
+            <div className="flex min-h-full items-center justify-center p-4">
+                <div
+                    className={`relative bg-white rounded-3xl shadow-2xl w-full max-w-md transform transition-all duration-300 ease-out ${isAnimating
+                        ? 'scale-100 opacity-100 translate-y-0'
+                        : 'scale-95 opacity-0 translate-y-4'
+                        }`}
+                >
+                    <div className="p-8 text-center">
+                        <div className="relative mb-6">
+                            <div className="absolute inset-0 bg-red-500/10 rounded-full blur-2xl" />
+                            <div className="relative w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center">
+                                <AlertTriangle className="h-8 w-8 text-red-600" />
+                            </div>
+                        </div>
+
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Job</h3>
+                        <p className="text-gray-600 mb-6">
+                            Are you sure you want to delete <strong>{jobName}</strong>?
+                            This action cannot be undone and will permanently remove all job data and associated reviews.
+                        </p>
+
+                        <div className="flex space-x-4">
+                            <button
+                                onClick={handleClose}
+                                disabled={loading}
+                                className="flex-1 px-6 py-3 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 hover:scale-105 active:scale-95"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={onConfirm}
+                                disabled={loading}
+                                className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 flex items-center justify-center hover:scale-105 active:scale-95"
+                            >
+                                {loading ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                        Deleting...
+                                    </>
+                                ) : (
+                                    'Delete Job'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
