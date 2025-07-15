@@ -9,8 +9,7 @@ import { DashboardNavigation } from '@/components/dashboard/DashboardNavigation'
 import { StatsCards } from '@/components/dashboard/StatsCards';
 import { BusinessGrid } from '@/components/dashboard/BusinessGrid';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
-
-
+import '@/styles/business-page.css';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -62,51 +61,86 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-indigo-400/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-cyan-400/10 to-blue-400/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }} />
+      </div>
+
       <DashboardNavigation />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-          <p className="text-gray-600">
-            Welcome back! Here's what's happening with your businesses.
-          </p>
+        <div className="mb-8 animate-in slide-in-from-top duration-700">
+          <div className="relative">
+            {/* Glassmorphic background */}
+            <div className="absolute inset-0 bg-white/40 backdrop-blur-xl rounded-3xl border border-white/30 shadow-xl" />
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 rounded-3xl opacity-60" />
+
+            <div className="relative p-8">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent mb-4">
+                Dashboard
+              </h1>
+              <p className="text-gray-600 text-lg">
+                Welcome back! Here's what's happening with your businesses.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Stats Cards */}
-        <StatsCards stats={stats} loading={loading} />
-
-
-
+        <div className="mb-8 animate-in slide-in-from-left duration-700" style={{ animationDelay: '0.2s' }}>
+          <StatsCards stats={stats} loading={loading} />
+        </div>
 
         {/* Business Grid - Full Width */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Your Businesses</h2>
-          <div className="text-sm text-gray-500">
-            {!loading && businesses.length > 0 && (
-              <span>{businesses.length} business{businesses.length !== 1 ? 'es' : ''}</span>
-            )}
+        <div className="mb-8 animate-in slide-in-from-bottom duration-700" style={{ animationDelay: '0.4s' }}>
+          <div className="relative mb-6">
+            {/* Glassmorphic background for header */}
+            <div className="absolute inset-0 bg-white/30 backdrop-blur-sm rounded-2xl border border-white/40" />
+            <div className="relative flex items-center justify-between p-6">
+              <h2 className="text-2xl font-bold text-gray-900">Your Businesses</h2>
+              <div className="text-sm text-gray-500">
+                {!loading && businesses.length > 0 && (
+                  <span className="bg-white/50 backdrop-blur-sm px-3 py-1 rounded-full border border-white/40">
+                    {businesses.length} business{businesses.length !== 1 ? 'es' : ''}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
+          <BusinessGrid
+            businesses={businesses}
+            loading={loading}
+            onBusinessCreated={loadDashboardData}
+          />
         </div>
-        <BusinessGrid
-          businesses={businesses}
-          loading={loading}
-          onBusinessCreated={loadDashboardData}
-        />
-      </div>
 
         {/* Recent Activity - Full width */}
-        <div className="mb-8">
-          <RecentActivity activities={activities} loading={loading} />
+        <div className="mb-8 animate-in slide-in-from-right duration-700" style={{ animationDelay: '0.6s' }}>
+          <div className="relative">
+            {/* Enhanced glassmorphic styling for activity section */}
+            <div className="absolute inset-0 bg-white/40 backdrop-blur-xl rounded-3xl border border-white/30 shadow-xl" />
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5 rounded-3xl opacity-60" />
+
+            <div className="relative">
+              <RecentActivity activities={activities} loading={loading} />
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="text-center py-8 border-t border-gray-200">
-          <p className="text-gray-500 text-sm">
-            ReviewsAI Dashboard • Last updated: {new Date().toLocaleTimeString()}
-          </p>
+        <div className="text-center py-8 animate-in fade-in duration-700" style={{ animationDelay: '0.8s' }}>
+          <div className="relative">
+            <div className="absolute inset-0 bg-white/30 backdrop-blur-sm rounded-2xl border border-white/40" />
+            <div className="relative p-6">
+              <p className="text-gray-500 text-sm">
+                ReviewsAI Dashboard • Last updated: {new Date().toLocaleTimeString()}
+              </p>
+            </div>
+          </div>
         </div>
       </main>
     </div>
