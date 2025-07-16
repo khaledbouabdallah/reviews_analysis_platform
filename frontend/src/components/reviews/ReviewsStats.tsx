@@ -50,8 +50,8 @@ export function ReviewsStats({ reviews, loading }: ReviewsStatsProps) {
                         <Star
                             key={star}
                             className={`h-4 w-4 ${star <= Math.round(averageRating)
-                                    ? 'text-yellow-400 fill-current'
-                                    : 'text-gray-300'
+                                ? 'text-yellow-400 fill-current'
+                                : 'text-gray-300'
                                 }`}
                         />
                     ))}

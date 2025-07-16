@@ -20,6 +20,10 @@ export function JobsSection({ businessId, sources, locations }: JobsSectionProps
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  // extra filters for jobs, no space
+  // const [sourceFilter, setSourceFilter] = useState<string>('all'); // ADD
+  // const [locationFilter, setLocationFilter] = useState<string>('all'); // ADD
+  // const [sourceTypeFilter, setSourceTypeFilter] = useState<string>('all'); // ADD
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -27,9 +31,46 @@ export function JobsSection({ businessId, sources, locations }: JobsSectionProps
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
+  const [frontendDurations, setFrontendDurations] = useState<Record<string, string>>({});
+
+
 
   // Real-time job status updates
   const [jobStatuses, setJobStatuses] = useState<Record<string, JobStatusResponse>>({});
+  // Job duration tracking
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newDurations: Record<string, string> = {};
+
+      jobs.forEach(job => {
+        const jobWithStatus = getJobWithStatus(job);
+        if (isJobActive(jobWithStatus.status)) {
+
+
+          // Use created_at as fallback if started_at is missing
+          const startTime = jobWithStatus.started_at || jobWithStatus.created_at;
+          if (startTime) {
+            const start = new Date(startTime + (startTime.endsWith('Z') ? '' : 'Z'));
+            const now = new Date();
+            const durationMs = now.getTime() - start.getTime();
+
+            const minutes = Math.floor(durationMs / 60000);
+            const seconds = Math.floor((durationMs % 60000) / 1000);
+
+            if (minutes > 0) {
+              newDurations[job.id] = `${minutes}m ${seconds}s`;
+            } else {
+              newDurations[job.id] = `${seconds}s`;
+            }
+          }
+        }
+      });
+
+      setFrontendDurations(newDurations);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [jobs, jobStatuses]);
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -173,12 +214,17 @@ export function JobsSection({ businessId, sources, locations }: JobsSectionProps
       getJobSource(job)?.name.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === 'all' || job.status === statusFilter;
+    // const matchesSource = sourceFilter === 'all' || job.source_id === sourceFilter; // ADD
+    // const matchesLocation = locationFilter === 'all' || job.location_id === locationFilter; // ADD
+    // const matchesSourceType = sourceTypeFilter === 'all' || job.source_type === sourceTypeFilter; // ADD
 
-    return matchesSearch && matchesStatus;
-  });
+    return matchesSearch && matchesStatus //&& matchesSource && matchesLocation && matchesSourceType; // UPDATE
+  }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    // Convert UTC to local time
+    const date = new Date(dateString + (dateString.endsWith('Z') ? '' : 'Z'));
+    return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
@@ -187,7 +233,7 @@ export function JobsSection({ businessId, sources, locations }: JobsSectionProps
   };
 
   return (
-    <div className="flex flex-col h-full max-h-96 section-container">
+    <div className="flex flex-col h-full p-6">
       {/* Fixed Header */}
       <div className="flex-shrink-0 space-y-4 pb-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -236,6 +282,46 @@ export function JobsSection({ businessId, sources, locations }: JobsSectionProps
               <option value="failed">Failed</option>
               <option value="cancelled">Cancelled</option>
             </select>
+            {/* EXTRA FILTERS - NO SPACE  */}
+            {/* </div><div className="relative">
+            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <select
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value)}
+              className="pl-10 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all duration-300 text-sm min-w-[140px] appearance-none cursor-pointer"
+            >
+              <option value="all">All Sources</option>
+              {sources.map((source) => (
+                <option key={source.id} value={source.id}>{source.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <select
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+              className="pl-10 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all duration-300 text-sm min-w-[140px] appearance-none cursor-pointer"
+            >
+              <option value="all">All Locations</option>
+              {locations.map((location) => (
+                <option key={location.id} value={location.id}>{location.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <select
+              value={sourceTypeFilter}
+              onChange={(e) => setSourceTypeFilter(e.target.value)}
+              className="pl-10 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all duration-300 text-sm min-w-[140px] appearance-none cursor-pointer"
+            >
+              <option value="all">All Types</option>
+              <option value="google">Google Maps</option>
+              <option value="csv">CSV</option>
+            </select>*/}
           </div>
         </div>
 
@@ -307,12 +393,9 @@ export function JobsSection({ businessId, sources, locations }: JobsSectionProps
         {/* Jobs Table - Scrollable */}
         {!loading && filteredJobs.length > 0 && (
           <div
-            className="table-scrollable border border-gray-200 rounded-xl"
-            style={{
-              height: '200px', // Fixed height
-              overflowY: 'auto', // Only vertical scrolling
-              overflowX: 'hidden' // Hide horizontal scrollbar
-            }}
+            className="h-full overflow-y-auto space-y-4 table-scrollable border border-gray-200 rounded-xl"
+
+
             tabIndex={0}
             role="region"
             aria-label="Jobs table"
@@ -334,7 +417,9 @@ export function JobsSection({ businessId, sources, locations }: JobsSectionProps
                   const source = getJobSource(job);
                   const location = getJobLocation(job);
                   const progress = getJobProgress(jobWithStatus);
-                  const duration = jobService.getJobDuration(jobWithStatus);
+                  const duration = isJobActive(jobWithStatus.status) && frontendDurations[job.id]
+                    ? frontendDurations[job.id]
+                    : jobService.getJobDuration(jobWithStatus);
                   const isActive = isJobActive(jobWithStatus.status);
 
                   return (

@@ -75,7 +75,7 @@ export function LocationsSection({ businessId }: LocationsSectionProps) {
   };
 
   return (
-    <div className="flex flex-col h-full max-h-96 section-container">
+    <div className="flex flex-col h-full p-6">
       {/* Fixed Header */}
       <div className="flex-shrink-0 space-y-4 pb-4">
         <div className="flex items-center justify-between">
@@ -142,12 +142,7 @@ export function LocationsSection({ businessId }: LocationsSectionProps) {
         {/* Locations List - Scrollable */}
         {!loading && locations.length > 0 && (
           <div
-            className="scrollable-container space-y-4"
-            style={{
-              height: '200px', // Fixed height like the test
-              overflowY: 'auto', // Only vertical scrolling
-              overflowX: 'hidden', // Hide horizontal scrollbar
-            }}
+            className="h-full overflow-y-auto space-y-4 scrollable-container"
             tabIndex={0}
             role="region"
             aria-label="Locations list"

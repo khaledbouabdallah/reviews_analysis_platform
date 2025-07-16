@@ -330,21 +330,24 @@ export class JobService {
   }
 
   // Utility Methods
-  getJobDuration(job: Job): string | null {
-    if (!job.started_at) return null;
-    
-    const start = new Date(job.started_at);
-    const end = job.ended_at ? new Date(job.ended_at) : new Date();
-    const durationMs = end.getTime() - start.getTime();
-    
-    const minutes = Math.floor(durationMs / 60000);
-    const seconds = Math.floor((durationMs % 60000) / 1000);
-    
-    if (minutes > 0) {
-      return `${minutes}m ${seconds}s`;
-    }
-    return `${seconds}s`;
+getJobDuration(job: Job): string | null {
+  if (!job.started_at) return null;
+  
+  // Convert UTC timestamps to local time
+  const start = new Date(job.started_at + (job.started_at.endsWith('Z') ? '' : 'Z'));
+  const end = job.ended_at 
+    ? new Date(job.ended_at + (job.ended_at.endsWith('Z') ? '' : 'Z'))
+    : new Date();
+  const durationMs = end.getTime() - start.getTime();
+  
+  const minutes = Math.floor(durationMs / 60000);
+  const seconds = Math.floor((durationMs % 60000) / 1000);
+  
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
   }
+  return `${seconds}s`;
+}
 
   getReviewsPageUrl(jobId: string): string {
     return `/reviews?job_id=${jobId}`;
