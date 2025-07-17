@@ -7,7 +7,7 @@ This module sets up the FastAPI application and defines the API endpoints.
 from contextlib import asynccontextmanager
 from typing import Any
 
-from api.routers import analyzer, businesses, jobs, locations, reviews, sources
+from api.routers import businesses, jobs, locations, reviews, sources
 from api.routers.auth import router as auth_router
 from db.mongodb import init_indexes
 from fastapi import FastAPI
@@ -52,7 +52,7 @@ app.include_router(locations.router, prefix="/api")
 app.include_router(sources.router, prefix="/api")
 app.include_router(jobs.router, prefix="/api")
 app.include_router(reviews.router, prefix="/api")
-app.include_router(analyzer.router, prefix="/api")
+# app.include_router(analyzer.router, prefix="/api")
 
 
 @app.get("/")

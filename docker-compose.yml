@@ -44,6 +44,8 @@ services:
     environment:
       - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/reviews_db
       - REDIS_URL=redis://redis:6379/0 
+      - GIMINI_API_KEY=${GIMINI_API_KEY}
+      - GIMINI_MODEL_NAME=${GIMINI_MODEL_NAME}
       - PYTHONUNBUFFERED=1
     volumes:
       - ./backend/app:/app/app 

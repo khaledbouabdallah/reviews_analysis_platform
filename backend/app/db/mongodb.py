@@ -11,13 +11,15 @@ locations_collection = db["locations"]
 sources_collection = db["sources"]
 jobs_collection = db["jobs"]
 reviews_collection = db["reviews"]
-
+llm_logs_collection = db["llm_logs"]
 
 
 async def init_indexes():
     # Businesses: ensure (user_id, name) is unique
     await busniesses_collection.create_index(
-        [("user_id", 1), ("name", 1)], unique=True, name="user_name_unique_idx",
+        [("user_id", 1), ("name", 1)],
+        unique=True,
+        name="user_name_unique_idx",
     )
 
     # Sources: ensure (user_id, business_id, name) is unique

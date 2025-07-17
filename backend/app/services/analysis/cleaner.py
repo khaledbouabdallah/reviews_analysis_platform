@@ -1,6 +1,7 @@
 """Module for cleaning and preprocessing text data."""
 
 import re
+import string
 import unicodedata
 
 
@@ -22,7 +23,7 @@ def preprocess_comment(text):
     text = re.sub(r"<.*?>", "", text)
 
     # Remove special characters and extra whitespaces
-    text = re.sub(r"[^a-zA-Z0-9\s]", "", text)
+    text = "".join(ch for ch in text if ch not in string.punctuation)
 
     # Convert to lowercase
     text = text.lower()

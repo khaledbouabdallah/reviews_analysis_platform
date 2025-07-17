@@ -1,6 +1,5 @@
 # backend/app/services/review_service.py
-"""Enhanced review service that automatically processes reviews when created.
-"""
+"""Enhanced review service that automatically processes reviews when created."""
 
 from datetime import datetime, timezone
 
@@ -9,7 +8,8 @@ from db.repositories.reviews import ReviewRepository
 from models.review import ReviewInDB
 from services.cleaner import preprocess_comment
 from services.language import detect_language
-from services.sentiment import SentimentAnalyzer
+
+from backend.app.services.analysis.sentiment import SentimentAnalyzer
 
 
 class BasicAnalyzer:
@@ -87,7 +87,8 @@ class BasicAnalyzer:
 
             # Update review with processed data
             updated_review = await self.review_repo.update_processed_data(
-                str(review.id), processed_data,
+                str(review.id),
+                processed_data,
             )
             logger.debug(f"Successfully processed review {review.id}")
             return updated_review
@@ -106,7 +107,8 @@ class BasicAnalyzer:
                 "processed_at": datetime.now(timezone.utc),
             }
             updated_review = await self.review_repo.update_processed_data(
-                review_id, failed_data,
+                review_id,
+                failed_data,
             )
             return updated_review
         except Exception as e:
