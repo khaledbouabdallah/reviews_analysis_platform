@@ -1,0 +1,21 @@
+meta {
+  name: single review
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{base_url}}/api/review_analyzer/single/
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "review_id": "68723284edb0e1ed6b8ec78e",
+    "business_id": "687620d91457fd8dfdf06157",
+    "url":"https://www.google.com/maps/place/Cimeti%C3%A8re+Communal/@48.9024615,2.4851893,18.17z/data=!4m8!3m7!1s0x47e6131870326039:0x28cbd3a916b93935!8m2!3d48.9008337!4d2.4845006!9m1!1b1!16s%2Fg%2F11h91d0kk3?entry=ttu&g_ep=EgoyMDI1MDYwNC4wIKXMDSoASAFQAw%3D%3D",
+    "source_id": "687659c40108096e1fee661a",
+    "source_type": "google"
+  }
+}

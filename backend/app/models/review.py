@@ -25,16 +25,6 @@ SOURCE_VALIDATORS = {
 }
 
 
-class ProcessedData(BaseModel):
-    cleaned_text: str | None = None  # Cleaned version of review text
-    translated_text: str | None = None  # Translated version if applicable
-    detected_language: str | None = None  # Language code (en, fr, es, etc.)
-    sentiment: dict | None = None  # Full sentiment analysis results
-    processing_status: str = "pending"  # pending, completed, failed
-    processed_at: datetime | None = None  # When processing occurred
-    error_message: str | None = None  # Error if processing failed
-
-
 class ReviewBase(BaseModel):
     user_id: PyObjectId
     business_id: PyObjectId
@@ -44,7 +34,7 @@ class ReviewBase(BaseModel):
     data: dict
     source_type: str
     created_at: datetime = Field(default_factory=lambda: datetime.now())
-    processed_data: ProcessedData | None = Field(default=None)
+    analyzed_data: dict | None = Field(default=None)
 
     @model_validator(mode="after")
     def validate_data_based_on_source(self):

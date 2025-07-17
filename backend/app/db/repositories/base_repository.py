@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Generic, TypeVar
 
 from bson import ObjectId
+from models import PyObjectId
 from pymongo import ReturnDocument
 from pymongo.errors import PyMongoError
 
@@ -30,7 +31,7 @@ class BaseRepository(Generic[CreateSchema, UpdateSchema, DBSchema]):
 
     async def get_by_id(self, item_id: str) -> DBSchema | None:
         try:
-            oid = ObjectId(item_id)
+            oid = PyObjectId(item_id)
         except Exception:
             raise ValueError("Invalid ID format")
 

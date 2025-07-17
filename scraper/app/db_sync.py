@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 
 # MongoDB connection
 MONGODB_URL = os.getenv(
-    "MONGODB_URL_SYNC", "mongodb://admin:password@mongodb:27017/?authSource=admin",
+    "MONGODB_URL_SYNC",
+    "mongodb://admin:password@mongodb:27017/?authSource=admin",
 )
 MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME", "mydatabase")
 
@@ -30,7 +31,7 @@ class SyncDatabase:
         status: str,
         error: str | None = None,
         total_reviews: int | None = None,
-        reviews_scraped: int | None = None,
+        reviews_handled: int | None = None,
         started_at: datetime | None = None,
         ended_at: datetime | None = None,
     ) -> bool:
@@ -43,8 +44,8 @@ class SyncDatabase:
                 update_data["error"] = error
             if total_reviews is not None:
                 update_data["total_reviews"] = total_reviews
-            if reviews_scraped is not None:
-                update_data["reviews_scraped"] = reviews_scraped
+            if reviews_handled is not None:
+                update_data["reviews_handled"] = reviews_handled
             if started_at is not None:
                 update_data["started_at"] = started_at
             if ended_at is not None:
@@ -52,7 +53,8 @@ class SyncDatabase:
 
             # Update in MongoDB
             result = self.jobs_collection.update_one(
-                {"_id": ObjectId(job_id)}, {"$set": update_data},
+                {"_id": ObjectId(job_id)},
+                {"$set": update_data},
             )
 
             if result.matched_count > 0:

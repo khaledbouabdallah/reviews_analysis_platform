@@ -84,7 +84,9 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             raise RuntimeError("Database error")
 
     async def get_by_business(
-        self, business_id: str, skip: int = 0,
+        self,
+        business_id: str,
+        skip: int = 0,
     ) -> list[ReviewInDB]:
         try:
             oid = PyObjectId(business_id)
@@ -115,6 +117,26 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             logger.error(f"Database error while fetching reviews by source: {e!s}")
             raise RuntimeError("Database error")
 
+    async def get_by_location(
+        self,
+        location_id: str,
+        skip: int = 0,
+    ) -> list[ReviewInDB]:
+        """Get all reviews from a specific location."""
+        try:
+            oid = PyObjectId(location_id)
+        except Exception:
+            raise ValueError("Invalid location_id format")
+
+        try:
+            reviews_data = (
+                await self.collection.find({"location_id": oid}).skip(skip).to_list()
+            )
+            return [self.db_model.model_validate(review) for review in reviews_data]
+        except PyMongoError as e:
+            logger.error(f"Database error while fetching reviews by location: {e!s}")
+            raise RuntimeError("Database error")
+
     async def get_by_job(self, job_id: str, skip: int = 0) -> list[ReviewInDB]:
         """Get all reviews linked to a specific scraping job."""
         try:
@@ -132,7 +154,9 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             raise RuntimeError("Database error")
 
     async def update_processed_data(
-        self, review_id: str, processed_data: dict,
+        self,
+        review_id: str,
+        analyzed_data: dict,
     ) -> ReviewInDB:
         """Update the processed data of a review."""
         try:
@@ -140,7 +164,7 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
         except Exception:
             raise ValueError("Invalid review_id format")
 
-        update_data = {"processed_data": processed_data}
+        update_data = {"analyzed_data": analyzed_data}
 
         try:
             updated_review = await self.collection.find_one_and_update(

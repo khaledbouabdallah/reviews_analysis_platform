@@ -41,7 +41,7 @@ interface Job {
   url: string;
   source_id: string;
   total_reviews?: number;
-  reviews_scraped?: number;
+  reviews_handled?: number;
   started_at?: string;
   ended_at?: string;
   created_at: string;

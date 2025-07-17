@@ -19,6 +19,7 @@ interface AddJobModalProps {
 export function AddJobModal({ isOpen, onClose, onJobCreated, businessId, sources, locations }: AddJobModalProps) {
     const [formData, setFormData] = useState<JobCreate>({
         name: '',
+        job_type: 'scraping',
         url: '',
         business_id: businessId,
         location_id: null,
@@ -34,6 +35,7 @@ export function AddJobModal({ isOpen, onClose, onJobCreated, businessId, sources
             setIsAnimating(true);
             setFormData({
                 name: '',
+                job_type: 'scraping',
                 url: '',
                 business_id: businessId,
                 location_id: null,
@@ -92,6 +94,7 @@ export function AddJobModal({ isOpen, onClose, onJobCreated, businessId, sources
                     name: '',
                     url: '',
                     business_id: businessId,
+                    job_type: 'scraping',
                     location_id: null,
                     source_id: '',
                     source_type: 'google',
@@ -657,21 +660,21 @@ export function JobDetailsModal({ isOpen, onClose, job, onRetry, onCancel }: Job
                                             <div className="h-full bg-white/20 animate-pulse" />
                                         </div>
                                     </div>
-                                    {status.reviews_scraped !== undefined && status.total_reviews && (
+                                    {status.reviews_handled !== undefined && status.total_reviews && (
                                         <p className="text-xs text-gray-500 mt-1">
-                                            {status.reviews_scraped} of {status.total_reviews} reviews scraped
+                                            {status.reviews_handled} of {status.total_reviews} reviews scraped
                                         </p>
                                     )}
                                 </div>
                             )}
 
                             {/* Completed Job Stats */}
-                            {status.status === 'completed' && status.reviews_scraped && (
+                            {status.status === 'completed' && status.reviews_handled && (
                                 <div className="bg-green-50 border border-green-200 rounded-xl p-4">
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <p className="font-semibold text-green-800">
-                                                ✅ {status.reviews_scraped} reviews collected
+                                                ✅ {status.reviews_handled} reviews collected
                                             </p>
                                             <p className="text-sm text-green-600">Job completed successfully</p>
                                         </div>
@@ -706,6 +709,10 @@ export function JobDetailsModal({ isOpen, onClose, job, onRetry, onCancel }: Job
                                 <div>
                                     <h3 className="text-lg font-semibold text-gray-900 mb-3">Job Information</h3>
                                     <div className="space-y-3">
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-700">Job Type</p>
+                                            <p className="text-gray-900 capitalize">{job.job_type}</p>
+                                        </div>
                                         <div>
                                             <p className="text-sm font-medium text-gray-700">Source Type</p>
                                             <p className="text-gray-900 capitalize">{job.source_type} Reviews</p>
@@ -759,13 +766,13 @@ export function JobDetailsModal({ isOpen, onClose, job, onRetry, onCancel }: Job
                             </button>
 
                             {/* View Reviews Button */}
-                            {(status.status === 'completed' || status.status === 'partially_completed') && status.reviews_scraped && (
+                            {(status.status === 'completed' || status.status === 'partially_completed') && status.reviews_handled && (
                                 <button
                                     onClick={handleViewReviews}
                                     className="flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl font-semibold transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
                                 >
                                     <ExternalLink className="h-5 w-5 mr-2" />
-                                    View {status.reviews_scraped} Reviews
+                                    View {status.reviews_handled} Reviews
                                 </button>
                             )}
 

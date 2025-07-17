@@ -47,7 +47,9 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
             raise RuntimeError(f"Unexpected error: {e!s}")
 
     async def update_internal(
-        self, job_id: str, job_update: JobUpdateInternal,
+        self,
+        job_id: str,
+        job_update: JobUpdateInternal,
     ) -> JobInDB:
         """Update job with internal fields."""
         try:
@@ -75,7 +77,10 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
             raise RuntimeError("Database error while updating job")
 
     async def get_by_user(
-        self, user_id: str, skip: int = 0, limit: int = 100,
+        self,
+        user_id: str,
+        skip: int = 0,
+        limit: int = 100,
     ) -> list[JobInDB]:
         """Get all jobs of a user."""
         try:
@@ -94,7 +99,10 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
             raise RuntimeError("Database error")
 
     async def get_by_business(
-        self, business_id: str, skip: int = 0, limit: int = 100,
+        self,
+        business_id: str,
+        skip: int = 0,
+        limit: int = 100,
     ) -> list[JobInDB]:
         """Get all jobs of a business."""
         try:
@@ -111,74 +119,6 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
             return [self.db_model.model_validate(job) for job in jobs_data]
         except PyMongoError:
             raise RuntimeError("Database error")
-
-    async def delete_by_user(self, user_id: str) -> bool:
-        """Delete all jobs of a user."""
-        try:
-            # Convert string to PyObjectId for database query
-            oid = PyObjectId(user_id)
-        except Exception:
-            raise ValueError("Invalid user_id format")
-
-        try:
-            result = await self.collection.delete_many({"user_id": oid})
-            logger.info(f"Deleted {result.deleted_count} jobs for user {oid}")
-            return result.deleted_count > 0
-
-        except PyMongoError as e:
-            logger.error(f"Database error while deleting jobs: {e!s}")
-            raise RuntimeError("Database error while deleting jobs")
-
-    async def delete_by_business(self, business_id: str) -> bool:
-        """Delete all sources of business."""
-        try:
-            # Convert string to PyObjectId for database query
-            oid = PyObjectId(business_id)
-        except Exception:
-            raise ValueError("Invalid user_id or business_id format")
-
-        try:
-            result = await self.collection.delete_many({"business_id": oid})
-            logger.info(f"Deleted {result.deleted_count} sources for business {oid}")
-            return result.deleted_count > 0
-
-        except PyMongoError as e:
-            logger.error(f"Database error while deleting sources: {e!s}")
-            raise RuntimeError("Database error while deleting sources")
-
-    async def delete_by_location(self, location_id: str) -> bool:
-        """Delete all sources of location."""
-        try:
-            # Convert string to PyObjectId for database query
-            oid = PyObjectId(location_id)
-        except Exception:
-            raise ValueError("Invalid user_id or location_id format")
-
-        try:
-            result = await self.collection.delete_many({"location_id": oid})
-            logger.info(f"Deleted {result.deleted_count} sources for location {oid}")
-            return result.deleted_count > 0
-
-        except PyMongoError as e:
-            logger.error(f"Database error while deleting sources: {e!s}")
-            raise RuntimeError("Database error while deleting sources")
-
-    async def delete_by_source(self, source_id: str) -> bool:
-        """Delete all jobs of a source."""
-        try:
-            # Convert string to PyObjectId for database query
-            oid = PyObjectId(source_id)
-        except Exception:
-            raise ValueError("Invalid user_id or source_id format")
-
-        try:
-            result = await self.collection.delete_many({"source_id": oid})
-            logger.info(f"Deleted {result.deleted_count} jobs for source {oid}")
-            return result.deleted_count > 0
-
-        except PyMongoError as e:
-            logger.error(f"Database error while deleting jobs: {e!s}")
-            raise RuntimeError("Database error while deleting jobs")
 
     async def delete(self, source_id: str) -> bool:
         """Delete all data related to a job:jobs, reviews."""

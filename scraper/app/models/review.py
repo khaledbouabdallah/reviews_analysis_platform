@@ -44,7 +44,7 @@ class ReviewBase(BaseModel):
     data: dict
     source_type: str
     created_at: datetime = Field(default_factory=lambda: datetime.now())
-    processed_data: ProcessedData | None = Field(default=None)
+    analyzed_data: ProcessedData | None = Field(default=None)
 
     @model_validator(mode="after")
     def validate_data_based_on_source(self):

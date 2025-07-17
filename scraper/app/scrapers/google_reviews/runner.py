@@ -24,7 +24,7 @@ class ScrapingJobManager:
         self.job_id = job_id
         self.job = JobCreate.model_validate(job)
         self.total_reviews = 0
-        self.reviews_scraped = 0
+        self.reviews_handled = 0
         self.scraper: GoogleMapsReviewScraper | None = None
 
         # Progress tracking
@@ -56,23 +56,23 @@ class ScrapingJobManager:
                 self._update_job_progress()
 
             elif event_type == "extraction_progress":
-                self.reviews_scraped = progress_info.get("current_reviews", 0)
+                self.reviews_handled = progress_info.get("current_reviews", 0)
                 progress_percent = progress_info.get("progress_percent", 0.0)
 
                 self.progress_data.update(
                     {
-                        "current_reviews": self.reviews_scraped,
+                        "current_reviews": self.reviews_handled,
                         "progress_percent": progress_percent,
                         "last_update": datetime.now(timezone.utc),
                     },
                 )
 
                 logger.info(
-                    f"Job {self.job_id}: Progress {progress_percent:.1f}% ({self.reviews_scraped}/{self.total_reviews})",
+                    f"Job {self.job_id}: Progress {progress_percent:.1f}% ({self.reviews_handled}/{self.total_reviews})",
                 )
 
                 # Update job progress every 25 reviews or every 10%
-                if self.reviews_scraped % 25 == 0 or progress_percent % 10 < 1:
+                if self.reviews_handled % 25 == 0 or progress_percent % 10 < 1:
                     logger.info("guess we need to update job progress")
                     self._update_job_progress()
 
@@ -99,7 +99,7 @@ class ScrapingJobManager:
                 job_id=self.job_id,
                 status="running",
                 total_reviews=self.progress_data.get("total_reviews"),
-                reviews_scraped=self.progress_data.get("current_reviews"),
+                reviews_handled=self.progress_data.get("current_reviews"),
             )
 
             logger.info(f"Job {self.job_id}: Progress updated successfully")
@@ -126,7 +126,7 @@ class ScrapingJobManager:
 
             # Update progress
             sync_db.update_job_status(
-                job_id=self.job_id, reviews_scraped=saved_count, status="saving"
+                job_id=self.job_id, reviews_handled=saved_count, status="saving"
             )
 
             return saved_count
@@ -193,19 +193,19 @@ def run_scraper_job(job_id: str, job: JobCreate) -> dict[str, Any]:
             # No reviews found
             status = "completed"
             job_manager.total_reviews = 0
-            job_manager.reviews_scraped = 0
+            job_manager.reviews_handled = 0
             logger.info(f"Job {job_id}: No reviews found")
 
         elif len(data) == 0:
             # Empty results
             status = "completed"
             job_manager.total_reviews = 0
-            job_manager.reviews_scraped = 0
+            job_manager.reviews_handled = 0
             logger.info(f"Job {job_id}: Empty results returned")
 
         else:
             # Successfully scraped reviews
-            job_manager.reviews_scraped = len(data)
+            job_manager.reviews_handled = len(data)
 
             logger.info(
                 f"Job {job_id}: Scraped {len(data)} reviews, starting save process",
@@ -243,7 +243,7 @@ def run_scraper_job(job_id: str, job: JobCreate) -> dict[str, Any]:
                 status=status,
                 ended_at=datetime.now(timezone.utc),
                 total_reviews=job_manager.total_reviews,
-                reviews_scraped=job_manager.reviews_scraped,
+                reviews_handled=job_manager.reviews_handled,
                 error=error,
             )
             sync_db.update_job_status(
@@ -251,13 +251,13 @@ def run_scraper_job(job_id: str, job: JobCreate) -> dict[str, Any]:
                 status=status,
                 ended_at=datetime.now(timezone.utc),
                 total_reviews=job_manager.total_reviews,
-                reviews_scraped=job_manager.reviews_scraped,
+                reviews_handled=job_manager.reviews_handled,
                 error=error,
             )
 
             logger.info(
                 f"Job {job_id}: Final status - {status}, "
-                f"Reviews: {job_manager.reviews_scraped}/{job_manager.total_reviews}, "
+                f"Reviews: {job_manager.reviews_handled}/{job_manager.total_reviews}, "
                 f"Error: {error or 'None'}",
             )
 
@@ -277,7 +277,7 @@ def run_scraper_job(job_id: str, job: JobCreate) -> dict[str, Any]:
         "job_id": job_id,
         "status": status,
         "total_reviews": job_manager.total_reviews,
-        "reviews_scraped": job_manager.reviews_scraped,
+        "reviews_handled": job_manager.reviews_handled,
         "error": error,
         "data_length": len(data) if data else 0,
     }

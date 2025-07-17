@@ -1,10 +1,11 @@
 # dynamic_review_analyzer.py
 import json
 import time
-from typing import Any
 
 from core.config import settings
+from db.repositories.llm_logs import LLMLogRepository
 from google import genai
+from models.analysis_requests import ReviewInput
 from models.analysis_schemas import (
     AnalysisTask,
     BusinessInsights,
@@ -14,6 +15,13 @@ from models.analysis_schemas import (
     TopicAnalysis,
     TranslationAnalysis,
     UrgencyClassification,
+)
+from models.llm_log import (
+    LLMLogCreate,
+    LLMResponse,
+    PerformanceMetrics,
+    RequestMetadata,
+    UsageContext,
 )
 from pydantic import BaseModel, Field, ValidationError, create_model
 
@@ -105,7 +113,7 @@ class PromptBuilder:
     @classmethod
     def create_prompt(
         cls,
-        reviews: list[dict[str, Any]],
+        reviews: list[ReviewInput],
         tasks: list[AnalysisTask],
         target_topics: list[str] | None = None,
         business_context: str | None = None,
@@ -136,9 +144,9 @@ class PromptBuilder:
             reviews_text = "\n".join(
                 [
                     f"Review {i + 1}:\n"
-                    f'Text: "{review["text"]}"\n'
-                    f"Rating: {review.get('rating', 'Not provided')}\n"
-                    f"Business Type: {review.get('business_type', 'unknown')}\n"
+                    f'Text: "{review.text}"\n'
+                    f"Rating: {review.rating if review.rating is not None else 'Not provided'}\n"
+                    f"Business Type: {review.business_type if review.business_type is not None else 'unknown'}\n"
                     f"---"
                     for i, review in enumerate(reviews)
                 ]
@@ -173,9 +181,9 @@ You are an expert review analyzer. Analyze this customer review comprehensively.
 {business_context if business_context else ""}
 
 REVIEW TO ANALYZE:
-Text: "{review["text"]}"
-Rating: {review.get("rating", "Not provided")}
-Business Type: {review.get("business_type", "unknown")}
+Text: "{review.text}"
+Rating: {review.rating or "Not provided"}
+Business Type: {review.business_type or "unknown"}
 
 ANALYSIS TASKS:
 {instructions_text}
@@ -199,13 +207,15 @@ class DynamicReviewAnalyzer:
         self.client = client
         self.model_name = model_name
         self.pricing = pricing
+        self.llm_log_repo = LLMLogRepository()
 
-    def analyze(
+    async def analyze(
         self,
-        reviews: list[dict[str, Any]],
+        reviews: list[ReviewInput],
         tasks: list[AnalysisTask],
         target_topics: list[str] | None = None,
         business_context: str | None = None,
+        user_id: str | None = None,  # Add user_id for logging
     ):
         """Perform dynamic analysis based on specified tasks"""
 
@@ -228,7 +238,7 @@ class DynamicReviewAnalyzer:
 
         try:
             start = time.time()
-            response = self.client.models.generate_content(
+            response = await self.client.aio.models.generate_content(
                 model=self.model_name,
                 contents=prompt,
                 config={
@@ -256,6 +266,37 @@ class DynamicReviewAnalyzer:
 
             # Calculate cost
             cost = self._calculate_cost(response.usage_metadata)
+
+            llm_log = LLMLogCreate(
+                user_id=user_id,  # Need to pass this parameter
+                request_metadata=RequestMetadata(
+                    model_name=self.model_name,
+                    tasks=[task.value for task in tasks],
+                    batch_size=len(reviews),
+                    review_count=len(reviews),
+                    prompt_length=len(prompt),
+                ),
+                performance=PerformanceMetrics(
+                    duration_seconds=duration,
+                    input_tokens=response.usage_metadata.prompt_token_count,
+                    output_tokens=response.usage_metadata.candidates_token_count,
+                    total_tokens=response.usage_metadata.total_token_count,
+                    cost=cost,
+                ),
+                llm_response=LLMResponse(
+                    raw_text=response.text,
+                    parsed_json=result_dict,
+                    success=True,
+                    error=None,
+                ),
+                usage_context=UsageContext(
+                    source="api",  # or pass as parameter
+                    subscription_tier=None,  # or pass as parameter
+                ),
+            )
+
+            # Save to database
+            await self.llm_log_repo.create(llm_log)
 
             return {
                 "success": True,
@@ -304,18 +345,8 @@ class DynamicReviewAnalyzer:
         return input_cost + output_cost
 
 
-tasks = [
+analysis_tasks = [
     AnalysisTask.LANGUAGE_DETECTION,
-    AnalysisTask.TRANSLATION,
-    AnalysisTask.SENTIMENT,
-    AnalysisTask.TOPICS,
-    AnalysisTask.SPAM_DETECTION,
-    AnalysisTask.URGENCY,
-    AnalysisTask.BUSINESS_INSIGHTS,
-]
-
-
-tasks_no_translation = [
     AnalysisTask.TRANSLATION,
     AnalysisTask.SENTIMENT,
     AnalysisTask.TOPICS,

@@ -1,4 +1,5 @@
 import os
+import random
 import re
 from datetime import datetime, timezone
 
@@ -6,28 +7,85 @@ from core.config import settings
 from models import PyObjectId
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+# Name generation lists
+ADJECTIVES = [
+    "purple",
+    "sleepy",
+    "brave",
+    "swift",
+    "clever",
+    "mighty",
+    "gentle",
+    "wild",
+    "bright",
+    "calm",
+    "happy",
+    "sneaky",
+    "fierce",
+    "playful",
+    "shy",
+    "curious",
+    "bold",
+    "loyal",
+    "wise",
+    "friendly",
+    "charming",
+    "graceful",
+    "elegant",
+]
+ANIMALS = [
+    "elephant",
+    "dolphin",
+    "penguin",
+    "tiger",
+    "eagle",
+    "wolf",
+    "fox",
+    "bear",
+    "owl",
+    "deer",
+    "rabbit",
+    "lion",
+    "panda",
+    "giraffe",
+    "koala",
+    "zebra",
+    "kangaroo",
+    "raven",
+    "raccoon",
+]
+
 
 class JobBase(BaseModel):
-    name: str | None = Field(default=None, max_length=100, min_length=2)
+    name: str | None = Field(default=None, max_length=40, min_length=0)
+    job_type: str = Field(...)  # "scraping" or "analysis"
     status: str = Field(default="pending")
-    url: str = Field(..., max_length=500, min_length=5)
+    url: str | None = Field(default=None, max_length=500, min_length=5)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     started_at: datetime | None = None
     ended_at: datetime | None = None
     total_reviews: int | None = None
-    reviews_scraped: int | None = None
+    reviews_handled: int | None = None
     error: str | None = None
     user_id: PyObjectId
     business_id: PyObjectId
     location_id: PyObjectId | None = None
     source_id: PyObjectId
-    source_type: str
+    source_type: str | None = None
 
     model_config = {
         "arbitrary_types_allowed": True,
         "populate_by_name": True,
         "json_encoders": {PyObjectId: str, datetime: lambda dt: dt.isoformat()},
     }
+
+    @classmethod
+    def generate_name(cls) -> str:
+        """Generate a random name like 'purple_elephant_8472'"""
+        adjective = random.choice(ADJECTIVES)
+        animal = random.choice(ANIMALS)
+        number = random.randint(1000, 9999)
+        return f"{adjective}_{animal}_{number}"
 
     @field_validator("status")
     def validate_status(cls, value):
@@ -37,35 +95,41 @@ class JobBase(BaseModel):
             )
         return value
 
-    @field_validator("source_type")
-    def validate_source_type(cls, v):
-        if v not in settings.ALLOWED_SOURCE_TYPES:
-            raise ValueError(
-                f"Invalid source_type. Allowed: {settings.ALLOWED_SOURCE_TYPES}",
-            )
+    @field_validator("job_type")
+    def validate_job_type(cls, v):
+        if v not in ["scraping", "analysis"]:
+            raise ValueError("job_type must be 'scraping' or 'analysis'")
         return v
 
     @model_validator(mode="after")
-    def validate_url_by_source(self):
-        if not self.source_type:
-            raise ValueError("source_type must be set before url can be validated")
+    def validate_job_fields(self):
+        # Auto-generate name if not provided
+        if not self.name:
+            self.name = self.generate_name()
 
-        if not self.url:
-            raise ValueError("url must be provided")
+        # URL and source_type validation only for scraping jobs
+        if self.job_type == "scraping":
+            if not self.source_type:
+                raise ValueError("source_type must be set for scraping jobs")
+            if self.source_type not in settings.ALLOWED_SOURCE_TYPES:
+                raise ValueError(
+                    f"Invalid source_type. Allowed: {settings.ALLOWED_SOURCE_TYPES}",
+                )
+            if not self.url:
+                raise ValueError("url must be provided for scraping jobs")
 
-        if self.source_type == "google":
-            self.validate_google_maps_url(self.url)
-        elif self.source_type == "csv":
-            self._validate_csv_file(self.url)
-        else:
-            raise ValueError(f"Unsupported source_type: {self.source_type}")
+            if self.source_type == "google":
+                self.validate_google_maps_url(self.url)
+            elif self.source_type == "csv":
+                self._validate_csv_file(self.url)
+            else:
+                raise ValueError(f"Unsupported source_type: {self.source_type}")
 
         return self  # required by Pydantic
 
     @staticmethod
     def validate_google_maps_url(v):
         # Pattern to match Google Maps URLs
-
         google_maps_pattern = r"^https?://(www\.)?(google\.[a-z]{2,3}(/maps)?|maps\.google\.[a-z]{2,3})/.+$"
 
         if not re.match(google_maps_pattern, v):
@@ -102,11 +166,11 @@ class JobInDB(JobBase):
 class JobUpdate(BaseModel):
     """Used for updating an existing job."""
 
-    title: str | None = None
+    name: str | None = None
     status: str | None = None
 
 
-class JobUpdateInternal(JobBase):
+class JobUpdateInternal(BaseModel):
     """Used for internal updates to a job."""
 
     title: str | None = None
@@ -116,7 +180,7 @@ class JobUpdateInternal(JobBase):
     started_at: datetime | None = None
     ended_at: datetime | None = None
     total_reviews: int | None = None
-    reviews_scraped: int | None = None
+    reviews_handled: int | None = None
     error: str | None = None
 
 

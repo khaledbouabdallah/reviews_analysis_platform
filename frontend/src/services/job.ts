@@ -9,29 +9,31 @@ export type SourceType = 'google' | 'csv';
 export interface Job {
   id: string;
   name?: string;
+  job_type: 'scraping' | 'analysis';
   status: JobStatus;
-  url: string;
+  url?: string;
   user_id: string;
   business_id: string;
   location_id?: string | null;
   source_id: string;
-  source_type: SourceType;
+  source_type?: SourceType | null;
   created_at: string;
   started_at?: string | null;
   ended_at?: string | null;
   total_reviews?: number | null;
-  reviews_scraped?: number | null;
+  reviews_handled?: number | null;
   error?: string | null;
   updated_at?: string;
 }
 
 export interface JobCreate {
   name?: string;
-  url: string;
+  job_type: 'scraping' | 'analysis';  
+  url?: string;  
   business_id: string;
   location_id?: string | null;
   source_id: string;
-  source_type: SourceType;
+  source_type?: SourceType | null; 
 }
 
 export interface JobUpdate {
@@ -43,7 +45,7 @@ export interface JobStatusResponse {
   id: string;
   status: JobStatus;
   total_reviews?: number | null;
-  reviews_scraped?: number | null;
+  reviews_handled?: number | null;
   created_at?: string | null;
   started_at?: string | null;
   ended_at?: string | null;
@@ -73,8 +75,8 @@ export const isJobActive = (status: JobStatus): boolean => {
 // Helper function to get progress percentage
 export const getJobProgress = (job: Job): number => {
   if (!job.total_reviews || job.total_reviews === 0) return 0;
-  if (!job.reviews_scraped) return 0;
-  return Math.min(Math.round((job.reviews_scraped / job.total_reviews) * 100), 100);
+  if (!job.reviews_handled) return 0;
+  return Math.min(Math.round((job.reviews_handled / job.total_reviews) * 100), 100);
 };
 
 // Helper function to get status color
@@ -166,42 +168,49 @@ export class JobService {
     }
   }
 
-  async getJobsByBusiness(businessId: string): Promise<Job[]> {
-    try {
-      return await this.fetchWithAuth(`/api/jobs/business/${businessId}`);
-    } catch (error) {
-      console.error('Error fetching jobs:', error);
-      throw error;
-    }
+async getJobsByBusiness(businessId: string): Promise<Job[]> {
+  try {
+    const jobs = await this.fetchWithAuth(`/api/jobs/business/${businessId}`);
+    return jobs.filter((job: Job) => job.job_type === 'scraping'); // Add this line
+  } catch (error) {
+    console.error('Error fetching jobs:', error);
+    throw error;
   }
+}
 
-  async getJobsBySource(sourceId: string): Promise<Job[]> {
-    try {
-      return await this.fetchWithAuth(`/api/jobs/source/${sourceId}`);
-    } catch (error) {
-      console.error('Error fetching jobs by source:', error);
-      throw error;
-    }
+async getJobsBySource(sourceId: string): Promise<Job[]> {
+  try {
+    const jobs = await this.fetchWithAuth(`/api/jobs/source/${sourceId}`);
+    return jobs.filter((job: Job) => job.job_type === 'scraping'); // Add this line
+  } catch (error) {
+    console.error('Error fetching jobs by source:', error);
+    throw error;
   }
+}
 
-  async getAllUserJobs(): Promise<Job[]> {
-    try {
-      return await this.fetchWithAuth('/api/jobs/');
-    } catch (error) {
-      console.error('Error fetching user jobs:', error);
-      throw error;
-    }
+async getAllUserJobs(): Promise<Job[]> {
+  try {
+    const jobs = await this.fetchWithAuth('/api/jobs/');
+    return jobs.filter((job: Job) => job.job_type === 'scraping'); // Add this line
+  } catch (error) {
+    console.error('Error fetching user jobs:', error);
+    throw error;
   }
+}
 
-  async getJob(jobId: string): Promise<Job> {
-    try {
-      return await this.fetchWithAuth(`/api/jobs/${jobId}`);
-    } catch (error) {
-      console.error('Error fetching job:', error);
-      throw error;
+async getJob(jobId: string): Promise<Job> {
+  try {
+    const job = await this.fetchWithAuth(`/api/jobs/${jobId}`);
+    // Optionally check if it's a scraping job and throw error if not
+    if (job.job_type !== 'scraping') {
+      throw new Error('Job is not a scraping job');
     }
+    return job;
+  } catch (error) {
+    console.error('Error fetching job:', error);
+    throw error;
   }
-
+}
   async updateJob(jobId: string, jobData: JobUpdate): Promise<Job> {
     try {
       return await this.fetchWithAuth(`/api/jobs/${jobId}`, {
@@ -266,6 +275,7 @@ export class JobService {
         location_id: originalJob.location_id,
         source_id: originalJob.source_id,
         source_type: originalJob.source_type,
+        job_type: originalJob.job_type,
       };
       
       return await this.createJob(retryJobData);

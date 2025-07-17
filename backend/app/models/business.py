@@ -12,6 +12,7 @@ class BusinessBase(BaseModel):
     description: str | None = None
     segments: list[str] | None = None
     auto_update_segments: bool = True
+    context: str | None = None
 
     model_config = {
         "arbitrary_types_allowed": True,

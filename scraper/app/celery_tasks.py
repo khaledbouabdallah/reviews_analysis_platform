@@ -148,7 +148,7 @@ def scraper_task(self, job_id: str, job_data: dict) -> dict[str, Any]:
             status=status,
             ended_at=datetime.now(timezone.utc),
             total_reviews=len(data) if data else 0,
-            reviews_scraped=saved_count,
+            reviews_handled=saved_count,
             error=error,
         )
 
@@ -157,7 +157,7 @@ def scraper_task(self, job_id: str, job_data: dict) -> dict[str, Any]:
             "job_id": job_id,
             "status": status,
             "total_reviews": len(data) if data else 0,
-            "reviews_scraped": saved_count,
+            "reviews_handled": saved_count,
             "error": error,
         }
 
@@ -176,7 +176,7 @@ def scraper_task(self, job_id: str, job_data: dict) -> dict[str, Any]:
             "job_id": job_id,
             "status": "failed",
             "total_reviews": 0,
-            "reviews_scraped": 0,
+            "reviews_handled": 0,
             "error": error_msg,
         }
 

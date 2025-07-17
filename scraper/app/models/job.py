@@ -15,7 +15,7 @@ class JobBase(BaseModel):
     started_at: datetime | None = None
     ended_at: datetime | None = None
     total_reviews: int | None = None
-    reviews_scraped: int | None = None
+    reviews_handled: int | None = None
     error: str | None = None
     user_id: PyObjectId
     business_id: PyObjectId
@@ -116,7 +116,7 @@ class JobUpdateInternal(BaseModel):
     started_at: datetime | None = None
     ended_at: datetime | None = None
     total_reviews: int | None = None
-    reviews_scraped: int | None = None
+    reviews_handled: int | None = None
     error: str | None = None
 
 

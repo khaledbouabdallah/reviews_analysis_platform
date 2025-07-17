@@ -48,7 +48,7 @@ export interface Review {
   };
   source_type: string;
   created_at: string;
-  processed_data?: ProcessedData | null;
+  analyzed_data?: ProcessedData | null;
 }
 
 export interface ReviewFilters {
@@ -125,8 +125,8 @@ export class ReviewService {
   // Utility methods for extracting data consistently
   getDisplayText(review: Review): string {
     // Priority: cleaned_text > translated_text > original_text > fallback
-    if (review.processed_data?.cleaned_text) {
-      return review.processed_data.cleaned_text;
+    if (review.analyzed_data?.cleaned_text) {
+      return review.analyzed_data.cleaned_text;
     }
     
     if (review.data?.translated_text) {
@@ -161,11 +161,11 @@ export class ReviewService {
   }
 
   getSentiment(review: Review): string {
-    return review.processed_data?.sentiment?.label || 'unknown';
+    return review.analyzed_data?.sentiment?.label || 'unknown';
   }
 
   getSentimentScore(review: Review): number {
-    return review.processed_data?.sentiment?.score || 0;
+    return review.analyzed_data?.sentiment?.score || 0;
   }
 
   getSentimentColor(sentiment: string): string {
@@ -182,7 +182,7 @@ export class ReviewService {
   }
 
   getLanguage(review: Review): string {
-    return review.processed_data?.detected_language || 'unknown';
+    return review.analyzed_data?.detected_language || 'unknown';
   }
 
   hasComment(review: Review): boolean {
@@ -190,24 +190,24 @@ export class ReviewService {
   }
 
   isProcessed(review: Review): boolean {
-    return review.processed_data?.processing_status === 'completed';
+    return review.analyzed_data?.processing_status === 'completed';
   }
 
   getProcessingStatus(review: Review): string {
-    return review.processed_data?.processing_status || 'not_processed';
+    return review.analyzed_data?.processing_status || 'not_processed';
   }
 
   // Future AI fields
   getTopic(review: Review): string {
-    return review.processed_data?.topic || 'uncategorized';
+    return review.analyzed_data?.topic || 'uncategorized';
   }
 
   getUrgency(review: Review): string {
-    return review.processed_data?.urgency || 'unknown';
+    return review.analyzed_data?.urgency || 'unknown';
   }
 
   isSpam(review: Review): boolean {
-    return review.processed_data?.spam_detection || false;
+    return review.analyzed_data?.spam_detection || false;
   }
 
   // Export functionality

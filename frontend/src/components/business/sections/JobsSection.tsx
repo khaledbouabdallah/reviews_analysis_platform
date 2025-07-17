@@ -107,7 +107,7 @@ export function JobsSection({ businessId, sources, locations }: JobsSectionProps
                 ...job,
                 status: status.status,
                 total_reviews: status.total_reviews ?? job.total_reviews,
-                reviews_scraped: status.reviews_scraped ?? job.reviews_scraped,
+                reviews_handled: status.reviews_handled ?? job.reviews_handled,
                 started_at: status.started_at ?? job.started_at,
                 ended_at: status.ended_at ?? job.ended_at,
                 error: status.error ?? job.error
@@ -201,7 +201,7 @@ export function JobsSection({ businessId, sources, locations }: JobsSectionProps
       ...job,
       status: status.status,
       total_reviews: status.total_reviews ?? job.total_reviews,
-      reviews_scraped: status.reviews_scraped ?? job.reviews_scraped,
+      reviews_handled: status.reviews_handled ?? job.reviews_handled,
       started_at: status.started_at ?? job.started_at,
       ended_at: status.ended_at ?? job.ended_at,
       error: status.error ?? job.error
@@ -460,7 +460,7 @@ export function JobsSection({ businessId, sources, locations }: JobsSectionProps
                           </span>
                         </div>
                         <div className="text-xs text-gray-500 mt-1 capitalize">
-                          {job.source_type}
+                          {job.job_type} • {job.source_type}
                         </div>
                       </td>
 
@@ -477,15 +477,15 @@ export function JobsSection({ businessId, sources, locations }: JobsSectionProps
                                 style={{ width: `${progress}%` }}
                               />
                             </div>
-                            {jobWithStatus.reviews_scraped !== undefined && jobWithStatus.total_reviews && (
+                            {jobWithStatus.reviews_handled !== undefined && jobWithStatus.total_reviews && (
                               <div className="text-xs text-gray-500">
-                                {jobWithStatus.reviews_scraped}/{jobWithStatus.total_reviews}
+                                {jobWithStatus.reviews_handled}/{jobWithStatus.total_reviews}
                               </div>
                             )}
                           </div>
-                        ) : jobWithStatus.status === 'completed' && jobWithStatus.reviews_scraped ? (
+                        ) : jobWithStatus.status === 'completed' && jobWithStatus.reviews_handled ? (
                           <div className="text-sm font-medium text-green-600">
-                            {jobWithStatus.reviews_scraped} reviews
+                            {jobWithStatus.reviews_handled} reviews
                           </div>
                         ) : (
                           <div className="text-sm text-gray-400">-</div>
@@ -507,7 +507,7 @@ export function JobsSection({ businessId, sources, locations }: JobsSectionProps
                       <td className="p-3 text-right">
                         <div className="flex items-center justify-end space-x-2">
                           {/* Quick Actions */}
-                          {(jobWithStatus.status === 'completed' || jobWithStatus.status === 'partially_completed') && jobWithStatus.reviews_scraped && (
+                          {(jobWithStatus.status === 'completed' || jobWithStatus.status === 'partially_completed') && jobWithStatus.reviews_handled && (
                             <button
                               onClick={() => window.open(`/reviews?job_id=${job.id}`, '_blank')}
                               className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200 hover:scale-110"
@@ -632,7 +632,7 @@ export function JobsSection({ businessId, sources, locations }: JobsSectionProps
               </div>
               <div>
                 <div className="text-lg font-bold text-gray-600">
-                  {jobs.reduce((sum, j) => sum + (getJobWithStatus(j).reviews_scraped || 0), 0)}
+                  {jobs.reduce((sum, j) => sum + (getJobWithStatus(j).reviews_handled || 0), 0)}
                 </div>
                 <div className="text-xs text-gray-600">Total Reviews</div>
               </div>

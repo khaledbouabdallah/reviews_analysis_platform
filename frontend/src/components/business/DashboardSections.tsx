@@ -33,7 +33,7 @@ interface DashboardSection {
 const defaultSections: DashboardSection[] = [
   { id: 'locations', title: 'Locations', icon: 'MapPin', component: 'LocationsSection', collapsed: false, order: 0, heightClass: 'h-[600px]' },
   { id: 'sources', title: 'Sources', icon: 'Database', component: 'SourcesSection', collapsed: false, order: 1, heightClass: 'h-[600px]' },
-  { id: 'jobs', title: 'Jobs & Scraping', icon: 'Play', component: 'JobsSection', collapsed: false, order: 2, heightClass: 'h-[600px]' },
+  { id: 'jobs', title: 'Scraping Jobs', icon: 'Play', component: 'JobsSection', collapsed: false, order: 2, heightClass: 'h-[600px]' },
   { id: 'analysis', title: 'Analysis Center', icon: 'Brain', component: 'AnalysisSection', collapsed: false, order: 3, heightClass: 'h-auto min-h-[400px]' },
   { id: 'statistics', title: 'Statistics', icon: 'BarChart3', component: 'StatisticsSection', collapsed: true, order: 4, heightClass: 'h-auto min-h-[600px]' },
   { id: 'activity', title: 'Recent Activity', icon: 'Activity', component: 'ActivitySection', collapsed: true, order: 5, heightClass: 'h-auto min-h-[400px]' }

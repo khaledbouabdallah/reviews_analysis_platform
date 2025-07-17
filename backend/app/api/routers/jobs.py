@@ -29,6 +29,7 @@ async def scrap_endpoint(
         # Create job with current user's ID
         job = JobCreate(
             name=job_data.get("name"),
+            job_type="scraping",
             url=source.url,
             user_id=str(current_user.id),
             business_id=job_data["business_id"],
@@ -136,7 +137,7 @@ async def get_job_status(
             "id": job_id,
             "status": job.status,
             "total_reviews": job.total_reviews,
-            "reviews_scraped": job.reviews_scraped,
+            "reviews_handled": job.reviews_handled,
             "created_at": job.created_at.isoformat() if job.created_at else None,
             "started_at": job.started_at.isoformat() if job.started_at else None,
             "ended_at": job.ended_at.isoformat() if job.ended_at else None,
