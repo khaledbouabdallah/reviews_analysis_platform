@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 class ReviewInput(BaseModel):
     """Standardized review input for LLM analysis"""
 
+    review_id: str = Field(..., description="Unique review identifier")
     text: str = Field(..., description="Review text content")
     rating: int | None = Field(None, ge=1, le=5, description="Review rating 1-5")
     business_type: str | None = Field(None, description="Type of business")

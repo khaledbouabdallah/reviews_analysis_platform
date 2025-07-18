@@ -10,7 +10,7 @@ import { ReviewsTable } from '@/components/reviews/ReviewsTable';
 import { ReviewsFilters } from '@/components/reviews/ReviewsFilters';
 import { ReviewsStats } from '@/components/reviews/ReviewsStats';
 import { ArrowLeft, Download, RefreshCw } from 'lucide-react';
-import '@/styles/business-page.css';
+import { BusinessStorageService } from '@/services/businessStorage';
 
 export default function ReviewsPage() {
     const router = useRouter();
@@ -19,6 +19,7 @@ export default function ReviewsPage() {
     const [filteredReviews, setFilteredReviews] = useState<Review[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+
     const [filters, setFilters] = useState<ReviewFilters>({
         job_id: searchParams.get('job_id') || '',
         source_id: '',
@@ -33,6 +34,14 @@ export default function ReviewsPage() {
         spam_status: '',
         urgency: '',
         topic: '',
+        processing_status: '',
+        // New analysis filters
+        has_analyzed_data: '',
+        sentiment_label: '',
+        emotional_tone: '',
+        spam_detection: '',
+        urgency_level: '',
+        detected_language: '',
     });
 
     // Load reviews
@@ -74,11 +83,52 @@ export default function ReviewsPage() {
             });
         }
 
-        // Sentiment filter
-        if (filters.sentiment) {
+        // Analysis status filter
+        if (filters.has_analyzed_data) {
             filtered = filtered.filter(review => {
-                const sentiment = reviewService.getSentiment(review);
-                return sentiment === filters.sentiment;
+                const isAnalyzed = reviewService.isAnalyzed(review);
+                return filters.has_analyzed_data === 'yes' ? isAnalyzed : !isAnalyzed;
+            });
+        }
+
+        // Sentiment filter (new analysis-based)
+        if (filters.sentiment_label) {
+            filtered = filtered.filter(review => {
+                const sentiment = review.analyzed_data?.analysis_results?.sentiment?.label;
+                return sentiment === filters.sentiment_label;
+            });
+        }
+
+        // Emotional tone filter
+        if (filters.emotional_tone) {
+            filtered = filtered.filter(review => {
+                const tone = review.analyzed_data?.analysis_results?.sentiment?.emotional_tone;
+                return tone === filters.emotional_tone;
+            });
+        }
+
+        // Spam detection filter
+        if (filters.spam_detection) {
+            filtered = filtered.filter(review => {
+                const spamData = review.analyzed_data?.analysis_results?.spam_detection;
+                if (!spamData) return false;
+                return filters.spam_detection === 'spam' ? spamData.is_spam : !spamData.is_spam;
+            });
+        }
+
+        // Urgency level filter
+        if (filters.urgency_level) {
+            filtered = filtered.filter(review => {
+                const urgency = review.analyzed_data?.analysis_results?.urgency?.level;
+                return urgency === filters.urgency_level;
+            });
+        }
+
+        // Detected language filter
+        if (filters.detected_language) {
+            filtered = filtered.filter(review => {
+                const language = review.analyzed_data?.analysis_results?.language_detection?.detected_language;
+                return language === filters.detected_language;
             });
         }
 
@@ -86,7 +136,7 @@ export default function ReviewsPage() {
         if (filters.rating) {
             filtered = filtered.filter(review => {
                 const rating = reviewService.getRating(review);
-                return rating === parseInt(filters.rating);
+                return rating === parseInt(filters.rating || '');
             });
         }
 
@@ -95,6 +145,24 @@ export default function ReviewsPage() {
             filtered = filtered.filter(review => {
                 const hasComment = reviewService.getDisplayText(review).trim() !== '';
                 return filters.has_comment === 'yes' ? hasComment : !hasComment;
+            });
+        }
+
+        // Date range filters
+        if (filters.date_from) {
+            const fromDate = new Date(filters.date_from);
+            filtered = filtered.filter(review => {
+                const reviewDate = new Date(reviewService.getDate(review));
+                return reviewDate >= fromDate;
+            });
+        }
+
+        if (filters.date_to) {
+            const toDate = new Date(filters.date_to);
+            toDate.setHours(23, 59, 59, 999); // End of day
+            filtered = filtered.filter(review => {
+                const reviewDate = new Date(reviewService.getDate(review));
+                return reviewDate <= toDate;
             });
         }
 
@@ -112,6 +180,10 @@ export default function ReviewsPage() {
         setFilters(newFilters);
     };
 
+    const handleRefresh = () => {
+        loadReviews();
+    };
+
     const handleExport = async () => {
         try {
             await reviewService.exportReviews(filteredReviews);
@@ -119,10 +191,6 @@ export default function ReviewsPage() {
             console.error('Export failed:', err);
             alert('Export failed. Please try again.');
         }
-    };
-
-    const handleRefresh = () => {
-        loadReviews();
     };
 
     return (
@@ -141,8 +209,6 @@ export default function ReviewsPage() {
                 <div className="mb-8 animate-in slide-in-from-top duration-700">
                     <div className="relative">
                         <div className="absolute inset-0 bg-white/40 backdrop-blur-xl rounded-3xl border border-white/30 shadow-xl" />
-                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 rounded-3xl opacity-60" />
-
                         <div className="relative p-8">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-4">
@@ -153,6 +219,8 @@ export default function ReviewsPage() {
                                         <ArrowLeft className="h-5 w-5 mr-2 group-hover:-translate-x-1 transition-transform" />
                                         <span className="font-medium">Back to Dashboard</span>
                                     </button>
+
+                                    <div className="h-8 w-px bg-gray-300" />
 
                                     <div>
                                         <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent">

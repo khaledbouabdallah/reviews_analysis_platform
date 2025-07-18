@@ -16,13 +16,29 @@ from services.review_analysis.review_analyzer import review_analyzer
 class BatchProcessor:
     """Handles batch processing of reviews with retry logic and progress tracking."""
 
-    def __init__(self, reviews: list[ReviewInDB], user_id: str):
+    def __init__(
+        self, reviews: list[ReviewInDB], user_id: str, override_analysis: bool = True
+    ):
         self.job_repo = JobRepository()
         self.review_repo = ReviewRepository()
-        self.batch_sizes = [100, 50, 20]  # Only 3 sizes as you specified
+        self.batch_sizes = [100, 50, 20]
         self.max_retries = 3
         self.reviews = reviews
         self.user_id = user_id
+
+        # filter out reviews that are not valid for analysis
+        self.reviews = [
+            review for review in self.reviews if review.data.get("original_text")
+        ]
+
+        # if override_analysis is False, filter out reviews that are already analyzed
+        if not override_analysis:
+            self.reviews = [
+                review
+                for review in self.reviews
+                if review.analyzed_data.get("processing_status") != "completed"
+            ]
+
         self.review_inputs = self._convert_to_review_inputs(reviews)
 
     async def process_all_reviews(
@@ -37,7 +53,7 @@ class BatchProcessor:
             # Create analysis job at the beginning
 
             logger.info(
-                f"Creating analysis job, analysis for {len(self.review_inputs)} reviews"
+                f"Creating analysis job, analysis for {len(self.review_inputs)},{len(self.reviews)}"
             )
 
             analysis_job = JobCreate(
@@ -256,14 +272,11 @@ class BatchProcessor:
 
         for review in reviews:
             # Extract text from review data
-            text = (
-                review.data.get("comment")
-                or review.data.get("original_text")
-                or review.data.get("text", "")
-            )
+            text = review.data.get("original_text")
 
             if text:
                 review_input = ReviewInput(
+                    review_id=str(review.id),
                     text=text,
                     rating=review.data.get("rating"),
                     business_type=review.data.get("business_type"),
@@ -318,9 +331,8 @@ class BatchProcessor:
     async def _update_job_status(self, job_id: str, status: str, **kwargs) -> None:
         """Update job status and other fields."""
         try:
-            logger.info("yesssssssssss")
             update_data = JobUpdateInternal(status=status, **kwargs)
-            logger.info("got you bitch")
+
             await self.job_repo.update_internal(job_id, update_data)
         except Exception as e:
             logger.error(f"Error updating job status for job {job_id}: {e}")
@@ -328,9 +340,8 @@ class BatchProcessor:
     async def _update_job_progress(self, job_id: str, **kwargs) -> None:
         """Update job progress fields."""
         try:
-            logger.info("noooooooooooooooooooo")
             update_data = JobUpdateInternal(**kwargs)
-            logger.info("got you bitchhhhhhhhhhhhhh 2")
+
             await self.job_repo.update_internal(job_id, update_data)
         except Exception as e:
             logger.error(f"Error updating job progress for job {job_id}: {e}")

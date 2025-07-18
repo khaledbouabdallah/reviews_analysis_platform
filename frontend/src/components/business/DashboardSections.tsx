@@ -36,7 +36,7 @@ const defaultSections: DashboardSection[] = [
   { id: 'jobs', title: 'Scraping Jobs', icon: 'Play', component: 'JobsSection', collapsed: false, order: 2, heightClass: 'h-[600px]' },
   { id: 'analysis', title: 'Analysis Center', icon: 'Brain', component: 'AnalysisSection', collapsed: false, order: 3, heightClass: 'h-auto min-h-[400px]' },
   { id: 'statistics', title: 'Statistics', icon: 'BarChart3', component: 'StatisticsSection', collapsed: true, order: 4, heightClass: 'h-auto min-h-[600px]' },
-  { id: 'activity', title: 'Recent Activity', icon: 'Activity', component: 'ActivitySection', collapsed: true, order: 5, heightClass: 'h-auto min-h-[400px]' }
+  { id: 'activity', title: 'Recent Activity', icon: 'Activity', component: 'ActivitySection', collapsed: true, order: 5, heightClass: 'h-auto min-h-[400px]' },
 ];
 
 interface DashboardSectionsProps {

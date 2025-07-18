@@ -12,7 +12,9 @@ import {
     MessageSquare,
     Globe,
     AlertTriangle,
-    Clock
+    Clock,
+    Brain,
+    Settings
 } from 'lucide-react';
 import { ReviewFilters } from '@/services/review';
 
@@ -30,6 +32,7 @@ export function ReviewsFilters({
     totalCount
 }: ReviewsFiltersProps) {
     const [isExpanded, setIsExpanded] = useState(false);
+    const [isAdvancedExpanded, setIsAdvancedExpanded] = useState(false);
 
     const handleFilterChange = (key: keyof ReviewFilters, value: string) => {
         onFiltersChange({
@@ -53,6 +56,14 @@ export function ReviewsFilters({
             spam_status: '',
             urgency: '',
             topic: '',
+            processing_status: '',
+            // Clear new analysis filters
+            has_analyzed_data: '',
+            sentiment_label: '',
+            emotional_tone: '',
+            spam_detection: '',
+            urgency_level: '',
+            detected_language: '',
         });
     };
 
@@ -74,24 +85,24 @@ export function ReviewsFilters({
                         </div>
 
                         <div className="text-sm text-gray-600 bg-white/50 backdrop-blur-sm px-3 py-1 rounded-full border border-white/40">
-                            Showing {reviewCount.toLocaleString()} of {totalCount.toLocaleString()} reviews
+                            {reviewCount} of {totalCount} reviews
                         </div>
                     </div>
 
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-3">
                         {hasActiveFilters && (
                             <button
                                 onClick={clearFilters}
-                                className="flex items-center space-x-1 text-red-600 hover:text-red-700 bg-red-50/50 hover:bg-red-50/70 px-3 py-1.5 rounded-lg transition-all duration-200 text-sm font-medium"
+                                className="flex items-center space-x-1 text-sm text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-lg transition-all duration-200"
                             >
-                                <X className="h-4 w-4" />
+                                <X className="h-3 w-3" />
                                 <span>Clear</span>
                             </button>
                         )}
 
                         <button
                             onClick={() => setIsExpanded(!isExpanded)}
-                            className="flex items-center space-x-1 text-gray-600 hover:text-gray-800 bg-white/50 hover:bg-white/70 px-3 py-1.5 rounded-lg transition-all duration-200 text-sm font-medium"
+                            className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-700 bg-white/50 hover:bg-white/70 px-3 py-2 rounded-lg transition-all duration-200"
                         >
                             <span>{isExpanded ? 'Less' : 'More'} Filters</span>
                             <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
@@ -100,7 +111,7 @@ export function ReviewsFilters({
                 </div>
 
                 {/* Quick Filters */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                     {/* Search */}
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -113,11 +124,25 @@ export function ReviewsFilters({
                         />
                     </div>
 
+                    {/* Analysis Status */}
+                    <div className="relative">
+                        <select
+                            value={filters.has_analyzed_data || ''}
+                            onChange={(e) => handleFilterChange('has_analyzed_data', e.target.value)}
+                            className="w-full px-4 py-3 bg-white/50 backdrop-blur-sm border-2 border-white/40 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white/70 transition-all duration-300 text-gray-900 appearance-none cursor-pointer"
+                        >
+                            <option value="">All Reviews</option>
+                            <option value="yes">🧠 Analyzed</option>
+                            <option value="no">⏳ Not Analyzed</option>
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    </div>
+
                     {/* Sentiment */}
                     <div className="relative">
                         <select
-                            value={filters.sentiment || ''}
-                            onChange={(e) => handleFilterChange('sentiment', e.target.value)}
+                            value={filters.sentiment_label || ''}
+                            onChange={(e) => handleFilterChange('sentiment_label', e.target.value)}
                             className="w-full px-4 py-3 bg-white/50 backdrop-blur-sm border-2 border-white/40 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white/70 transition-all duration-300 text-gray-900 appearance-none cursor-pointer"
                         >
                             <option value="">All Sentiments</option>
@@ -145,16 +170,16 @@ export function ReviewsFilters({
                         <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                     </div>
 
-                    {/* Has Comment */}
+                    {/* Source Type */}
                     <div className="relative">
                         <select
-                            value={filters.has_comment || ''}
-                            onChange={(e) => handleFilterChange('has_comment', e.target.value)}
+                            value={filters.source_id || ''}
+                            onChange={(e) => handleFilterChange('source_id', e.target.value)}
                             className="w-full px-4 py-3 bg-white/50 backdrop-blur-sm border-2 border-white/40 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white/70 transition-all duration-300 text-gray-900 appearance-none cursor-pointer"
                         >
-                            <option value="">All Reviews</option>
-                            <option value="yes">💬 With Comments</option>
-                            <option value="no">⭐ Rating Only</option>
+                            <option value="">All Sources</option>
+                            <option value="google">📍 Google Maps</option>
+                            <option value="csv">📊 CSV Upload</option>
                         </select>
                         <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                     </div>
@@ -163,124 +188,142 @@ export function ReviewsFilters({
                 {/* Advanced Filters (Expandable) */}
                 {isExpanded && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-6 border-t border-white/20 animate-in slide-in-from-top duration-300">
-
                         {/* Date Range */}
                         <div className="space-y-2">
                             <label className="block text-sm font-medium text-gray-700">
                                 <Calendar className="inline h-4 w-4 mr-1" />
-                                Date Range
+                                Date From
                             </label>
-                            <div className="grid grid-cols-2 gap-2">
-                                <input
-                                    type="date"
-                                    value={filters.date_from || ''}
-                                    onChange={(e) => handleFilterChange('date_from', e.target.value)}
-                                    className="px-3 py-2 bg-white/50 backdrop-blur-sm border-2 border-white/40 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white/70 transition-all duration-300 text-gray-900 text-sm"
-                                />
-                                <input
-                                    type="date"
-                                    value={filters.date_to || ''}
-                                    onChange={(e) => handleFilterChange('date_to', e.target.value)}
-                                    className="px-3 py-2 bg-white/50 backdrop-blur-sm border-2 border-white/40 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white/70 transition-all duration-300 text-gray-900 text-sm"
-                                />
-                            </div>
+                            <input
+                                type="date"
+                                value={filters.date_from || ''}
+                                onChange={(e) => handleFilterChange('date_from', e.target.value)}
+                                className="w-full px-3 py-2 bg-white/50 backdrop-blur-sm border-2 border-white/40 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white/70 transition-all duration-300 text-gray-900 text-sm"
+                            />
                         </div>
 
-                        {/* Language */}
                         <div className="space-y-2">
                             <label className="block text-sm font-medium text-gray-700">
-                                <Globe className="inline h-4 w-4 mr-1" />
-                                Language
+                                <Calendar className="inline h-4 w-4 mr-1" />
+                                Date To
                             </label>
-                            <select
-                                value={filters.language || ''}
-                                onChange={(e) => handleFilterChange('language', e.target.value)}
-                                className="w-full px-3 py-2 bg-white/50 backdrop-blur-sm border-2 border-white/40 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white/70 transition-all duration-300 text-gray-900 text-sm appearance-none cursor-pointer"
-                            >
-                                <option value="">All Languages</option>
-                                <option value="en">🇺🇸 English</option>
-                                <option value="fr">🇫🇷 French</option>
-                                <option value="es">🇪🇸 Spanish</option>
-                                <option value="de">🇩🇪 German</option>
-                                <option value="it">🇮🇹 Italian</option>
-                            </select>
+                            <input
+                                type="date"
+                                value={filters.date_to || ''}
+                                onChange={(e) => handleFilterChange('date_to', e.target.value)}
+                                className="w-full px-3 py-2 bg-white/50 backdrop-blur-sm border-2 border-white/40 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white/70 transition-all duration-300 text-gray-900 text-sm"
+                            />
                         </div>
 
-                        {/* Topic/Segment */}
+                        {/* Has Comment */}
                         <div className="space-y-2">
                             <label className="block text-sm font-medium text-gray-700">
                                 <MessageSquare className="inline h-4 w-4 mr-1" />
-                                Topic
+                                Comments
                             </label>
                             <select
-                                value={filters.topic || ''}
-                                onChange={(e) => handleFilterChange('topic', e.target.value)}
-                                className="w-full px-3 py-2 bg-white/50 backdrop-blur-sm border-2 border-white/40 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white/70 transition-all duration-300 text-gray-900 text-sm appearance-none cursor-pointer"
-                            >
-                                <option value="">All Topics</option>
-                                <option value="food_quality">🍽️ Food Quality</option>
-                                <option value="service">👥 Service</option>
-                                <option value="ambiance">🏛️ Ambiance</option>
-                                <option value="price">💰 Price</option>
-                                <option value="location">📍 Location</option>
-                                <option value="cleanliness">🧽 Cleanliness</option>
-                            </select>
-                        </div>
-
-                        {/* Urgency */}
-                        <div className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-700">
-                                <AlertTriangle className="inline h-4 w-4 mr-1" />
-                                Urgency
-                            </label>
-                            <select
-                                value={filters.urgency || ''}
-                                onChange={(e) => handleFilterChange('urgency', e.target.value)}
-                                className="w-full px-3 py-2 bg-white/50 backdrop-blur-sm border-2 border-white/40 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white/70 transition-all duration-300 text-gray-900 text-sm appearance-none cursor-pointer"
-                            >
-                                <option value="">All Urgency Levels</option>
-                                <option value="very_urgent">🚨 Very Urgent</option>
-                                <option value="urgent">⚡ Urgent</option>
-                                <option value="moderate">⚠️ Moderate</option>
-                                <option value="low">📝 Low</option>
-                                <option value="not_urgent">✅ Not Urgent</option>
-                            </select>
-                        </div>
-
-                        {/* Spam Status */}
-                        <div className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-700">
-                                <Clock className="inline h-4 w-4 mr-1" />
-                                Content Quality
-                            </label>
-                            <select
-                                value={filters.spam_status || ''}
-                                onChange={(e) => handleFilterChange('spam_status', e.target.value)}
+                                value={filters.has_comment || ''}
+                                onChange={(e) => handleFilterChange('has_comment', e.target.value)}
                                 className="w-full px-3 py-2 bg-white/50 backdrop-blur-sm border-2 border-white/40 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white/70 transition-all duration-300 text-gray-900 text-sm appearance-none cursor-pointer"
                             >
                                 <option value="">All Reviews</option>
-                                <option value="legitimate">✅ Legitimate</option>
-                                <option value="spam">🚫 Spam</option>
-                                <option value="suspicious">⚠️ Suspicious</option>
+                                <option value="yes">💬 With Comments</option>
+                                <option value="no">⭐ Rating Only</option>
                             </select>
                         </div>
 
-                        {/* Processing Status */}
-                        <div className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-700">
-                                <Clock className="inline h-4 w-4 mr-1" />
-                                AI Processing
-                            </label>
-                            <select
-                                value={filters.processing_status || ''}
-                                onChange={(e) => handleFilterChange('processing_status', e.target.value)}
-                                className="w-full px-3 py-2 bg-white/50 backdrop-blur-sm border-2 border-white/40 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white/70 transition-all duration-300 text-gray-900 text-sm appearance-none cursor-pointer"
-                            >
-                                <option value="">All Statuses</option>
-                                <option value="completed">✅ Processed</option>
-                                <option value="pending">⏳ Pending</option>
-                                <option value="failed">❌ Failed</option>
-                            </select>
+                        {/* AI Analysis Filters */}
+                        <div className="col-span-full">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center space-x-2">
+                                    <Brain className="h-4 w-4 text-purple-600" />
+                                    <span className="text-sm font-medium text-gray-700">AI Analysis Filters</span>
+                                </div>
+                                <button
+                                    onClick={() => setIsAdvancedExpanded(!isAdvancedExpanded)}
+                                    className="flex items-center space-x-1 text-xs text-gray-500 hover:text-gray-700"
+                                >
+                                    <span>{isAdvancedExpanded ? 'Hide' : 'Show'} Advanced</span>
+                                    <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${isAdvancedExpanded ? 'rotate-180' : ''}`} />
+                                </button>
+                            </div>
+
+                            {isAdvancedExpanded && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-in slide-in-from-top duration-300">
+                                    {/* Emotional Tone */}
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            Emotional Tone
+                                        </label>
+                                        <select
+                                            value={filters.emotional_tone || ''}
+                                            onChange={(e) => handleFilterChange('emotional_tone', e.target.value)}
+                                            className="w-full px-3 py-2 bg-white/50 backdrop-blur-sm border-2 border-white/40 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white/70 transition-all duration-300 text-gray-900 text-sm appearance-none cursor-pointer"
+                                        >
+                                            <option value="">All Tones</option>
+                                            <option value="happy">😄 Happy</option>
+                                            <option value="satisfied">😌 Satisfied</option>
+                                            <option value="neutral">😐 Neutral</option>
+                                            <option value="disappointed">😞 Disappointed</option>
+                                            <option value="frustrated">😤 Frustrated</option>
+                                            <option value="angry">😡 Angry</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Spam Detection */}
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            Spam Status
+                                        </label>
+                                        <select
+                                            value={filters.spam_detection || ''}
+                                            onChange={(e) => handleFilterChange('spam_detection', e.target.value)}
+                                            className="w-full px-3 py-2 bg-white/50 backdrop-blur-sm border-2 border-white/40 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white/70 transition-all duration-300 text-gray-900 text-sm appearance-none cursor-pointer"
+                                        >
+                                            <option value="">All Reviews</option>
+                                            <option value="not_spam">✅ Genuine</option>
+                                            <option value="spam">🚫 Spam/Fake</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Urgency Level */}
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            Urgency Level
+                                        </label>
+                                        <select
+                                            value={filters.urgency_level || ''}
+                                            onChange={(e) => handleFilterChange('urgency_level', e.target.value)}
+                                            className="w-full px-3 py-2 bg-white/50 backdrop-blur-sm border-2 border-white/40 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white/70 transition-all duration-300 text-gray-900 text-sm appearance-none cursor-pointer"
+                                        >
+                                            <option value="">All Levels</option>
+                                            <option value="critical">🚨 Critical</option>
+                                            <option value="high">🔴 High</option>
+                                            <option value="medium">🟡 Medium</option>
+                                            <option value="low">🟢 Low</option>
+                                            <option value="none">⚪ None</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Detected Language */}
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            Language
+                                        </label>
+                                        <select
+                                            value={filters.detected_language || ''}
+                                            onChange={(e) => handleFilterChange('detected_language', e.target.value)}
+                                            className="w-full px-3 py-2 bg-white/50 backdrop-blur-sm border-2 border-white/40 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white/70 transition-all duration-300 text-gray-900 text-sm appearance-none cursor-pointer"
+                                        >
+                                            <option value="">All Languages</option>
+                                            <option value="en">🇬🇧 English</option>
+                                            <option value="fr">🇫🇷 French</option>
+                                            <option value="ar">🇸🇦 Arabic</option>
+                                            <option value="es">🇪🇸 Spanish</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -296,26 +339,29 @@ export function ReviewsFilters({
 
                                 const filterLabels: Record<string, string> = {
                                     search: `Search: "${value}"`,
-                                    sentiment: `Sentiment: ${value}`,
+                                    has_analyzed_data: `Analysis: ${value === 'yes' ? 'Analyzed' : 'Not Analyzed'}`,
+                                    sentiment_label: `Sentiment: ${value}`,
                                     rating: `Rating: ${value} stars`,
-                                    has_comment: `Comments: ${value === 'yes' ? 'With comments' : 'Rating only'}`,
-                                    language: `Language: ${value}`,
-                                    topic: `Topic: ${value.replace('_', ' ')}`,
-                                    urgency: `Urgency: ${value.replace('_', ' ')}`,
-                                    spam_status: `Quality: ${value}`,
+                                    has_comment: `Comments: ${value === 'yes' ? 'With Comments' : 'Rating Only'}`,
+                                    emotional_tone: `Tone: ${value}`,
+                                    spam_detection: `Spam: ${value === 'spam' ? 'Spam/Fake' : 'Genuine'}`,
+                                    urgency_level: `Urgency: ${value}`,
+                                    detected_language: `Language: ${value}`,
                                     date_from: `From: ${value}`,
                                     date_to: `To: ${value}`,
                                 };
 
+                                const label = filterLabels[key] || `${key}: ${value}`;
+
                                 return (
                                     <span
                                         key={key}
-                                        className="inline-flex items-center space-x-1 bg-blue-100/80 text-blue-800 text-xs font-medium px-2.5 py-1 rounded-full border border-blue-200/50"
+                                        className="inline-flex items-center space-x-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-lg text-xs border border-blue-200"
                                     >
-                                        <span>{filterLabels[key] || `${key}: ${value}`}</span>
+                                        <span>{label}</span>
                                         <button
                                             onClick={() => handleFilterChange(key as keyof ReviewFilters, '')}
-                                            className="text-blue-600 hover:text-blue-800 ml-1"
+                                            className="hover:bg-blue-200 rounded-full p-0.5 transition-colors duration-200"
                                         >
                                             <X className="h-3 w-3" />
                                         </button>

@@ -1,4 +1,3 @@
-// src/components/reviews/ReviewsTable.tsx
 'use client';
 
 import { useState } from 'react';
@@ -15,7 +14,10 @@ import {
     CheckCircle,
     Clock,
     Loader2,
-    RefreshCw
+    RefreshCw,
+    Settings,
+    Eye,
+    EyeOff
 } from 'lucide-react';
 import { Review, reviewService } from '@/services/review';
 
@@ -26,9 +28,28 @@ interface ReviewsTableProps {
     onRefresh: () => void;
 }
 
+interface ColumnConfig {
+    key: string;
+    label: string;
+    visible: boolean;
+    icon: any;
+}
+
+const defaultColumns: ColumnConfig[] = [
+    { key: 'date', label: 'Date', visible: true, icon: Calendar },
+    { key: 'reviewer', label: 'Reviewer', visible: true, icon: User },
+    { key: 'rating', label: 'Rating', visible: true, icon: Star },
+    { key: 'text', label: 'Original Text', visible: true, icon: MessageSquare },
+    { key: 'source', label: 'Source', visible: true, icon: Globe },
+    { key: 'source_type', label: 'Source Type', visible: true, icon: Globe },
+    { key: 'analysis_status', label: 'Analysis Status', visible: true, icon: Brain },
+];
+
 export function ReviewsTable({ reviews, loading, error, onRefresh }: ReviewsTableProps) {
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
     const [currentPage, setCurrentPage] = useState(1);
+    const [showColumnSelector, setShowColumnSelector] = useState(false);
+    const [columns, setColumns] = useState<ColumnConfig[]>(defaultColumns);
     const reviewsPerPage = 20;
 
     const toggleRow = (reviewId: string) => {
@@ -41,6 +62,16 @@ export function ReviewsTable({ reviews, loading, error, onRefresh }: ReviewsTabl
         setExpandedRows(newExpanded);
     };
 
+    const toggleColumn = (columnKey: string) => {
+        setColumns(prevColumns =>
+            prevColumns.map(col =>
+                col.key === columnKey ? { ...col, visible: !col.visible } : col
+            )
+        );
+    };
+
+    const visibleColumns = columns.filter(col => col.visible);
+
     const renderStars = (rating: number) => {
         return (
             <div className="flex items-center space-x-1">
@@ -48,188 +79,242 @@ export function ReviewsTable({ reviews, loading, error, onRefresh }: ReviewsTabl
                     <Star
                         key={star}
                         className={`h-4 w-4 ${star <= rating
-                                ? 'text-yellow-400 fill-current'
-                                : 'text-gray-300'
+                            ? 'text-yellow-400 fill-current'
+                            : 'text-gray-300'
                             }`}
                     />
                 ))}
-                <span className="ml-2 text-sm font-medium text-gray-700">{rating}</span>
+                <span className="ml-2 text-sm text-gray-600">({rating})</span>
             </div>
         );
     };
 
-    const renderSentimentBadge = (review: Review) => {
+    const getSentimentBadge = (review: Review) => {
         const sentiment = reviewService.getSentiment(review);
-        const score = reviewService.getSentimentScore(review);
-        const colorClass = reviewService.getSentimentColor(sentiment);
-
-        if (sentiment === 'unknown') {
-            return (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">
-                    <Clock className="h-3 w-3 mr-1" />
-                    Pending
-                </span>
-            );
-        }
+        const sentimentColors = {
+            positive: 'bg-green-100 text-green-700 border-green-200',
+            negative: 'bg-red-100 text-red-700 border-red-200',
+            neutral: 'bg-gray-100 text-gray-700 border-gray-200',
+            Unknown: 'bg-gray-100 text-gray-500 border-gray-200',
+        };
 
         return (
-            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${colorClass}`}>
-                {sentiment === 'positive' && <CheckCircle className="h-3 w-3 mr-1" />}
-                {sentiment === 'negative' && <AlertCircle className="h-3 w-3 mr-1" />}
-                {sentiment === 'neutral' && <Clock className="h-3 w-3 mr-1" />}
-                {sentiment.charAt(0).toUpperCase() + sentiment.slice(1)}
-                {score > 0 && <span className="ml-1 opacity-75">({Math.round(score * 100)}%)</span>}
+            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${sentimentColors[sentiment as keyof typeof sentimentColors] || sentimentColors.Unknown}`}>
+                {sentiment}
+            </span>
+        );
+    };
+
+    const getAnalysisStatusBadge = (review: Review) => {
+        const status = reviewService.getAnalysisStatus(review);
+        const statusColors = {
+            'Analyzed': 'bg-green-100 text-green-700 border-green-200',
+            'Processing': 'bg-blue-100 text-blue-700 border-blue-200',
+            'Failed': 'bg-red-100 text-red-700 border-red-200',
+            'Not Processed': 'bg-gray-100 text-gray-500 border-gray-200',
+        };
+
+        return (
+            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${statusColors[status as keyof typeof statusColors] || statusColors['Not Processed']}`}>
+                {status}
             </span>
         );
     };
 
     const renderExpandedContent = (review: Review) => {
-        const displayText = reviewService.getDisplayText(review);
-        const hasProcessedData = reviewService.isProcessed(review);
+        const isExpanded = expandedRows.has(review._id);
+        if (!isExpanded) return null;
+
+        const analysisData = review.analyzed_data?.analysis_results;
 
         return (
-            <tr>
-                <td colSpan={7} className="px-6 py-4">
-                    <div className="relative">
-                        <div className="absolute inset-0 bg-white/30 backdrop-blur-sm rounded-2xl border border-white/40" />
-                        <div className="relative p-6 space-y-6">
+            <tr key={`${review._id}-expanded`} className="bg-blue-50/50">
+                <td colSpan={visibleColumns.length + 1} className="px-6 py-6">
+                    <div className="space-y-6">
+                        {/* Full Review Text */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-900 mb-2">Full Review Text</h4>
+                            <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-white/40">
+                                <p className="text-gray-700 leading-relaxed">
+                                    {reviewService.getDisplayText(review) || 'No text available'}
+                                </p>
+                            </div>
+                        </div>
 
-                            {/* Review Content */}
-                            <div className="space-y-4">
-                                <h4 className="font-semibold text-gray-900 flex items-center">
-                                    <MessageSquare className="h-4 w-4 mr-2" />
-                                    Review Content
+                        {/* Analysis Results */}
+                        {analysisData && (
+                            <div>
+                                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                                    <Brain className="h-4 w-4 mr-2 text-purple-600" />
+                                    AI Analysis Results
                                 </h4>
 
-                                {displayText ? (
-                                    <div className="space-y-3">
-                                        <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 border border-white/40">
-                                            <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                                                {displayText}
-                                            </p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {/* Sentiment Analysis */}
+                                    {analysisData.sentiment && (
+                                        <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-white/40">
+                                            <h5 className="font-medium text-gray-900 mb-2">Sentiment</h5>
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Label:</span>
+                                                    <span className="font-medium">{analysisData.sentiment.label}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Confidence:</span>
+                                                    <span className="font-medium">{(analysisData.sentiment.confidence * 100).toFixed(1)}%</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Emotional Tone:</span>
+                                                    <span className="font-medium">{analysisData.sentiment.emotional_tone}</span>
+                                                </div>
+                                            </div>
                                         </div>
+                                    )}
 
-                                        {/* Show original text if different from display text */}
-                                        {review.data?.original_text && review.data.original_text !== displayText && (
-                                            <div className="bg-blue-50/50 backdrop-blur-sm rounded-xl p-4 border border-blue-200/40">
-                                                <div className="flex items-center mb-2">
-                                                    <Globe className="h-4 w-4 text-blue-600 mr-2" />
-                                                    <span className="text-sm font-medium text-blue-800">
-                                                        Original Text ({reviewService.getLanguage(review)})
+                                    {/* Language Detection */}
+                                    {analysisData.language_detection && (
+                                        <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-white/40">
+                                            <h5 className="font-medium text-gray-900 mb-2">Language</h5>
+                                            <div className="text-sm">
+                                                <span className="font-medium">{analysisData.language_detection.detected_language}</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Urgency */}
+                                    {analysisData.urgency && (
+                                        <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-white/40">
+                                            <h5 className="font-medium text-gray-900 mb-2">Urgency</h5>
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Level:</span>
+                                                    <span className="font-medium">{analysisData.urgency.level}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Immediate Response:</span>
+                                                    <span className="font-medium">
+                                                        {analysisData.urgency.requires_immediate_response ? 'Yes' : 'No'}
                                                     </span>
                                                 </div>
-                                                <p className="text-blue-700 leading-relaxed whitespace-pre-wrap">
-                                                    {review.data.original_text}
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="bg-gray-50/50 backdrop-blur-sm rounded-xl p-4 border border-gray-200/40 text-center">
-                                        <p className="text-gray-500 italic">No comment provided</p>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* AI Analysis */}
-                            {hasProcessedData && (
-                                <div className="space-y-4">
-                                    <h4 className="font-semibold text-gray-900 flex items-center">
-                                        <Brain className="h-4 w-4 mr-2" />
-                                        AI Analysis
-                                    </h4>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 border border-white/40">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="text-sm font-medium text-gray-700">Sentiment</span>
-                                                {renderSentimentBadge(review)}
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm font-medium text-gray-700">Language</span>
-                                                <span className="text-sm text-gray-600 capitalize">
-                                                    {reviewService.getLanguage(review)}
-                                                </span>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Escalation Needed:</span>
+                                                    <span className="font-medium">
+                                                        {analysisData.urgency.escalation_needed ? 'Yes' : 'No'}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
+                                    )}
 
-                                        <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 border border-white/40">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="text-sm font-medium text-gray-700">Topic</span>
-                                                <span className="text-sm text-gray-600 capitalize">
-                                                    {reviewService.getTopic(review)}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm font-medium text-gray-700">Urgency</span>
-                                                <span className="text-sm text-gray-600 capitalize">
-                                                    {reviewService.getUrgency(review).replace('_', ' ')}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Metadata */}
-                            <div className="space-y-4">
-                                <h4 className="font-semibold text-gray-900">Metadata</h4>
-
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 border border-white/40">
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-gray-600">Source:</span>
-                                                <span className="font-medium capitalize">{review.source_type}</span>
-                                            </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-gray-600">Likes:</span>
-                                                <span className="font-medium">{review.data?.likes || 0}</span>
+                                    {/* Spam Detection */}
+                                    {analysisData.spam_detection && (
+                                        <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-white/40">
+                                            <h5 className="font-medium text-gray-900 mb-2">Spam Detection</h5>
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Is Spam:</span>
+                                                    <span className="font-medium">
+                                                        {analysisData.spam_detection.is_spam ? 'Yes' : 'No'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Confidence:</span>
+                                                    <span className="font-medium">{(analysisData.spam_detection.confidence * 100).toFixed(1)}%</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    )}
 
-                                    {/* Google Maps specific ratings */}
-                                    {review.source_type === 'google' && (review.data?.Food || review.data?.Service || review.data?.Atmosphere) && (
-                                        <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 border border-white/40">
-                                            <div className="space-y-2">
-                                                {review.data.Food && (
-                                                    <div className="flex justify-between text-sm">
-                                                        <span className="text-gray-600">Food:</span>
-                                                        <span className="font-medium">{review.data.Food}/5</span>
+                                    {/* Topics */}
+                                    {analysisData.topics && analysisData.topics.length > 0 && (
+                                        <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-white/40 md:col-span-2 lg:col-span-3">
+                                            <h5 className="font-medium text-gray-900 mb-2">Topics</h5>
+                                            <div className="flex flex-wrap gap-2">
+                                                {analysisData.topics.map((topic, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${topic.sentiment === 'positive' ? 'bg-green-100 text-green-700 border-green-200' :
+                                                                topic.sentiment === 'negative' ? 'bg-red-100 text-red-700 border-red-200' :
+                                                                    'bg-gray-100 text-gray-700 border-gray-200'
+                                                            }`}
+                                                    >
+                                                        {topic.topic}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Business Insights */}
+                                    {analysisData.business_insights && (
+                                        <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-white/40 md:col-span-2 lg:col-span-3">
+                                            <h5 className="font-medium text-gray-900 mb-2">Business Insights</h5>
+                                            <div className="space-y-3 text-sm">
+                                                {analysisData.business_insights.main_issues.length > 0 && (
+                                                    <div>
+                                                        <span className="text-gray-600 font-medium">Main Issues:</span>
+                                                        <ul className="list-disc list-inside mt-1 space-y-1">
+                                                            {analysisData.business_insights.main_issues.map((issue, index) => (
+                                                                <li key={index} className="text-gray-700">{issue}</li>
+                                                            ))}
+                                                        </ul>
                                                     </div>
                                                 )}
-                                                {review.data.Service && (
-                                                    <div className="flex justify-between text-sm">
-                                                        <span className="text-gray-600">Service:</span>
-                                                        <span className="font-medium">{review.data.Service}/5</span>
+                                                {analysisData.business_insights.positive_highlights.length > 0 && (
+                                                    <div>
+                                                        <span className="text-gray-600 font-medium">Positive Highlights:</span>
+                                                        <ul className="list-disc list-inside mt-1 space-y-1">
+                                                            {analysisData.business_insights.positive_highlights.map((highlight, index) => (
+                                                                <li key={index} className="text-gray-700">{highlight}</li>
+                                                            ))}
+                                                        </ul>
                                                     </div>
                                                 )}
-                                                {review.data.Atmosphere && (
-                                                    <div className="flex justify-between text-sm">
-                                                        <span className="text-gray-600">Atmosphere:</span>
-                                                        <span className="font-medium">{review.data.Atmosphere}/5</span>
+                                                {analysisData.business_insights.actionable_recommendations.length > 0 && (
+                                                    <div>
+                                                        <span className="text-gray-600 font-medium">Recommendations:</span>
+                                                        <ul className="list-disc list-inside mt-1 space-y-1">
+                                                            {analysisData.business_insights.actionable_recommendations.map((rec, index) => (
+                                                                <li key={index} className="text-gray-700">{rec}</li>
+                                                            ))}
+                                                        </ul>
                                                     </div>
                                                 )}
                                             </div>
                                         </div>
                                     )}
+                                </div>
+                            </div>
+                        )}
 
-                                    <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 border border-white/40">
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-gray-600">Processed:</span>
-                                                <span className="font-medium">
-                                                    {hasProcessedData ? 'Yes' : 'No'}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-gray-600">Created:</span>
-                                                <span className="font-medium text-xs">
-                                                    {new Date(review.created_at).toLocaleDateString()}
-                                                </span>
-                                            </div>
-                                        </div>
+                        {/* Raw Data */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-900 mb-2">Review Metadata</h4>
+                            <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-white/40">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">Source ID:</span>
+                                        <span className="font-medium text-xs">
+                                            {review.source_id.slice(-8)}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">Job ID:</span>
+                                        <span className="font-medium text-xs">
+                                            {review.job_id.slice(-8)}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">Analyzed:</span>
+                                        <span className="font-medium">
+                                            {reviewService.isAnalyzed(review) ? 'Yes' : 'No'}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">Created:</span>
+                                        <span className="font-medium text-xs">
+                                            {new Date(review.created_at).toLocaleDateString()}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -311,81 +396,139 @@ export function ReviewsTable({ reviews, loading, error, onRefresh }: ReviewsTabl
         <div className="relative">
             <div className="absolute inset-0 bg-white/40 backdrop-blur-xl rounded-3xl border border-white/30 shadow-xl" />
             <div className="relative overflow-hidden rounded-3xl">
+                {/* Table Header with Column Selector */}
+                <div className="px-6 py-4 border-b border-white/20 bg-white/20 backdrop-blur-sm">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-gray-900">Reviews ({reviews.length})</h3>
+
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowColumnSelector(!showColumnSelector)}
+                                className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-700 bg-white/50 hover:bg-white/70 rounded-lg transition-all duration-200"
+                            >
+                                <Settings className="h-4 w-4" />
+                                <span>Columns</span>
+                                <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${showColumnSelector ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {/* Column Selector Dropdown */}
+                            {showColumnSelector && (
+                                <div className="absolute right-0 top-full mt-2 w-64 bg-white/90 backdrop-blur-xl rounded-xl border border-white/40 shadow-xl z-10">
+                                    <div className="p-4">
+                                        <h4 className="text-sm font-semibold text-gray-900 mb-3">Show/Hide Columns</h4>
+                                        <div className="space-y-2">
+                                            {columns.map((column) => {
+                                                const IconComponent = column.icon;
+                                                return (
+                                                    <label
+                                                        key={column.key}
+                                                        className="flex items-center space-x-2 cursor-pointer hover:bg-white/50 rounded-lg p-2 transition-colors duration-200"
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={column.visible}
+                                                            onChange={() => toggleColumn(column.key)}
+                                                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <IconComponent className="h-4 w-4 text-gray-500" />
+                                                        <span className="text-sm text-gray-700">{column.label}</span>
+                                                        {column.visible ? (
+                                                            <Eye className="h-3 w-3 text-green-500 ml-auto" />
+                                                        ) : (
+                                                            <EyeOff className="h-3 w-3 text-gray-400 ml-auto" />
+                                                        )}
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead>
                             <tr className="border-b border-white/20">
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Date</th>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Reviewer</th>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Rating</th>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Comment Preview</th>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Sentiment</th>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Source</th>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Actions</th>
+                                {visibleColumns.map((column) => {
+                                    const IconComponent = column.icon;
+                                    return (
+                                        <th key={column.key} className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                                            <div className="flex items-center space-x-2">
+                                                <IconComponent className="h-4 w-4 text-gray-500" />
+                                                <span>{column.label}</span>
+                                            </div>
+                                        </th>
+                                    );
+                                })}
+                                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900 w-16">
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
-                        <tbody>
-                            {currentReviews.map((review, index) => {
+                        <tbody className="divide-y divide-white/10">
+                            {currentReviews.map((review) => {
                                 const isExpanded = expandedRows.has(review._id);
-                                const displayText = reviewService.getDisplayText(review);
-                                const hasComment = reviewService.hasComment(review);
 
                                 return (
                                     <>
-                                        <tr
-                                            key={review._id}
-                                            className="border-b border-white/10 hover:bg-white/20 transition-all duration-200 group animate-in slide-in-from-bottom"
-                                            style={{ animationDelay: `${index * 0.05}s` }}
-                                        >
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center space-x-2">
-                                                    <Calendar className="h-4 w-4 text-gray-400" />
-                                                    <span className="text-sm text-gray-700">
-                                                        {new Date(reviewService.getDate(review)).toLocaleDateString()}
-                                                    </span>
-                                                </div>
-                                            </td>
+                                        <tr key={review._id} className="hover:bg-white/30 transition-colors duration-200">
+                                            {visibleColumns.map((column) => (
+                                                <td key={column.key} className="px-6 py-4 text-sm text-gray-900 max-w-xs">
+                                                    {column.key === 'date' && (
+                                                        <div className="font-medium">
+                                                            {new Date(reviewService.getDate(review)).toLocaleDateString()}
+                                                        </div>
+                                                    )}
+                                                    {column.key === 'reviewer' && (
+                                                        <div className="flex items-center space-x-2">
+                                                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                                                                {reviewService.getReviewer(review).charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <span className="font-medium truncate">
+                                                                {reviewService.getReviewer(review)}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {column.key === 'rating' && (
+                                                        <div>
+                                                            {reviewService.getRating(review) ?
+                                                                renderStars(reviewService.getRating(review)!) :
+                                                                <span className="text-gray-500">No rating</span>
+                                                            }
+                                                        </div>
+                                                    )}
+                                                    {column.key === 'text' && (
+                                                        <div className="max-w-md">
+                                                            <p className="text-gray-700 line-clamp-2">
+                                                                {reviewService.getDisplayText(review) || 'No text available'}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                    {column.key === 'source' && (
+                                                        <div>
+                                                            {getSentimentBadge(review)}
+                                                        </div>
+                                                    )}
+                                                    {column.key === 'source_type' && (
+                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                                                            {reviewService.getSource(review)}
+                                                        </span>
+                                                    )}
+                                                    {column.key === 'analysis_status' && (
+                                                        <div>
+                                                            {getAnalysisStatusBadge(review)}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            ))}
 
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center space-x-2">
-                                                    <User className="h-4 w-4 text-gray-400" />
-                                                    <span className="text-sm font-medium text-gray-900 truncate max-w-32">
-                                                        {reviewService.getUsername(review)}
-                                                    </span>
-                                                </div>
-                                            </td>
-
-                                            <td className="px-6 py-4">
-                                                {renderStars(reviewService.getRating(review))}
-                                            </td>
-
-                                            <td className="px-6 py-4 max-w-xs">
-                                                {hasComment ? (
-                                                    <p className="text-sm text-gray-700 truncate">
-                                                        {displayText.length > 100
-                                                            ? `${displayText.substring(0, 100)}...`
-                                                            : displayText
-                                                        }
-                                                    </p>
-                                                ) : (
-                                                    <span className="text-sm text-gray-400 italic">No comment</span>
-                                                )}
-                                            </td>
-
-                                            <td className="px-6 py-4">
-                                                {renderSentimentBadge(review)}
-                                            </td>
-
-                                            <td className="px-6 py-4">
-                                                <span className="text-sm text-gray-600 capitalize bg-white/50 px-2 py-1 rounded-lg">
-                                                    {review.source_type}
-                                                </span>
-                                            </td>
-
-                                            <td className="px-6 py-4">
+                                            <td className="px-6 py-4 text-center">
                                                 <button
                                                     onClick={() => toggleRow(review._id)}
-                                                    className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 transition-colors duration-200 bg-white/50 hover:bg-white/70 px-3 py-1.5 rounded-lg group-hover:scale-105"
+                                                    className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 mx-auto"
                                                 >
                                                     {isExpanded ? (
                                                         <>
@@ -402,7 +545,7 @@ export function ReviewsTable({ reviews, loading, error, onRefresh }: ReviewsTabl
                                             </td>
                                         </tr>
 
-                                        {isExpanded && renderExpandedContent(review)}
+                                        {renderExpandedContent(review)}
                                     </>
                                 );
                             })}
@@ -435,8 +578,8 @@ export function ReviewsTable({ reviews, loading, error, onRefresh }: ReviewsTabl
                                                 key={pageNum}
                                                 onClick={() => setCurrentPage(pageNum)}
                                                 className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${currentPage === pageNum
-                                                        ? 'bg-blue-600 text-white'
-                                                        : 'text-gray-600 bg-white/50 hover:bg-white/70'
+                                                    ? 'bg-blue-500 text-white'
+                                                    : 'text-gray-600 bg-white/50 hover:bg-white/70'
                                                     }`}
                                             >
                                                 {pageNum}

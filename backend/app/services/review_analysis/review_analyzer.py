@@ -66,6 +66,11 @@ class SchemaBuilder:
         # Build field definitions
         field_definitions = {}
 
+        # Add common fields
+        field_definitions["review_id"] = (
+            str,
+            Field(..., description="Unique review identifier"),
+        )
         for task in tasks:
             if task not in cls.TASK_SCHEMA_MAP:
                 raise ValueError(f"Unknown task: {task}")
@@ -144,6 +149,7 @@ class PromptBuilder:
             reviews_text = "\n".join(
                 [
                     f"Review {i + 1}:\n"
+                    f"Review ID: {review.review_id}\n"
                     f'Text: "{review.text}"\n'
                     f"Rating: {review.rating if review.rating is not None else 'Not provided'}\n"
                     f"Business Type: {review.business_type if review.business_type is not None else 'unknown'}\n"
@@ -274,6 +280,7 @@ class DynamicReviewAnalyzer:
                     tasks=[task.value for task in tasks],
                     batch_size=len(reviews),
                     review_count=len(reviews),
+                    prompt=prompt,
                     prompt_length=len(prompt),
                 ),
                 performance=PerformanceMetrics(

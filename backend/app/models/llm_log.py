@@ -13,6 +13,7 @@ class RequestMetadata(BaseModel):
     tasks: list[str] = Field(..., description="Analysis tasks requested")
     batch_size: int = Field(..., ge=1, description="Number of reviews in batch")
     review_count: int = Field(..., ge=1, description="Total reviews processed")
+    prompt: str = Field(..., description="Prompt sent to the LLM")
     prompt_length: int | None = Field(None, description="Character length of prompt")
 
 
@@ -43,9 +44,6 @@ class LLMResponse(BaseModel):
     parsed_json: dict[str, Any] | None = Field(None, description="Parsed JSON response")
     success: bool = Field(..., description="Whether request was successful")
     error: str | None = Field(None, description="Error message if failed")
-    # response_size_bytes: int | None = Field(
-    #     None, description="Size of response in bytes"
-    # )
 
 
 class UsageContext(BaseModel):

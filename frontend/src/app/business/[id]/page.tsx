@@ -7,6 +7,7 @@ import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { authService } from '@/services/auth';
 import { DashboardNavigation } from '@/components/dashboard/DashboardNavigation';
 import { BusinessHeader, DashboardSections, BusinessSkeleton, } from '@/components/business';
+import { BusinessStorageService } from '@/services/businessStorage';
 import '@/styles/business-page.css';
 interface Business {
   id: string;
@@ -68,6 +69,14 @@ export default function BusinessPage() {
     }
     loadBusinessData();
   }, [router, businessId]);
+
+
+  useEffect(() => {
+    // Save the current business ID when page loads
+    if (businessId) {
+      BusinessStorageService.setCurrentBusiness(businessId);
+    }
+  }, [businessId]);
 
   // Load all business data
   const loadBusinessData = async () => {

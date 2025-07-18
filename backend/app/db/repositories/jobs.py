@@ -120,16 +120,16 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
         except PyMongoError:
             raise RuntimeError("Database error")
 
-    async def delete(self, source_id: str) -> bool:
+    async def delete(self, job_id: str) -> bool:
         """Delete all data related to a job:jobs, reviews."""
         try:
-            oid = PyObjectId(source_id)
+            oid = PyObjectId(job_id)
         except Exception:
             raise ValueError("Invalid source_id format")
 
         try:
             review_repo = ReviewRepository()
-            await review_repo.delete_by_source(oid)
+            await review_repo.delete_by_job(oid)
 
             # Finally, delete the job document itself
             result = await self.collection.delete_one({"_id": oid})
