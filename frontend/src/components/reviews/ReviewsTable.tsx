@@ -17,9 +17,17 @@ import {
     RefreshCw,
     Settings,
     Eye,
-    EyeOff
+    EyeOff,
+    TrendingUp,
+    Heart,
+    AlertTriangle,
+    ShieldCheck,
+    Target
 } from 'lucide-react';
 import { Review, reviewService } from '@/services/review';
+import { ReviewDetailsModal } from './ReviewDetailsModal';
+
+
 
 interface ReviewsTableProps {
     reviews: Review[];
@@ -40,9 +48,17 @@ const defaultColumns: ColumnConfig[] = [
     { key: 'reviewer', label: 'Reviewer', visible: true, icon: User },
     { key: 'rating', label: 'Rating', visible: true, icon: Star },
     { key: 'text', label: 'Original Text', visible: true, icon: MessageSquare },
-    { key: 'source', label: 'Source', visible: true, icon: Globe },
+    { key: 'location', label: 'Location', visible: false, icon: Globe },
+    { key: 'job', label: 'Job', visible: false, icon: User },
+    { key: 'source', label: 'Source', visible: false, icon: Globe },
     { key: 'source_type', label: 'Source Type', visible: true, icon: Globe },
     { key: 'analysis_status', label: 'Analysis Status', visible: true, icon: Brain },
+    { key: 'sentiment', label: 'Sentiment', visible: false, icon: TrendingUp },
+    { key: 'emotional_tone', label: 'Emotional Tone', visible: false, icon: Heart },
+    { key: 'urgency', label: 'Urgency Level', visible: false, icon: AlertTriangle },
+    { key: 'language', label: 'Language', visible: false, icon: Globe },
+    { key: 'spam_status', label: 'Spam Detection', visible: false, icon: ShieldCheck },
+    { key: 'topics', label: 'Key Topics', visible: false, icon: Target },
 ];
 
 export function ReviewsTable({ reviews, loading, error, onRefresh }: ReviewsTableProps) {
@@ -50,17 +66,11 @@ export function ReviewsTable({ reviews, loading, error, onRefresh }: ReviewsTabl
     const [currentPage, setCurrentPage] = useState(1);
     const [showColumnSelector, setShowColumnSelector] = useState(false);
     const [columns, setColumns] = useState<ColumnConfig[]>(defaultColumns);
+    const [selectedReview, setSelectedReview] = useState<Review | null>(null);
+    const [showModal, setShowModal] = useState(false);
     const reviewsPerPage = 20;
 
-    const toggleRow = (reviewId: string) => {
-        const newExpanded = new Set(expandedRows);
-        if (newExpanded.has(reviewId)) {
-            newExpanded.delete(reviewId);
-        } else {
-            newExpanded.add(reviewId);
-        }
-        setExpandedRows(newExpanded);
-    };
+
 
     const toggleColumn = (columnKey: string) => {
         setColumns(prevColumns =>
@@ -121,209 +131,75 @@ export function ReviewsTable({ reviews, loading, error, onRefresh }: ReviewsTabl
         );
     };
 
-    const renderExpandedContent = (review: Review) => {
-        const isExpanded = expandedRows.has(review._id);
-        if (!isExpanded) return null;
+    const getUrgencyBadge = (review: Review) => {
+        const urgency = review.analyzed_data?.analysis_results?.urgency_classification?.level || 'Unknown';
+        const urgencyColors = {
+            'critical': 'bg-red-100 text-red-700 border-red-200',
+            'high': 'bg-orange-100 text-orange-700 border-orange-200',
+            'medium': 'bg-yellow-100 text-yellow-700 border-yellow-200',
+            'low': 'bg-blue-100 text-blue-700 border-blue-200',
+            'none': 'bg-green-100 text-green-700 border-green-200',
+            'Unknown': 'bg-gray-100 text-gray-500 border-gray-200',
+        };
 
-        const analysisData = review.analyzed_data?.analysis_results;
+        const urgencyIcons = {
+            'critical': '🚨',
+            'high': '⚠️',
+            'medium': '⚡',
+            'low': '📋',
+            'none': '✅',
+            'Unknown': '❓',
+        };
 
         return (
-            <tr key={`${review._id}-expanded`} className="bg-blue-50/50">
-                <td colSpan={visibleColumns.length + 1} className="px-6 py-6">
-                    <div className="space-y-6">
-                        {/* Full Review Text */}
-                        <div>
-                            <h4 className="text-sm font-semibold text-gray-900 mb-2">Full Review Text</h4>
-                            <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-white/40">
-                                <p className="text-gray-700 leading-relaxed">
-                                    {reviewService.getDisplayText(review) || 'No text available'}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Analysis Results */}
-                        {analysisData && (
-                            <div>
-                                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
-                                    <Brain className="h-4 w-4 mr-2 text-purple-600" />
-                                    AI Analysis Results
-                                </h4>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {/* Sentiment Analysis */}
-                                    {analysisData.sentiment && (
-                                        <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-white/40">
-                                            <h5 className="font-medium text-gray-900 mb-2">Sentiment</h5>
-                                            <div className="space-y-2 text-sm">
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Label:</span>
-                                                    <span className="font-medium">{analysisData.sentiment.label}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Confidence:</span>
-                                                    <span className="font-medium">{(analysisData.sentiment.confidence * 100).toFixed(1)}%</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Emotional Tone:</span>
-                                                    <span className="font-medium">{analysisData.sentiment.emotional_tone}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Language Detection */}
-                                    {analysisData.language_detection && (
-                                        <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-white/40">
-                                            <h5 className="font-medium text-gray-900 mb-2">Language</h5>
-                                            <div className="text-sm">
-                                                <span className="font-medium">{analysisData.language_detection.detected_language}</span>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Urgency */}
-                                    {analysisData.urgency && (
-                                        <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-white/40">
-                                            <h5 className="font-medium text-gray-900 mb-2">Urgency</h5>
-                                            <div className="space-y-2 text-sm">
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Level:</span>
-                                                    <span className="font-medium">{analysisData.urgency.level}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Immediate Response:</span>
-                                                    <span className="font-medium">
-                                                        {analysisData.urgency.requires_immediate_response ? 'Yes' : 'No'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Escalation Needed:</span>
-                                                    <span className="font-medium">
-                                                        {analysisData.urgency.escalation_needed ? 'Yes' : 'No'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Spam Detection */}
-                                    {analysisData.spam_detection && (
-                                        <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-white/40">
-                                            <h5 className="font-medium text-gray-900 mb-2">Spam Detection</h5>
-                                            <div className="space-y-2 text-sm">
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Is Spam:</span>
-                                                    <span className="font-medium">
-                                                        {analysisData.spam_detection.is_spam ? 'Yes' : 'No'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Confidence:</span>
-                                                    <span className="font-medium">{(analysisData.spam_detection.confidence * 100).toFixed(1)}%</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Topics */}
-                                    {analysisData.topics && analysisData.topics.length > 0 && (
-                                        <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-white/40 md:col-span-2 lg:col-span-3">
-                                            <h5 className="font-medium text-gray-900 mb-2">Topics</h5>
-                                            <div className="flex flex-wrap gap-2">
-                                                {analysisData.topics.map((topic, index) => (
-                                                    <span
-                                                        key={index}
-                                                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${topic.sentiment === 'positive' ? 'bg-green-100 text-green-700 border-green-200' :
-                                                                topic.sentiment === 'negative' ? 'bg-red-100 text-red-700 border-red-200' :
-                                                                    'bg-gray-100 text-gray-700 border-gray-200'
-                                                            }`}
-                                                    >
-                                                        {topic.topic}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Business Insights */}
-                                    {analysisData.business_insights && (
-                                        <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-white/40 md:col-span-2 lg:col-span-3">
-                                            <h5 className="font-medium text-gray-900 mb-2">Business Insights</h5>
-                                            <div className="space-y-3 text-sm">
-                                                {analysisData.business_insights.main_issues.length > 0 && (
-                                                    <div>
-                                                        <span className="text-gray-600 font-medium">Main Issues:</span>
-                                                        <ul className="list-disc list-inside mt-1 space-y-1">
-                                                            {analysisData.business_insights.main_issues.map((issue, index) => (
-                                                                <li key={index} className="text-gray-700">{issue}</li>
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-                                                )}
-                                                {analysisData.business_insights.positive_highlights.length > 0 && (
-                                                    <div>
-                                                        <span className="text-gray-600 font-medium">Positive Highlights:</span>
-                                                        <ul className="list-disc list-inside mt-1 space-y-1">
-                                                            {analysisData.business_insights.positive_highlights.map((highlight, index) => (
-                                                                <li key={index} className="text-gray-700">{highlight}</li>
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-                                                )}
-                                                {analysisData.business_insights.actionable_recommendations.length > 0 && (
-                                                    <div>
-                                                        <span className="text-gray-600 font-medium">Recommendations:</span>
-                                                        <ul className="list-disc list-inside mt-1 space-y-1">
-                                                            {analysisData.business_insights.actionable_recommendations.map((rec, index) => (
-                                                                <li key={index} className="text-gray-700">{rec}</li>
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Raw Data */}
-                        <div>
-                            <h4 className="text-sm font-semibold text-gray-900 mb-2">Review Metadata</h4>
-                            <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-white/40">
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Source ID:</span>
-                                        <span className="font-medium text-xs">
-                                            {review.source_id.slice(-8)}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Job ID:</span>
-                                        <span className="font-medium text-xs">
-                                            {review.job_id.slice(-8)}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Analyzed:</span>
-                                        <span className="font-medium">
-                                            {reviewService.isAnalyzed(review) ? 'Yes' : 'No'}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Created:</span>
-                                        <span className="font-medium text-xs">
-                                            {new Date(review.created_at).toLocaleDateString()}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </td>
-            </tr>
+            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${urgencyColors[urgency as keyof typeof urgencyColors] || urgencyColors.Unknown}`}>
+                <span className="mr-1">{urgencyIcons[urgency as keyof typeof urgencyIcons] || urgencyIcons.Unknown}</span>
+                {urgency}
+            </span>
         );
     };
+
+    const getSpamBadge = (review: Review) => {
+        const spamData = review.analyzed_data?.analysis_results?.spam_detection;
+        if (!spamData) {
+            return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border bg-gray-100 text-gray-500 border-gray-200">Unknown</span>;
+        }
+
+        return (
+            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${spamData.is_spam
+                ? 'bg-red-100 text-red-700 border-red-200'
+                : 'bg-green-100 text-green-700 border-green-200'
+                }`}>
+                <span className="mr-1">{spamData.is_spam ? '🚫' : '✅'}</span>
+                {spamData.is_spam ? 'Spam' : 'Genuine'}
+            </span>
+        );
+    };
+
+    const getTopicsList = (review: Review) => {
+        const topics = review.analyzed_data?.analysis_results?.topics || [];
+        if (topics.length === 0) {
+            return <span className="text-gray-500 text-xs">No topics</span>;
+        }
+
+        return (
+            <div className="flex flex-wrap gap-1 max-w-xs">
+                {topics.slice(0, 2).map((topic, index) => (
+                    <span key={index} className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${topic.sentiment === 'positive' ? 'bg-green-100 text-green-700' :
+                        topic.sentiment === 'negative' ? 'bg-red-100 text-red-700' :
+                            'bg-gray-100 text-gray-700'
+                        }`}>
+                        {topic.topic}
+                    </span>
+                ))}
+                {topics.length > 2 && (
+                    <span className="text-xs text-gray-500">+{topics.length - 2}</span>
+                )}
+            </div>
+        );
+    };
+
+
 
     // Pagination
     const totalPages = Math.ceil(reviews.length / reviewsPerPage);
@@ -507,9 +383,19 @@ export function ReviewsTable({ reviews, loading, error, onRefresh }: ReviewsTabl
                                                             </p>
                                                         </div>
                                                     )}
+                                                    {column.key === 'location' && (
+                                                        <div>
+                                                            {reviewService.getLocationName(review)}
+                                                        </div>
+                                                    )}
                                                     {column.key === 'source' && (
                                                         <div>
-                                                            {getSentimentBadge(review)}
+                                                            {reviewService.getSourceName(review)}
+                                                        </div>
+                                                    )}
+                                                    {column.key === 'job' && (
+                                                        <div>
+                                                            {reviewService.getJobName(review)}
                                                         </div>
                                                     )}
                                                     {column.key === 'source_type' && (
@@ -522,30 +408,58 @@ export function ReviewsTable({ reviews, loading, error, onRefresh }: ReviewsTabl
                                                             {getAnalysisStatusBadge(review)}
                                                         </div>
                                                     )}
+
+                                                    {column.key === 'sentiment' && (
+                                                        <div>
+                                                            {getSentimentBadge(review)}
+                                                        </div>
+                                                    )}
+                                                    {column.key === 'emotional_tone' && (
+                                                        <div>
+                                                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200">
+                                                                {review.analyzed_data?.analysis_results?.sentiment?.emotional_tone || 'Unknown'}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {column.key === 'urgency' && (
+                                                        <div>
+                                                            {getUrgencyBadge(review)}
+                                                        </div>
+                                                    )}
+                                                    {column.key === 'language' && (
+                                                        <div>
+                                                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 border border-indigo-200">
+                                                                <Globe className="h-3 w-3 mr-1" />
+                                                                {review.analyzed_data?.analysis_results?.language_analysis?.detected_language?.toUpperCase() || 'Unknown'}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {column.key === 'spam_status' && (
+                                                        <div>
+                                                            {getSpamBadge(review)}
+                                                        </div>
+                                                    )}
+                                                    {column.key === 'topics' && (
+                                                        <div>
+                                                            {getTopicsList(review)}
+                                                        </div>
+                                                    )}
                                                 </td>
                                             ))}
 
                                             <td className="px-6 py-4 text-center">
                                                 <button
-                                                    onClick={() => toggleRow(review._id)}
+                                                    onClick={() => {
+                                                        setSelectedReview(review);
+                                                        setShowModal(true);
+                                                    }}
                                                     className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 mx-auto"
                                                 >
-                                                    {isExpanded ? (
-                                                        <>
-                                                            <ChevronUp className="h-4 w-4" />
-                                                            <span className="text-sm font-medium">Less</span>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <ChevronDown className="h-4 w-4" />
-                                                            <span className="text-sm font-medium">More</span>
-                                                        </>
-                                                    )}
+                                                    <span className="text-sm font-medium">Details</span>
                                                 </button>
                                             </td>
                                         </tr>
 
-                                        {renderExpandedContent(review)}
                                     </>
                                 );
                             })}
@@ -600,6 +514,16 @@ export function ReviewsTable({ reviews, loading, error, onRefresh }: ReviewsTabl
                     </div>
                 )}
             </div>
+
+
+            <ReviewDetailsModal
+                review={selectedReview}
+                isOpen={showModal}
+                onClose={() => {
+                    setShowModal(false);
+                    setSelectedReview(null);
+                }}
+            />
         </div>
     );
 }

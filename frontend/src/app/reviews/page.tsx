@@ -119,7 +119,7 @@ export default function ReviewsPage() {
         // Urgency level filter
         if (filters.urgency_level) {
             filtered = filtered.filter(review => {
-                const urgency = review.analyzed_data?.analysis_results?.urgency?.level;
+                const urgency = review.analyzed_data?.analysis_results?.urgency_classification?.level;
                 return urgency === filters.urgency_level;
             });
         }
@@ -127,7 +127,7 @@ export default function ReviewsPage() {
         // Detected language filter
         if (filters.detected_language) {
             filtered = filtered.filter(review => {
-                const language = review.analyzed_data?.analysis_results?.language_detection?.detected_language;
+                const language = review.analyzed_data?.analysis_results?.language_analysis?.detected_language;
                 return language === filters.detected_language;
             });
         }

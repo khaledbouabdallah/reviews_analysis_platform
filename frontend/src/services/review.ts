@@ -4,7 +4,8 @@ import { BusinessStorageService } from '@/services/businessStorage';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-// Analysis schemas matching backend
+
+// Analysis schemas matching backend structure
 export interface LanguageAnalysis {
   detected_language: string; // ISO 639-1 language code
 }
@@ -51,12 +52,13 @@ export interface BusinessInsights {
 
 export interface AnalyzedData {
   analysis_results?: {
-    language_detection?: LanguageAnalysis;
-    translation?: TranslationAnalysis;
+    // FIXED: Match actual backend field names
+    language_analysis?: LanguageAnalysis;  // Changed from language_detection
+    translation_analysis?: TranslationAnalysis;
     sentiment?: SentimentAnalysis;
     topics?: TopicAnalysis[];
     spam_detection?: SpamDetection;
-    urgency?: UrgencyClassification;
+    urgency_classification?: UrgencyClassification;  // Changed from urgency
     business_insights?: BusinessInsights;
   };
   processing_status: 'pending' | 'completed' | 'failed';
@@ -119,6 +121,14 @@ export interface ReviewFilters {
 }
 
 export class ReviewService {
+
+  private entitiesCache: {
+    sources: Array<{id: string, name: string}>;
+    jobs: Array<{id: string, name: string}>;
+    locations: Array<{id: string, name: string}>;
+  } | null = null;
+
+
   private async fetchWithAuth(url: string, options: RequestInit = {}) {
     const headers = {
       'Content-Type': 'application/json',
@@ -145,6 +155,7 @@ export class ReviewService {
 
   async getReviews(filters: ReviewFilters = {}): Promise<Review[]> {
     try {
+      await this.loadEntitiesCache();
       // Build query parameters
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
@@ -170,7 +181,7 @@ export class ReviewService {
 
   async exportReviews(reviews: Review[]): Promise<void> {
     // Simple CSV export
-    const headers = ['Date', 'Reviewer', 'Rating', 'Text', 'Source', 'Sentiment', 'Language'];
+    const headers = ['Date', 'Reviewer', 'Rating', 'Text', 'Source', 'Sentiment', 'Language', 'Translation'];
     const rows = reviews.map(review => [
       this.getDate(review),
       this.getReviewer(review),
@@ -178,7 +189,8 @@ export class ReviewService {
       this.getDisplayText(review).replace(/,/g, ';'), // Replace commas to avoid CSV issues
       this.getSource(review),
       this.getSentiment(review),
-      this.getDetectedLanguage(review)
+      this.getDetectedLanguage(review),
+      this.getTranslation(review).replace(/,/g, ';') // ADDED: Include translation
     ]);
 
     const csvContent = [headers, ...rows]
@@ -194,12 +206,19 @@ export class ReviewService {
     window.URL.revokeObjectURL(url);
   }
 
-  // Helper methods
+  // Helper methods - FIXED to match backend structure
   getDisplayText(review: Review): string {
     return review.data?.original_text || 
            review.data?.translated_text || 
            review.data?.text || 
            review.data?.comment || 
+           '';
+  }
+
+  // ADDED: New method to get translation
+  getTranslation(review: Review): string {
+    return review.analyzed_data?.analysis_results?.translation_analysis?.english_translation || 
+           review.data?.translated_text || 
            '';
   }
 
@@ -223,8 +242,9 @@ export class ReviewService {
     return review.analyzed_data?.analysis_results?.sentiment?.label || 'Unknown';
   }
 
+  // FIXED: Use correct backend field name
   getDetectedLanguage(review: Review): string {
-    return review.analyzed_data?.analysis_results?.language_detection?.detected_language || 'Unknown';
+    return review.analyzed_data?.analysis_results?.language_analysis?.detected_language || 'Unknown';
   }
 
   isAnalyzed(review: Review): boolean {
@@ -238,47 +258,144 @@ export class ReviewService {
   }
 
   getAverageRating(reviews: Review[]): number {
-  const ratingsWithValues = reviews.filter(review => this.getRating(review) !== null);
-  if (ratingsWithValues.length === 0) return 0;
-  
-  const sum = ratingsWithValues.reduce((acc, review) => acc + (this.getRating(review) || 0), 0);
-  return Math.round((sum / ratingsWithValues.length) * 10) / 10; // Round to 1 decimal
+    const ratingsWithValues = reviews.filter(review => this.getRating(review) !== null);
+    if (ratingsWithValues.length === 0) return 0;
+    
+    const sum = ratingsWithValues.reduce((acc, review) => acc + (this.getRating(review) || 0), 0);
+    return Math.round((sum / ratingsWithValues.length) * 10) / 10; // Round to 1 decimal
+  }
+
+  getSentimentDistribution(reviews: Review[]): { positive: number; negative: number; neutral: number } {
+    const distribution = { positive: 0, negative: 0, neutral: 0 };
+    
+    reviews.forEach(review => {
+      const sentiment = review.analyzed_data?.analysis_results?.sentiment?.label;
+      if (sentiment === 'positive') distribution.positive++;
+      else if (sentiment === 'negative') distribution.negative++;
+      else if (sentiment === 'neutral') distribution.neutral++;
+    });
+    
+    return distribution;
+  }
+
+  getRatingDistribution(reviews: Review[]): Record<number, number> {
+    const distribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    
+    reviews.forEach(review => {
+      const rating = this.getRating(review);
+      if (rating && rating >= 1 && rating <= 5) {
+        distribution[rating]++;
+      }
+    });
+    
+    return distribution;
+  }
+
+  hasComment(review: Review): boolean {
+    return this.getDisplayText(review).trim() !== '';
+  }
+
+  isProcessed(review: Review): boolean {
+    return this.isAnalyzed(review);
+  }
+
+  // ADDED: Helper methods for specific analysis results
+  getEmotionalTone(review: Review): string {
+    return review.analyzed_data?.analysis_results?.sentiment?.emotional_tone || 'Unknown';
+  }
+
+  getUrgencyLevel(review: Review): string {
+    return review.analyzed_data?.analysis_results?.urgency_classification?.level || 'Unknown';
+  }
+
+  isSpam(review: Review): boolean | null {
+    const spamData = review.analyzed_data?.analysis_results?.spam_detection;
+    return spamData ? spamData.is_spam : null;
+  }
+
+  getTopics(review: Review): TopicAnalysis[] {
+    return review.analyzed_data?.analysis_results?.topics || [];
+  }
+
+  getBusinessInsights(review: Review): BusinessInsights | null {
+    return review.analyzed_data?.analysis_results?.business_insights || null;
+  }
+
+  // Add these methods to fetch entities
+async getSources(): Promise<Array<{id: string, name: string}>> {
+  try {
+    const sources = await this.fetchWithAuth('/api/sources');
+
+    return sources.map((source: any) => ({
+      id: source.id,
+      name: source.name || source.business_name || 'Unknown Source'
+    }));
+  } catch (error) {
+    console.error('Error fetching sources:', error);
+    return [];
+  }
 }
 
-getSentimentDistribution(reviews: Review[]): { positive: number; negative: number; neutral: number } {
-  const distribution = { positive: 0, negative: 0, neutral: 0 };
-  
-  reviews.forEach(review => {
-    const sentiment = review.analyzed_data?.analysis_results?.sentiment?.label;
-    if (sentiment === 'positive') distribution.positive++;
-    else if (sentiment === 'negative') distribution.negative++;
-    else if (sentiment === 'neutral') distribution.neutral++;
-  });
-  
-  return distribution;
+async getJobs(): Promise<Array<{id: string, name: string}>> {
+  try {
+    const jobs = await this.fetchWithAuth('/api/jobs');
+    return jobs.map((job: any) => ({
+      id: job.id,
+      name: job.name || `Job ${job._id.slice(-8)}` || 'Unknown Job'
+    }));
+  } catch (error) {
+    console.error('Error fetching jobs:', error);
+    return [];
+  }
 }
 
-getRatingDistribution(reviews: Review[]): Record<number, number> {
-  const distribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-  
-  reviews.forEach(review => {
-    const rating = this.getRating(review);
-    if (rating && rating >= 1 && rating <= 5) {
-      distribution[rating]++;
-    }
-  });
-  
-  return distribution;
+async getLocations(): Promise<Array<{id: string, name: string}>> {
+  try {
+    const locations = await this.fetchWithAuth('/api/locations');
+    return locations.map((location: any) => ({
+      id: location.id,
+      name: location.name || location.address || 'Unknown Location'
+    }));
+  } catch (error) {
+    console.error('Error fetching locations:', error);
+    return [];
+  }
+}
+private async loadEntitiesCache() {
+  if (!this.entitiesCache) {
+    const [sources, jobs, locations] = await Promise.all([
+      this.getSources(),
+      this.getJobs(),
+      this.getLocations()
+    ]);
+    this.entitiesCache = { sources, jobs, locations };
+  }
 }
 
-hasComment(review: Review): boolean {
-  return this.getDisplayText(review).trim() !== '';
+getSourceName(review: Review): string {
+  if (!this.entitiesCache) return review.source_type || 'Unknown Source';
+  const source = this.entitiesCache.sources.find(s => s.id === review.source_id);
+  console.error('Source not found in cache:', review.source_id, this.entitiesCache.sources);
+  return source?.name || review.source_type || 'Unknown Source';
 }
 
-isProcessed(review: Review): boolean {
-  return this.isAnalyzed(review);
+getJobName(review: Review): string {
+  if (!this.entitiesCache) return `Job ${review.job_id.slice(-8)}`;
+  const job = this.entitiesCache.jobs.find(j => j.id === review.job_id);
+  return job?.name || `Job ${review.job_id.slice(-8)}`;
 }
+
+getLocationName(review: Review): string {
+  if (!review.location_id) return 'No Location';
+  if (!this.entitiesCache) return `Location ${review.location_id.slice(-8)}`;
+  const location = this.entitiesCache.locations.find(l => l.id === review.location_id);
+  return location?.name || `Location ${review.location_id.slice(-8)}`;
 }
+
+
+
+}
+
 
 
 export const reviewService = new ReviewService();
