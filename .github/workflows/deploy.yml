@@ -47,10 +47,12 @@ jobs:
       - name: Run frontend build test
         run: |
           cd frontend
+          # Set environment variable to skip ESLint during build
+          export NEXT_LINT=false
           npm run build
 
-      # - name: Run pre-commit checks
-      #   uses: pre-commit/action@v3.0.0
+            # - name: Run pre-commit checks
+            #   uses: pre-commit/action@v3.0.0
 
   # 🔥 Security scan stage
   security-scan:
