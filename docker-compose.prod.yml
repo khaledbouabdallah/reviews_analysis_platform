@@ -1,0 +1,131 @@
+services:
+  # MongoDB service
+  mongodb:
+    image: mongo:latest
+    container_name: reviews_mongodb_prod
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data_prod:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - MONGO_INITDB_DATABASE=reviews_db
+    networks:
+      - reviews_network_prod
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: reviews_redis_prod
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data_prod:/data
+    networks:
+      - reviews_network_prod
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend API service - Production target
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production 
+    container_name: reviews_backend_prod
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongodb
+      - redis
+    environment:
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/reviews_db
+      - REDIS_URL=redis://redis:6379/0 
+      - GIMINI_API_KEY=${GIMINI_API_KEY}
+      - GIMINI_MODEL_NAME=${GIMINI_MODEL_NAME}
+      - PYTHONUNBUFFERED=1
+      - NODE_ENV=production
+    # No volumes - use built-in code
+    networks:
+      - reviews_network_prod
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Scraper: Pure Celery Worker - Production target
+  scraper_worker:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+      target: production
+    container_name: reviews_scraper_worker_prod
+    restart: unless-stopped
+    # No VNC port exposed in production
+    depends_on:
+      - mongodb
+      - redis
+    # No volumes - use built-in code
+    environment:
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/reviews_db
+      - REDIS_URL=redis://redis:6379/0
+      - PYTHONUNBUFFERED=1
+      - NODE_ENV=production
+    networks:
+      - reviews_network_prod
+    shm_size: '2gb'
+    mem_limit: 4g
+    cpus: 2.0
+    # Add logging for production
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  
+  # Frontend Next.js - Production target
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production 
+    container_name: reviews_frontend_prod
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      - NODE_ENV=production 
+      - NEXT_PUBLIC_API_URL=http://backend:8000  # Internal API URL
+    # No volumes - use built-in code
+    networks:
+      - reviews_network_prod
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  reviews_network_prod:
+    driver: bridge
+
+volumes:
+  mongodb_data_prod:
+    driver: local
+  redis_data_prod:
+    driver: local

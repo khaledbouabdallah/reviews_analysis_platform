@@ -1,4 +1,3 @@
-
 services:
   # MongoDB service
   mongodb:
@@ -16,7 +15,6 @@ services:
     networks:
       - reviews_network
 
-
   redis:
     image: redis:7-alpine
     container_name: reviews_redis
@@ -29,11 +27,12 @@ services:
     networks:
       - reviews_network
 
-  # Backend API service
+  # Backend API service - Development target
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: development 
     container_name: reviews_backend
     restart: always
     ports:
@@ -48,19 +47,20 @@ services:
       - GIMINI_MODEL_NAME=${GIMINI_MODEL_NAME}
       - PYTHONUNBUFFERED=1
     volumes:
-      - ./backend/app:/app/app 
+      - ./backend/app:/app/app
     networks:
       - reviews_network
 
-
-# Scraper: Pure Celery Worker (no API, no ports)
+  # Scraper: Pure Celery Worker - Development target
   scraper_worker:
     build:
       context: ./scraper
-      dockerfile: Dockerfile  
+      dockerfile: Dockerfile
+      target: development 
     container_name: reviews_scraper_worker
     restart: always
-    # NO ports - pure worker
+    ports:
+      - "5900:5900"
     depends_on:
       - mongodb
       - redis
@@ -77,24 +77,23 @@ services:
     mem_limit: 4g
     cpus: 2.0
   
-  # Frontend Next.js
+  # Frontend Next.js - Development target
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: development  
     container_name: reviews_frontend
     restart: always
     ports:
-      - "3000:3000"  # Only change the port
+      - "3000:3000"
     depends_on:
       - backend
-      
     environment:
-      #- NEXT_PUBLIC_API_URL=http://backend:8000  # Keep internal container communication
-      - NODE_ENV=development
+      - NODE_ENV=development  
     volumes:
       - ./frontend:/app
-      #- /app/node_modules
+      - /app/node_modules
       - /app/.next
     networks:
       - reviews_network

@@ -39,7 +39,7 @@ export class AuthService {
 
     const result = await response.json();
     
-    // Store token in localStorage
+    // TODO Store token in localStorage to cookie
     localStorage.setItem('token', result.access_token);
     
     return result;
