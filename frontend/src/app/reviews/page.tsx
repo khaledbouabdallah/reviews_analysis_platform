@@ -12,6 +12,8 @@ import { ReviewsStats } from '@/components/reviews/ReviewsStats';
 import { ArrowLeft, Download, RefreshCw } from 'lucide-react';
 import { BusinessStorageService } from '@/services/businessStorage';
 
+export const dynamic = 'force-dynamic'
+
 export default function ReviewsPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
