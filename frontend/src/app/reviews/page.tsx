@@ -1,7 +1,7 @@
 // src/app/reviews/page.tsx
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authService } from '@/services/auth';
 import { reviewService, Review, ReviewFilters } from '@/services/review';
@@ -13,8 +13,15 @@ import { ArrowLeft, Download, RefreshCw } from 'lucide-react';
 import { BusinessStorageService } from '@/services/businessStorage';
 
 export const dynamic = 'force-dynamic'
+export default function ReviewsContent() {
+    return (
+        <Suspense fallback={<div>Loading reviews...</div>}>
+            <ReviewsPage />
+        </Suspense>
+    );
+}
 
-export default function ReviewsPage() {
+function ReviewsPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [reviews, setReviews] = useState<Review[]>([]);
