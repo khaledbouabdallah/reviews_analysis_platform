@@ -58,7 +58,7 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 # Expose the API port
-EXPOSE 8000
+EXPOSE 8080
 
 # Get inside app folder
 WORKDIR /app/app
