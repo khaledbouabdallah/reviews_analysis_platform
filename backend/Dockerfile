@@ -64,4 +64,4 @@ EXPOSE 8000
 WORKDIR /app/app
 
 # Command to run the API server (no reload for production)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]
