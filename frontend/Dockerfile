@@ -6,8 +6,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies with legacy peer deps
+RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .
@@ -26,8 +26,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install only production dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install only production dependencies with legacy peer deps
+RUN npm ci --only=production --legacy-peer-deps && npm cache clean --force
 
 # Build stage
 FROM node:18-alpine as builder
@@ -37,8 +37,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install all dependencies (including devDependencies for build)
-RUN npm ci
+# Install all dependencies (including devDependencies for build) with legacy peer deps
+RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .
