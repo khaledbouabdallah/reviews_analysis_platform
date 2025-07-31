@@ -25,7 +25,7 @@ chromedriver
 src/complaint_management_platform.egg-info
 
 # Ignore scripts for development
-scripts/
+
 
 # Ignore Jupyter Notebook checkpoints
 .ipynb_checkpoints/
