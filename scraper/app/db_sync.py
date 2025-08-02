@@ -9,7 +9,7 @@ from pymongo import MongoClient
 logger = logging.getLogger(__name__)
 
 # MongoDB connection
-MONGODB_URL = os.getenv(
+MONGODB_URI = os.getenv(
     "MONGODB_URL_SYNC",
     "mongodb://admin:password@mongodb:27017/?authSource=admin",
 )
@@ -20,7 +20,7 @@ class SyncDatabase:
     """Synchronous database operations for Celery workers"""
 
     def __init__(self):
-        self.client = MongoClient(MONGODB_URL)
+        self.client = MongoClient(MONGODB_URI)
         self.db = self.client[MONGODB_DB_NAME]
         self.jobs_collection = self.db["jobs"]
         self.reviews_collection = self.db["reviews"]

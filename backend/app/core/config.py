@@ -10,7 +10,7 @@ Parent_DIR = Path(APP_DIR).parent
 
 
 class Settings(BaseSettings):
-    MONGODB_URL: str
+    MONGODB_URI: str
     MONGODB_DB_NAME: str
     GIMINI_API_KEY: str
     GIMINI_MODEL_NAME: str

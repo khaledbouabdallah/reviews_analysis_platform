@@ -42,7 +42,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: production 
+      target: production
     container_name: reviews_backend_prod
     restart: unless-stopped
     ports:
@@ -51,8 +51,8 @@ services:
       - mongodb
       - redis
     environment:
-      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/reviews_db
-      - REDIS_URL=redis://redis:6379/0 
+      #- MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/reviews_db
+      #- REDIS_URL=redis://redis:6379/0
       - GIMINI_API_KEY=${GIMINI_API_KEY}
       - GIMINI_MODEL_NAME=${GIMINI_MODEL_NAME}
       - PYTHONUNBUFFERED=1
@@ -80,8 +80,8 @@ services:
       - redis
     # No volumes - use built-in code
     environment:
-      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/reviews_db
-      - REDIS_URL=redis://redis:6379/0
+     # - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/reviews_db
+     # - REDIS_URL=redis://redis:6379/0
       - PYTHONUNBUFFERED=1
       - NODE_ENV=production
     networks:
@@ -95,13 +95,13 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-  
+
   # Frontend Next.js - Production target
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: production 
+      target: production
     container_name: reviews_frontend_prod
     restart: unless-stopped
     ports:
@@ -109,7 +109,7 @@ services:
     depends_on:
       - backend
     environment:
-      - NODE_ENV=production 
+      - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=http://backend:8000  # Internal API URL
     # No volumes - use built-in code
     networks:
