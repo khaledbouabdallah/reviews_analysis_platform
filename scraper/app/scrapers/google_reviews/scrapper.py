@@ -3,6 +3,7 @@ import logging
 import os
 import random
 import re
+import tempfile
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -177,6 +178,7 @@ class GoogleMapsReviewScraper:
 
     def _setup_logging(self) -> None:
         """Setup structured logging configuration"""
+
         log_level = logging.DEBUG if self.config.verbose else logging.INFO
 
         # Create formatter with consistent structure
@@ -193,12 +195,26 @@ class GoogleMapsReviewScraper:
 
         # Add file handler if specified
         if self.config.log_file:
-            os.makedirs("logs", exist_ok=True)
-            file_handler = logging.FileHandler(
-                f"logs/{self.config.log_file}_{self.now}.log",
-            )
-            file_handler.setFormatter(formatter)
-            self.logger.addHandler(file_handler)
+            try:
+                # Use environment variable or temp directory
+                log_dir = os.environ.get("LOG_DIR", tempfile.gettempdir())
+                log_path = os.path.join(
+                    log_dir, f"{self.config.log_file}_{self.now}.log"
+                )
+
+                # Only create directory if it's not temp and doesn't exist
+                if log_dir != tempfile.gettempdir() and not os.path.exists(log_dir):
+                    os.makedirs(log_dir, exist_ok=True)
+
+                file_handler = logging.FileHandler(log_path)
+                file_handler.setFormatter(formatter)
+                self.logger.addHandler(file_handler)
+
+            except (PermissionError, OSError) as e:
+                # Fallback to console-only logging
+                self.logger.warning(
+                    f"Could not create log file: {e}. Using console logging only."
+                )
 
         # Add console handler
         console_handler = logging.StreamHandler()
