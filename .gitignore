@@ -47,3 +47,7 @@ data/
 
 # Ignore bruno environments
 /bruno/*/environments/*
+
+# Ignore .env files
+*.env
+.env
