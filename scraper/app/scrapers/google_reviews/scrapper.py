@@ -234,6 +234,11 @@ class GoogleMapsReviewScraper:
         """Initialize the Chrome driver with proper configuration"""
         try:
             self.logger.info("Initializing Chrome driver...")
+
+            # Force undetected_chromedriver to use writable directory
+
+            os.environ["HOME"] = "/tmp"  # Override HOME directory
+
             options = uc.ChromeOptions()
             options.arguments.extend(["--no-sandbox", "--disable-setuid-sandbox"])
             options.arguments.extend(self.config.extra_headers)
@@ -247,11 +252,11 @@ class GoogleMapsReviewScraper:
             if self.config.headless:
                 options.add_argument("--headless")
 
+            # Try without user_data_dir parameter to avoid conflicts
             self.driver = uc.Chrome(
                 headless=self.config.headless,
                 use_subprocess=False,
                 options=options,
-                user_data_dir="/tmp/chrome-user-data",  # This is the key fix
             )
 
             # Set up WebDriverWait
@@ -272,8 +277,7 @@ class GoogleMapsReviewScraper:
             start_time = time.time()
 
             self.driver.get(MAPS_LINK)
-            time.sleep(random.uniform(8, 10))
-
+            time.sleep(random.uniform(4, 10))
             self.accept_cookies()
 
             elapsed = time.time() - start_time
@@ -321,7 +325,8 @@ class GoogleMapsReviewScraper:
 
         except Exception as e:
             self.logger.error(f"Failed to accept cookies: {e}")
-            raise RuntimeError(f"Cookie acceptance failed: {e}")
+        finally:
+            self._verify_cookies_accepted()
 
     def _verify_cookies_accepted(self) -> None:
         """Verify that cookies banner is no longer visible"""

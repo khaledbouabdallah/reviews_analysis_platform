@@ -41,7 +41,7 @@ services:
       - mongodb
       - redis
     environment:
-      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/reviews_db
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/reviews_db?authSource=admin
       - REDIS_URL=redis://redis:6379/0 
       - GIMINI_API_KEY=${GIMINI_API_KEY}
       - GIMINI_MODEL_NAME=${GIMINI_MODEL_NAME}
