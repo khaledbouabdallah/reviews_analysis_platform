@@ -1,15 +1,32 @@
 import os
+from urllib.parse import urlparse, urlunparse
 
 from celery import Celery
 
 # Get Redis URL from environment
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
+
+# Add SSL cert requirements for rediss:// URLs
+def configure_redis_url(url):
+    if url.startswith("rediss://"):
+        parsed = urlparse(url)
+        # Add ssl_cert_reqs=CERT_NONE if not present
+        if "ssl_cert_reqs" not in url:
+            separator = "&" if parsed.query else ""
+            query = f"{parsed.query}{separator}ssl_cert_reqs=CERT_NONE"
+            return urlunparse(parsed._replace(query=query))
+    return url
+
+
+# Configure Redis URL
+configured_redis_url = configure_redis_url(REDIS_URL)
+
 # Create Celery app
 celery_app = Celery(
     "reviews_scraper",
-    broker=REDIS_URL,
-    backend=REDIS_URL,
+    broker=configured_redis_url,
+    backend=configured_redis_url,
     include=["celery_tasks"],  # Import tasks module
 )
 
