@@ -234,10 +234,15 @@ class GoogleMapsReviewScraper:
         """Initialize the Chrome driver with proper configuration"""
         try:
             self.logger.info("Initializing Chrome driver...")
-
             options = uc.ChromeOptions()
             options.arguments.extend(["--no-sandbox", "--disable-setuid-sandbox"])
             options.arguments.extend(self.config.extra_headers)
+
+            # Add writable directory arguments for containerized environments
+            options.add_argument("--user-data-dir=/tmp/chrome-user-data")
+            options.add_argument("--data-path=/tmp/chrome-data")
+            options.add_argument("--disk-cache-dir=/tmp/chrome-cache")
+            options.add_argument("--disable-dev-shm-usage")
 
             if self.config.headless:
                 options.add_argument("--headless")
@@ -246,6 +251,7 @@ class GoogleMapsReviewScraper:
                 headless=self.config.headless,
                 use_subprocess=False,
                 options=options,
+                user_data_dir="/tmp/chrome-user-data",  # This is the key fix
             )
 
             # Set up WebDriverWait
@@ -254,9 +260,7 @@ class GoogleMapsReviewScraper:
                 ignored_exceptions=ignored_exceptions,
                 timeout=self.config.timeout,
             )
-
             self.logger.info("Chrome driver initialized successfully")
-
         except Exception as e:
             self.logger.error(f"Failed to initialize Chrome driver: {e}")
             raise RuntimeError(f"Driver initialization failed: {e}")
