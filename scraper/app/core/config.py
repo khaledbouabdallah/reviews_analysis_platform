@@ -8,7 +8,7 @@ logger = logging.getLogger("uvicorn")
 class Settings(BaseSettings):
     # MongoDB settings
     MONGODB_URI: str
-    MONGODB_DB_NAME: str
+    MONGODB_DB_NAME: str = "reviews_prod"
     ALLOWED_SOURCE_TYPES: list[str] = ["google", "csv"]
     ALLOWED_JOB_STATUSES: list[str] = [
         "pending",
