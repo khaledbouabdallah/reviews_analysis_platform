@@ -1,3 +1,5 @@
+# WARNING: This setup is for local development only.
+# DO NOT use these credentials in production.
 services:
   # MongoDB service
   mongodb:
@@ -9,9 +11,9 @@ services:
     volumes:
       - mongodb_data:/data/db
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
-      - MONGO_INITDB_DATABASE=reviews_db
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+      - MONGODB_DB_NAME=mydatabase
     networks:
       - reviews_network
 
@@ -41,7 +43,8 @@ services:
       - mongodb
       - redis
     environment:
-      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/reviews_db?authSource=admin
+      - MONGODB_URI=mongodb://admin:password@mongodb:27017/reviews_local?authSource=admin
+      - MONGODB_DB_NAME=reviews_local
       - REDIS_URL=redis://redis:6379/0 
       - GIMINI_API_KEY=${GIMINI_API_KEY}
       - GIMINI_MODEL_NAME=${GIMINI_MODEL_NAME}
@@ -68,7 +71,7 @@ services:
       - ./scraper/app:/app/app
       - ./scraper/logs:/app/logs
     environment:
-      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/reviews_db
+      - MONGODB_URI=mongodb://admin:password@mongodb:27017/reviews_local?authSource=admin
       - REDIS_URL=redis://redis:6379/0
       - PYTHONUNBUFFERED=1
     networks:

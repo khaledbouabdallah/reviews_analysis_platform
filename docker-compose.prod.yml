@@ -55,6 +55,7 @@ services:
       #- REDIS_URL=redis://redis:6379/0
       - GIMINI_API_KEY=${GIMINI_API_KEY}
       - GIMINI_MODEL_NAME=${GIMINI_MODEL_NAME}
+      - MONGODB_DB_NAME=reviews_prod
       - PYTHONUNBUFFERED=1
       - NODE_ENV=production
     # No volumes - use built-in code
@@ -82,6 +83,7 @@ services:
     environment:
      # - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/reviews_db
      # - REDIS_URL=redis://redis:6379/0
+      - MONGODB_DB_NAME=reviews_prod
       - PYTHONUNBUFFERED=1
       - NODE_ENV=production
     networks:

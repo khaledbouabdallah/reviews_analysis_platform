@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 # MongoDB connection
 MONGODB_URI = os.getenv(
-    "MONGODB_URL_SYNC",
+    "MONGODB_URI",
     "mongodb://admin:password@mongodb:27017/?authSource=admin",
 )
 MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME", "mydatabase")

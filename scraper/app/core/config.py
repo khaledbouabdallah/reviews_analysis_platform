@@ -8,7 +8,7 @@ logger = logging.getLogger("uvicorn")
 class Settings(BaseSettings):
     # MongoDB settings
     MONGODB_URI: str
-    MONGODB_URL_SYNC: str
+    MONGODB_URI: str
     MONGODB_DB_NAME: str
     CHROMEDRIVER_PATH: str
     ALLOWED_SOURCE_TYPES: list[str] = ["google", "csv"]
