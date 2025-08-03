@@ -126,8 +126,8 @@ RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
     && python3.10 get-pip.py \
     && rm get-pip.py
 
-# Create non-root user for security
-RUN groupadd -r scraperuser && useradd -r -g scraperuser scraperuser
+# Create non-root user for security with home directory
+RUN groupadd -r scraperuser && useradd -r -g scraperuser -m scraperuser
 
 COPY ./requirements.txt /tmp/requirements.txt
 
