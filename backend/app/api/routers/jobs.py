@@ -1,8 +1,9 @@
 # backend/app/api/routers/jobs.py (CELERY VERSION)
-
+import httpx
 from api.dependencies import get_current_active_user
 from celery.result import AsyncResult
 from celery_app import celery_app
+from core.config import settings
 from db.repositories.jobs import JobRepository
 from db.repositories.sources import SourceRepository
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -55,6 +56,16 @@ async def scrap_endpoint(
             args=[job_id, job_data_processed],
             queue="scraping",
         )
+
+        # make http request to scraper service to force cloud run to start the service
+
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                await client.get(settings.SCRAPER_SERVICE_URL + "/health")
+            print(f"Scraper service wake-up call sent for job {job_id}")
+        except Exception as wake_error:
+            # Don't fail the job if wake-up fails - job is already queued
+            print(f"Wake-up call failed (job still queued): {wake_error}")
 
         # Return task information
         return {

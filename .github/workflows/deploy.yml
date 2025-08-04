@@ -165,7 +165,7 @@ jobs:
             --region $REGION \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars="MONGODB_URI=${{ secrets.MONGODB_URI }},REDIS_URL=${{ secrets.REDIS_URL }},GIMINI_API_KEY=${{ secrets.GIMINI_API_KEY }},GIMINI_MODEL_NAME=${{ secrets.GIMINI_MODEL_NAME }}" \
+            --set-env-vars="SCRAPER_SERVICE_URL=https://reviews-scraper-$PROJECT_ID.$REGION.run.app, MONGODB_URI=${{ secrets.MONGODB_URI }},REDIS_URL=${{ secrets.REDIS_URL }},GIMINI_API_KEY=${{ secrets.GIMINI_API_KEY }},GIMINI_MODEL_NAME=${{ secrets.GIMINI_MODEL_NAME }}" \
             --memory 1Gi \
             --cpu 1 \
             --min-instances 0 \
@@ -194,7 +194,7 @@ jobs:
             --set-env-vars="MONGODB_URI=${{ secrets.MONGODB_URI }},REDIS_URL=${{ secrets.REDIS_URL }},CLOUD_RUN_DEPLOYMENT=true" \
             --memory 2Gi \
             --cpu 2 \
-            --min-instances 1 \
-            --max-instances 1 \
+            --min-instances 0 \
+            --max-instances 5 \
             --port 8080 \
             --no-cpu-throttling
