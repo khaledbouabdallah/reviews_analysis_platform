@@ -63,7 +63,7 @@ services:
     container_name: reviews_scraper_worker
     restart: always
     ports:
-      - "5900:5900"
+      - "8080:8080"
     depends_on:
       - mongodb
       - redis

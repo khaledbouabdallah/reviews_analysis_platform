@@ -1,12 +1,5 @@
-import os
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-# print current working directory
-print("Current working directory:", os.getcwd())
-from routers.core import router as core_router
-from routers.google_scrapper import router as google_scraper_router
 
 # Import the scraper class
 
@@ -23,11 +16,12 @@ app.add_middleware(
 )
 
 
-app.include_router(core_router, prefix="", tags=["Core"])
-app.include_router(google_scraper_router, prefix="/google", tags=["Google Scraper"])
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
