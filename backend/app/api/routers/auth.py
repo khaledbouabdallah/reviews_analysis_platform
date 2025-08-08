@@ -2,7 +2,7 @@
 from datetime import timedelta
 
 from api.dependencies import get_current_active_user  # Add this import
-from core.config import settings
+from core.config import logger, settings
 from core.security import create_access_token, verify_password
 from db.repositories.users import UserRepository
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -25,8 +25,7 @@ class TokenData(BaseModel):
 
 @router.post("/login", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):  # noqa: B008 - FastAPI dependency injection
-    """Login endpoint that returns JWT token
-    """
+    """Login endpoint that returns JWT token"""
     # Get user by username
     user = await user_repo.get_by_username(form_data.username)
 
@@ -41,22 +40,25 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     # Check if user is disabled
     if user.disabled:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Inactive user",
         )
 
     # Create access token
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        subject=user.username, expires_delta=access_token_expires,
+        subject=user.username,
+        expires_delta=access_token_expires,
     )
+
+    logger.info(f"User {user.username} logged in successfully")
 
     return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.post("/register", response_model=dict)
 async def register_user(user_data: dict):
-    """Register new user (can be moved to users router if preferred)
-    """
+    """Register new user (can be moved to users router if preferred)"""
     # Validate input data
     try:
         user_create = UserCreate(**user_data)
@@ -90,13 +92,14 @@ async def register_user(user_data: dict):
             detail="Failed to register user",
         ) from e
 
+    logger.info(f"User {new_user.username} registered successfully")
+
     return {"message": "User registered successfully", "user_id": str(new_user.id)}
 
 
 @router.get("/me")
 async def read_users_me(current_user: UserInDB = Depends(get_current_active_user)):  # noqa: B008 - FastAPI dependency injection
-    """Get current user info
-    """
+    """Get current user info"""
     return {
         "id": str(current_user.id),
         "username": current_user.username,
@@ -107,8 +110,7 @@ async def read_users_me(current_user: UserInDB = Depends(get_current_active_user
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_my_account(current_user: UserInDB = Depends(get_current_active_user)):  # noqa: B008 - FastAPI dependency injection
-    """Delete the current user's account and all associated data
-    """
+    """Delete the current user's account and all associated data"""
     try:
         # Delete the user account
         await user_repo.delete(str(current_user.id))

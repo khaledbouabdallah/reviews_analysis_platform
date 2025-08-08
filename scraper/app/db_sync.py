@@ -1,27 +1,22 @@
 import logging
-import os
 from datetime import datetime, timezone
 from typing import Any
 
 from bson import ObjectId
+from core.config import Settings
 from pymongo import MongoClient
 
 logger = logging.getLogger(__name__)
 
-# MongoDB connection
-MONGODB_URI = os.getenv(
-    "MONGODB_URI",
-    "mongodb://admin:password@mongodb:27017/?authSource=admin",
-)
-MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME", "mydatabase")
+settings = Settings()
 
 
 class SyncDatabase:
     """Synchronous database operations for Celery workers"""
 
     def __init__(self):
-        self.client = MongoClient(MONGODB_URI)
-        self.db = self.client[MONGODB_DB_NAME]
+        self.client = MongoClient(settings.MONGODB_URI)
+        self.db = self.client[settings.MONGODB_DB_NAME]
         self.jobs_collection = self.db["jobs"]
         self.reviews_collection = self.db["reviews"]
 
