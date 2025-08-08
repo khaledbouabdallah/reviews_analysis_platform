@@ -46,6 +46,7 @@ services:
       - MONGODB_URI=mongodb://admin:password@mongodb:27017/reviews_local?authSource=admin
       - MONGODB_DB_NAME=reviews_local
       - REDIS_URL=redis://redis:6379/0 
+      - SCRAPER_SERVICE_URL=http://scraper_worker:8080
       - GIMINI_API_KEY=${GIMINI_API_KEY}
       - GIMINI_MODEL_NAME=${GIMINI_MODEL_NAME}
       - PYTHONUNBUFFERED=1
@@ -72,6 +73,7 @@ services:
       - ./scraper/logs:/app/logs
     environment:
       - MONGODB_URI=mongodb://admin:password@mongodb:27017/reviews_local?authSource=admin
+      - MONGODB_DB_NAME=reviews_local
       - REDIS_URL=redis://redis:6379/0
       - PYTHONUNBUFFERED=1
     networks:

@@ -4,6 +4,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 # Create client connection (this is executed on import)
 
 logger.info("Connecting to MongoDB at %s", settings.MONGODB_URI)
+logger.info("Using database: %s", settings.MONGODB_DB_NAME)
+
 client = AsyncIOMotorClient(settings.MONGODB_URI)
 db = client[settings.MONGODB_DB_NAME]
 

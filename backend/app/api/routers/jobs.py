@@ -3,7 +3,7 @@ import httpx
 from api.dependencies import get_current_active_user
 from celery.result import AsyncResult
 from celery_app import celery_app
-from core.config import settings
+from core.config import logger, settings
 from db.repositories.jobs import JobRepository
 from db.repositories.sources import SourceRepository
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -40,7 +40,8 @@ async def scrap_endpoint(
         )
 
         job_data_processed = job.model_dump(mode="json", by_alias=True)
-        print("Received job data:", job_data_processed)
+
+        logger.info(f"Creating job for user {current_user.id}: {job_data_processed}")
 
         # Check source type support
         if job_data_processed.get("source_type") != "google":
@@ -60,14 +61,21 @@ async def scrap_endpoint(
         # make http request to scraper service to force cloud run to start the service
 
         try:
+            logger.warning(
+                f"Sending wake-up call to scraper service for job {job_id} at {settings.SCRAPER_SERVICE_URL}/health"
+            )
             async with httpx.AsyncClient(timeout=5.0) as client:
                 await client.get(settings.SCRAPER_SERVICE_URL + "/health")
-            print(f"Scraper service wake-up call sent for job {job_id}")
+            logger.info(
+                f"Scraper service wake-up call sent for job {job_id} to {settings.SCRAPER_SERVICE_URL}"
+            )
         except Exception as wake_error:
             # Don't fail the job if wake-up fails - job is already queued
-            print(f"Wake-up call failed (job still queued): {wake_error}")
+            logger.warning(f"Wake-up call failed (job still queued): {wake_error}")
 
         # Return task information
+
+        logger.info(f"Job {job_id} created and task {task.id} queued successfully")
         return {
             "id": job_id,
             "task_id": task.id,
