@@ -2,7 +2,7 @@
 
 from api.dependencies import get_current_active_user
 from core.config import logger
-from db.repositories.reviews import ReviewRepository
+from db.repositories import ReviewRepository
 from fastapi import APIRouter, Depends, HTTPException, status
 from models.review import ReviewResponse, ReviewUpdate
 from models.user import UserInDB
@@ -19,9 +19,14 @@ async def list_user_reviews(
 ):
     """List reviews for the authenticated user only."""
     try:
+        logger.info(
+            f"Listing reviews for user {current_user.id} with skip={skip} and limit={limit}"
+        )
         reviews = await review_repo.get_by_user(str(current_user.id), skip=skip)
         # Apply limit in Python since get_by_user doesn't have limit param
         reviews = reviews[:limit]
+
+        logger.info(f"Found {len(reviews)} reviews for user {current_user.id}")
 
         return [
             ReviewResponse.model_validate(review.model_dump(by_alias=False))
@@ -43,6 +48,7 @@ async def get_review(
 ):
     """Get a review by ID (only if user owns it)."""
     try:
+        logger.info("i'm in get by reeview_id endpooint")
         review = await review_repo.get_by_id(review_id)
         if not review:
             raise HTTPException(status_code=404, detail="Review not found")
@@ -184,6 +190,7 @@ async def get_reviews_by_job(
 ):
     """Get all reviews of a job (only if user owns the job)."""
     try:
+        logger.info("im in job/job_id endpoint")
         reviews = await review_repo.get_by_job(job_id, skip=skip)
 
         # Filter to only include reviews owned by current user

@@ -4,15 +4,37 @@ from api.dependencies import get_current_active_user
 from celery.result import AsyncResult
 from celery_app import celery_app
 from core.config import logger, settings
-from db.repositories.jobs import JobRepository
-from db.repositories.sources import SourceRepository
-from fastapi import APIRouter, Depends, HTTPException, status
+from db.repositories import JobRepository, ReviewRepository, SourceRepository
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from models.job import JobCreate, JobResponse, JobUpdate
 from models.user import UserInDB
+from services.csv_services import process_csv_upload
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 job_repo = JobRepository()
 source_repo = SourceRepository()
+review_repo = ReviewRepository()
+
+
+@router.post("/load_csv", response_model=dict)
+async def load_csv_endpoint(
+    csv_file: UploadFile = File(...),
+    business_id: str = Form(...),
+    location_id: str | None = Form(None),
+    job_name: str | None = Form(None),
+    current_user: UserInDB = Depends(get_current_active_user),
+):
+    """Endpoint to load CSV data for the authenticated user."""
+
+    return await process_csv_upload(
+        csv_file=csv_file,
+        job_name=job_name,
+        current_user=current_user,
+        job_repo=job_repo,
+        review_repo=review_repo,
+        business_id=business_id,
+        location_id=location_id,
+    )
 
 
 @router.post("/", response_model=dict)

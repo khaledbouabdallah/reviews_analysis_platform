@@ -5,11 +5,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export type JobStatus = 'pending' | 'running' | 'saving' | 'completed' | 'failed' | 'cancelled' | 'partially_completed';
 export type SourceType = 'google' | 'csv';
+export type JobType = 'scraping' | 'analysis' | 'csv_upload';
 
 export interface Job {
   id: string;
   name?: string;
-  job_type: 'scraping' | 'analysis';
+  job_type: JobType;
   status: JobStatus;
   url?: string;
   user_id: string;
@@ -28,7 +29,7 @@ export interface Job {
 
 export interface JobCreate {
   name?: string;
-  job_type: 'scraping' | 'analysis';  
+  job_type: JobType;  
   url?: string;  
   business_id: string;
   location_id?: string | null;
@@ -171,7 +172,8 @@ export class JobService {
 async getJobsByBusiness(businessId: string): Promise<Job[]> {
   try {
     const jobs = await this.fetchWithAuth(`/api/jobs/business/${businessId}`);
-    return jobs.filter((job: Job) => job.job_type === 'scraping'); // Add this line
+    // log jobs for debugging
+    return jobs.filter((job: Job) => ['scraping', 'csv_upload'].includes(job.job_type)); // Add this line
   } catch (error) {
     console.error('Error fetching jobs:', error);
     throw error;
@@ -181,7 +183,7 @@ async getJobsByBusiness(businessId: string): Promise<Job[]> {
 async getJobsBySource(sourceId: string): Promise<Job[]> {
   try {
     const jobs = await this.fetchWithAuth(`/api/jobs/source/${sourceId}`);
-    return jobs.filter((job: Job) => job.job_type === 'scraping'); // Add this line
+    return jobs.filter((job: Job) => ['scraping', 'csv_upload'].includes(job.job_type)); // Add this line
   } catch (error) {
     console.error('Error fetching jobs by source:', error);
     throw error;
@@ -191,7 +193,7 @@ async getJobsBySource(sourceId: string): Promise<Job[]> {
 async getAllUserJobs(): Promise<Job[]> {
   try {
     const jobs = await this.fetchWithAuth('/api/jobs/');
-    return jobs.filter((job: Job) => job.job_type === 'scraping'); // Add this line
+    return jobs.filter((job: Job) => ['scraping', 'csv_upload'].includes(job.job_type)); // Add this line
   } catch (error) {
     console.error('Error fetching user jobs:', error);
     throw error;
@@ -202,7 +204,7 @@ async getJob(jobId: string): Promise<Job> {
   try {
     const job = await this.fetchWithAuth(`/api/jobs/${jobId}`);
     // Optionally check if it's a scraping job and throw error if not
-    if (job.job_type !== 'scraping') {
+    if (!['scraping', 'csv_upload'].includes(job.job_type)) {
       throw new Error('Job is not a scraping job');
     }
     return job;
@@ -367,6 +369,47 @@ getJobDuration(job: Job): string | null {
   cleanup(): void {
     this.stopAllPolling();
   }
+
+  async uploadCSV(file: File, jobName: string | null, businessId: string, locationId: string | null): Promise<any> {
+  try {
+    const formData = new FormData();
+    formData.append('csv_file', file);
+    formData.append('business_id', businessId);
+    if (locationId) {
+      formData.append('location_id', locationId);
+    }
+    if (jobName) {
+      formData.append('job_name', jobName);
+    }
+
+    // Don't include Content-Type for FormData - let browser set it
+    const headers = {
+      ...authService.getAuthHeaders(),
+    };
+
+    const response = await fetch(`${API_URL}/api/jobs/load_csv`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        authService.logout();
+        window.location.href = '/login';
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `Upload failed: ${response.status}`);
+    }
+
+    return response;
+  } catch (error) {
+    console.error('Error uploading CSV:', error);
+    throw error;
+  }
+}
+
+
 }
 
 export const jobService = new JobService();

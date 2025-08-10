@@ -2,10 +2,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Play, Loader2, AlertTriangle, Clock, Database, CheckCircle, XCircle, RotateCcw, ExternalLink, Eye, Pause, RefreshCw } from 'lucide-react';
+import { X, Play, Loader2, AlertTriangle, Clock, Database, CheckCircle, XCircle, RotateCcw, ExternalLink, Eye, Pause, RefreshCw, Upload } from 'lucide-react';
 import { Job, JobCreate, JobUpdate, jobService, getJobProgress, getJobStatusColor, getJobStatusLabel, isJobActive, JobStatusResponse } from '@/services/job';
 import { Source } from '@/services/source';
 import { Location } from '@/services/location';
+
 
 interface AddJobModalProps {
     isOpen: boolean;
@@ -29,6 +30,7 @@ export function AddJobModal({ isOpen, onClose, onJobCreated, businessId, sources
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [isAnimating, setIsAnimating] = useState(false);
+    const [csvFile, setCsvFile] = useState<File | null>(null);
 
     useEffect(() => {
         if (isOpen) {
@@ -42,6 +44,7 @@ export function AddJobModal({ isOpen, onClose, onJobCreated, businessId, sources
                 source_id: '',
                 source_type: 'google',
             });
+            setCsvFile(null);
         }
     }, [isOpen, businessId]);
 
@@ -51,8 +54,29 @@ export function AddJobModal({ isOpen, onClose, onJobCreated, businessId, sources
         setLoading(true);
 
         try {
-            const response = await jobService.createJob(formData);
-            console.log('Job created and launched:', response);
+            if (formData.job_type === 'csv_upload') {
+                // Handle CSV upload
+                if (!csvFile) {
+                    throw new Error('Please select a CSV file');
+                }
+
+                const response = await jobService.uploadCSV(
+                    csvFile,
+                    formData.name || null,
+                    businessId,
+                    formData.location_id || null
+                    // TODO: Add location_id, need refactor, scraping jobs shouldn't have source_id 
+                );
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'CSV upload failed');
+                }
+
+                const result = await response.json();
+                console.log('CSV job created:', result);
+            }
+
             onJobCreated();
             handleClose();
         } catch (err: any) {
@@ -64,6 +88,11 @@ export function AddJobModal({ isOpen, onClose, onJobCreated, businessId, sources
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
+
+        // Reset CSV file when switching job types
+        if (name === 'job_type') {
+            setCsvFile(null);
+        }
 
         // Auto-fill URL when source is selected
         if (name === 'source_id') {
@@ -100,6 +129,7 @@ export function AddJobModal({ isOpen, onClose, onJobCreated, businessId, sources
                     source_type: 'google',
                 });
                 setError('');
+                setCsvFile(null);
                 onClose();
             }, 200);
         }
@@ -127,6 +157,8 @@ export function AddJobModal({ isOpen, onClose, onJobCreated, businessId, sources
 
     const selectedSource = sources.find(s => s.id === formData.source_id);
     const selectedLocation = locations.find(l => l.id === formData.location_id);
+    const isScrapingJob = formData.job_type === 'scraping';
+    const isCsvJob = formData.job_type === 'csv_upload';
 
     return (
         <div className="fixed inset-0 z-50 overflow-hidden">
@@ -151,12 +183,18 @@ export function AddJobModal({ isOpen, onClose, onJobCreated, businessId, sources
                                 <div className="relative">
                                     <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-blue-500 rounded-2xl blur opacity-30 animate-pulse" />
                                     <div className="relative p-3 bg-gradient-to-r from-green-500 to-blue-500 rounded-2xl">
-                                        <Play className="h-7 w-7 text-white" />
+                                        {isCsvJob ? (
+                                            <Upload className="h-7 w-7 text-white" />
+                                        ) : (
+                                            <Play className="h-7 w-7 text-white" />
+                                        )}
                                     </div>
                                 </div>
                                 <div>
                                     <h2 className="text-2xl font-bold text-gray-900">Start New Job</h2>
-                                    <p className="text-sm text-gray-500 mt-1">Launch a scraping job from your sources</p>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        {isCsvJob ? 'Upload CSV reviews' : 'Launch a scraping job from your sources'}
+                                    </p>
                                 </div>
                             </div>
 
@@ -170,43 +208,88 @@ export function AddJobModal({ isOpen, onClose, onJobCreated, businessId, sources
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-6">
+                            {/* Job Type Selection */}
                             <div className="space-y-2">
-                                <label htmlFor="source_id" className="block text-sm font-semibold text-gray-700">
-                                    Source to Scrape <span className="text-red-500">*</span>
+                                <label htmlFor="job_type" className="block text-sm font-semibold text-gray-700">
+                                    Job Type <span className="text-red-500">*</span>
                                 </label>
                                 <select
-                                    id="source_id"
-                                    name="source_id"
+                                    id="job_type"
+                                    name="job_type"
                                     required
-                                    value={formData.source_id}
+                                    value={formData.job_type}
                                     onChange={handleChange}
                                     disabled={loading}
                                     className="w-full px-4 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 focus:bg-white transition-all duration-300 text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
                                 >
-                                    <option value="">Select a source to scrape</option>
-                                    {sources.map((source) => (
-                                        <option key={source.id} value={source.id}>
-                                            {source.name} ({source.type.toUpperCase()})
-                                        </option>
-                                    ))}
+                                    <option value="scraping">Scraping Job</option>
+                                    <option value="csv_upload">CSV Upload</option>
                                 </select>
-                                {selectedSource && (
-                                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                        <p className="text-sm text-blue-700 mb-1">
-                                            <strong>Source:</strong> {selectedSource.name}
-                                        </p>
-                                        <p className="text-sm text-blue-600 break-all">
-                                            <strong>URL:</strong> {selectedSource.url}
-                                        </p>
-                                        {selectedLocation && (
-                                            <p className="text-sm text-blue-600">
-                                                <strong>Location:</strong> {selectedLocation.name}
-                                            </p>
-                                        )}
-                                    </div>
-                                )}
                             </div>
 
+                            {/* Source Selection - Only for scraping jobs */}
+                            {isScrapingJob && (
+                                <div className="space-y-2">
+                                    <label htmlFor="source_id" className="block text-sm font-semibold text-gray-700">
+                                        Source to Scrape <span className="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        id="source_id"
+                                        name="source_id"
+                                        required
+                                        value={formData.source_id}
+                                        onChange={handleChange}
+                                        disabled={loading}
+                                        className="w-full px-4 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 focus:bg-white transition-all duration-300 text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                                    >
+                                        <option value="">Select a source to scrape</option>
+                                        {sources.map((source) => (
+                                            <option key={source.id} value={source.id}>
+                                                {source.name} ({source.type.toUpperCase()})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {selectedSource && (
+                                        <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                            <p className="text-sm text-blue-700 mb-1">
+                                                <strong>Source:</strong> {selectedSource.name}
+                                            </p>
+                                            <p className="text-sm text-blue-600 break-all">
+                                                <strong>URL:</strong> {selectedSource.url}
+                                            </p>
+                                            {selectedLocation && (
+                                                <p className="text-sm text-blue-600">
+                                                    <strong>Location:</strong> {selectedLocation.name}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* CSV Upload Section - Only for CSV jobs */}
+                            {isCsvJob && (
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-semibold text-gray-700">
+                                        CSV File <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="file"
+                                        accept=".csv"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) setCsvFile(file);
+                                        }}
+                                        disabled={loading}
+                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:bg-white transition-all duration-300"
+                                    />
+                                    {csvFile && (
+                                        <p className="text-sm text-green-600">✓ {csvFile.name}</p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Job Name */}
                             <div className="space-y-2">
                                 <label htmlFor="name" className="block text-sm font-semibold text-gray-700">
                                     Job Name <span className="text-gray-400 font-normal">(Optional)</span>
@@ -219,10 +302,13 @@ export function AddJobModal({ isOpen, onClose, onJobCreated, businessId, sources
                                     onChange={handleChange}
                                     disabled={loading}
                                     className="w-full px-4 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 focus:bg-white transition-all duration-300 text-gray-900 placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
-                                    placeholder="e.g., Weekly Review Collection, Competitor Analysis..."
+                                    placeholder={isCsvJob ? "e.g., Monthly Review Import, Customer Feedback..." : "e.g., Weekly Review Collection, Competitor Analysis..."}
                                 />
                                 <p className="text-xs text-gray-500">
-                                    Leave empty to auto-generate from source name and timestamp
+                                    {isCsvJob ?
+                                        "Leave empty to auto-generate from file name and timestamp" :
+                                        "Leave empty to auto-generate from source name and timestamp"
+                                    }
                                 </p>
                             </div>
 
@@ -246,18 +332,24 @@ export function AddJobModal({ isOpen, onClose, onJobCreated, businessId, sources
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={loading || !formData.source_id}
+                                    disabled={loading || (isScrapingJob && !formData.source_id) || (isCsvJob && !csvFile)}
                                     className="flex-1 px-6 py-4 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
                                 >
                                     {loading ? (
                                         <>
                                             <Loader2 className="h-5 w-5 animate-spin mr-3" />
-                                            <span className="animate-pulse">Launching...</span>
+                                            <span className="animate-pulse">
+                                                {isCsvJob ? 'Uploading...' : 'Launching...'}
+                                            </span>
                                         </>
                                     ) : (
                                         <>
-                                            <Play className="h-5 w-5 mr-3" />
-                                            Launch Job
+                                            {isCsvJob ? (
+                                                <Upload className="h-5 w-5 mr-3" />
+                                            ) : (
+                                                <Play className="h-5 w-5 mr-3" />
+                                            )}
+                                            {isCsvJob ? 'Upload CSV' : 'Launch Job'}
                                         </>
                                     )}
                                 </button>
@@ -271,9 +363,13 @@ export function AddJobModal({ isOpen, onClose, onJobCreated, businessId, sources
                                     <span className="text-green-600 text-sm font-bold">⚡</span>
                                 </div>
                                 <div>
-                                    <h4 className="text-sm font-medium text-green-800 mb-1">Auto-Launch Mode</h4>
+                                    <h4 className="text-sm font-medium text-green-800 mb-1">
+                                        {isCsvJob ? 'Instant Processing' : 'Auto-Launch Mode'}
+                                    </h4>
                                     <p className="text-xs text-green-700 leading-relaxed">
-                                        Jobs start automatically when created. You'll be able to track progress in real-time and cancel if needed.
+                                        {isCsvJob ?
+                                            'CSV files are processed immediately. You\'ll be able to track progress in real-time.' :
+                                            'Jobs start automatically when created. You\'ll be able to track progress in real-time and cancel if needed.'}
                                     </p>
                                 </div>
                             </div>
@@ -285,6 +381,7 @@ export function AddJobModal({ isOpen, onClose, onJobCreated, businessId, sources
     );
 }
 
+// Keep all the other modals unchanged - EditJobModal, JobDetailsModal, DeleteJobConfirmationModal
 interface EditJobModalProps {
     isOpen: boolean;
     onClose: () => void;

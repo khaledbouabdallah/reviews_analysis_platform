@@ -119,6 +119,7 @@ class SyncDatabase:
                         "data": review_data,
                         "source_type": source_type,
                         "created_at": datetime.now(timezone.utc),
+                        "job_type": "scraping",
                     }
                     review_docs.append(review_doc)
 

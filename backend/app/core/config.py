@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     GIMINI_API_KEY: str
     GIMINI_MODEL_NAME: str
     ALLOWED_SOURCE_TYPES: list[str] = ["google", "csv"]
+    ALLOWED_SCRAPING_TYPES: list[str] = ["google"]
+    ALLOWED_JOB_TYPES: list[str] = ["scraping", "analysis", "csv_upload"]
     ALLOWED_JOB_STATUSES: list[str] = [
         "pending",
         "running",
@@ -25,7 +27,7 @@ class Settings(BaseSettings):
         "canceled",
     ]
 
-    SCRAPER_SERVICE_URL: str = os.getenv("SCRAPER_SERVICE_URL", "http://localhost:8080")
+    SCRAPER_SERVICE_URL: str = os.getenv("SCRAPER_SERVICE_URL")
 
     # JWT Authentication settings
     SECRET_KEY: str = os.getenv(

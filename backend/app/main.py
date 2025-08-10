@@ -46,7 +46,7 @@ app.add_middleware(
 
 # Include routers with auth first
 app.include_router(auth_router, prefix="/api")
-# app.include_router(users.router, prefix="/api")
+# app.include_router(users.router, prefix="/api") # Uncomment when user management is implemented
 app.include_router(businesses.router, prefix="/api")
 app.include_router(locations.router, prefix="/api")
 app.include_router(sources.router, prefix="/api")
