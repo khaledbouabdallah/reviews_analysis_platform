@@ -131,18 +131,19 @@ export class JobService {
   private async fetchWithAuth(url: string, options: RequestInit = {}) {
     const headers = {
       'Content-Type': 'application/json',
-      ...authService.getAuthHeaders(),
       ...options.headers,
     };
 
     const response = await fetch(`${API_URL}${url}`, {
       ...options,
       headers,
+      credentials: 'include', // **NEW: Required for httpOnly cookies**
     });
 
     if (!response.ok) {
       if (response.status === 401) {
-        authService.logout();
+        // **CHANGED: Made logout async since it now calls server**
+        await authService.logout();
         window.location.href = '/login';
       }
       const errorData = await response.json().catch(() => ({}));
@@ -371,45 +372,39 @@ getJobDuration(job: Job): string | null {
   }
 
   async uploadCSV(file: File, jobName: string | null, businessId: string, locationId: string | null): Promise<any> {
-  try {
-    const formData = new FormData();
-    formData.append('csv_file', file);
-    formData.append('business_id', businessId);
-    if (locationId) {
-      formData.append('location_id', locationId);
-    }
-    if (jobName) {
-      formData.append('job_name', jobName);
-    }
-
-    // Don't include Content-Type for FormData - let browser set it
-    const headers = {
-      ...authService.getAuthHeaders(),
-    };
-
-    const response = await fetch(`${API_URL}/api/jobs/load_csv`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        authService.logout();
-        window.location.href = '/login';
+    try {
+      const formData = new FormData();
+      formData.append('csv_file', file);
+      formData.append('business_id', businessId);
+      if (locationId) {
+        formData.append('location_id', locationId);
       }
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `Upload failed: ${response.status}`);
+      if (jobName) {
+        formData.append('job_name', jobName);
+      }
+
+      const response = await fetch(`${API_URL}/api/jobs/load_csv`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include', // **NEW: Required for httpOnly cookies**
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          // **CHANGED: Made logout async since it now calls server**
+          await authService.logout();
+          window.location.href = '/login';
+        }
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Upload failed: ${response.status}`);
+      }
+
+      return response;
+    } catch (error) {
+      console.error('Error uploading CSV:', error);
+      throw error;
     }
-
-    return response;
-  } catch (error) {
-    console.error('Error uploading CSV:', error);
-    throw error;
   }
-}
-
-
 }
 
 export const jobService = new JobService();

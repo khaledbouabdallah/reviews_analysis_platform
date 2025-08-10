@@ -91,18 +91,18 @@ export class SourceService {
   private async fetchWithAuth(url: string, options: RequestInit = {}) {
     const headers = {
       'Content-Type': 'application/json',
-      ...authService.getAuthHeaders(),
       ...options.headers,
     };
 
     const response = await fetch(`${API_URL}${url}`, {
       ...options,
       headers,
+      credentials: 'include', // **NEW: Required for httpOnly cookies**
     });
 
     if (!response.ok) {
       if (response.status === 401) {
-        authService.logout();
+        await authService.logout();
         window.location.href = '/login';
       }
       const errorData = await response.json().catch(() => ({}));
@@ -172,12 +172,13 @@ export class SourceService {
     try {
       const response = await fetch(`${API_URL}/api/sources/${sourceId}`, {
         method: 'DELETE',
-        headers: authService.getAuthHeaders(),
+        credentials: 'include', 
       });
 
       if (!response.ok) {
         if (response.status === 401) {
-          authService.logout();
+
+          await authService.logout();
           window.location.href = '/login';
         }
         throw new Error(`Failed to delete source: ${response.status}`);

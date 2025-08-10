@@ -43,26 +43,27 @@ export class DashboardService {
   private async fetchWithAuth(url: string, options: RequestInit = {}) {
     const headers = {
       'Content-Type': 'application/json',
-      ...authService.getAuthHeaders(),
       ...options.headers,
     };
 
     const response = await fetch(`${API_URL}${url}`, {
       ...options,
-        headers,
+      headers,
+      credentials: 'include', // **NEW: Required for httpOnly cookies**
     });
 
     if (!response.ok) {
       if (response.status === 401) {
-        authService.logout();
+        // **CHANGED: Made logout async since it now calls server**
+        await authService.logout();
         window.location.href = '/login';
       }
       throw new Error(`API Error: ${response.status}`);
     }
 
     if (options.method === 'DELETE' || response.status === 204) {
-    return response; // Return response object, not parsed JSON
-  }
+      return response; // Return response object, not parsed JSON
+    }
 
     return response.json();
   }
@@ -117,22 +118,19 @@ export class DashboardService {
     }
   }
 
-
   async updateBusiness(businessId: string, data: { name: string }): Promise<Business> {
-  try {
-    const response = await this.fetchWithAuth(`/api/businesses/${businessId}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-    
-    return response;
-  } catch (error) {
-    console.error('Error updating business:', error);
-    throw error;
+    try {
+      const response = await this.fetchWithAuth(`/api/businesses/${businessId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+      
+      return response;
+    } catch (error) {
+      console.error('Error updating business:', error);
+      throw error;
+    }
   }
-}
-
-
 
   async getBusinessesWithStats(): Promise<BusinessWithStats[]> {
     try {

@@ -9,6 +9,7 @@ import { DashboardNavigation } from '@/components/dashboard/DashboardNavigation'
 import { BusinessHeader, DashboardSections, BusinessSkeleton, } from '@/components/business';
 import { BusinessStorageService } from '@/services/businessStorage';
 import '@/styles/business-page.css';
+
 interface Business {
   id: string;
   name: string;
@@ -63,13 +64,18 @@ export default function BusinessPage() {
 
   // Authentication check
   useEffect(() => {
-    if (!authService.isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-    loadBusinessData();
-  }, [router, businessId]);
+    const checkAuthAndLoad = async () => {
+      // **CHANGED: Made authentication check async**
+      const isAuth = await authService.isAuthenticated();
+      if (!isAuth) {
+        router.push('/login');
+        return;
+      }
+      loadBusinessData();
+    };
 
+    checkAuthAndLoad();
+  }, [router, businessId]);
 
   useEffect(() => {
     // Save the current business ID when page loads
@@ -83,15 +89,27 @@ export default function BusinessPage() {
     try {
       setLoading(true);
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const headers = authService.getAuthHeaders();
+
+      // **CHANGED: Removed authService.getAuthHeaders() and added credentials: 'include'**
+      const fetchOptions = {
+        credentials: 'include' as RequestCredentials, // **NEW: Required for httpOnly cookies**
+      };
 
       // Load business data in parallel
       const [businessRes, locationsRes, sourcesRes, jobsRes] = await Promise.all([
-        fetch(`${API_URL}/api/businesses/${businessId}`, { headers }),
-        fetch(`${API_URL}/api/locations/business/${businessId}`, { headers }),
-        fetch(`${API_URL}/api/sources/business/${businessId}`, { headers }),
-        fetch(`${API_URL}/api/jobs/business/${businessId}`, { headers })
+        fetch(`${API_URL}/api/businesses/${businessId}`, fetchOptions),
+        fetch(`${API_URL}/api/locations/business/${businessId}`, fetchOptions),
+        fetch(`${API_URL}/api/sources/business/${businessId}`, fetchOptions),
+        fetch(`${API_URL}/api/jobs/business/${businessId}`, fetchOptions)
       ]);
+
+      // **NEW: Handle 401 authentication errors**
+      if (businessRes.status === 401 || locationsRes.status === 401 ||
+        sourcesRes.status === 401 || jobsRes.status === 401) {
+        await authService.logout();
+        router.push('/login');
+        return;
+      }
 
       if (!businessRes.ok) throw new Error('Business not found');
 

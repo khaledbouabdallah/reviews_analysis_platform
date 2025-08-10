@@ -28,18 +28,18 @@ export class LocationService {
   private async fetchWithAuth(url: string, options: RequestInit = {}) {
     const headers = {
       'Content-Type': 'application/json',
-      ...authService.getAuthHeaders(),
       ...options.headers,
     };
 
     const response = await fetch(`${API_URL}${url}`, {
       ...options,
       headers,
+      credentials: 'include', 
     });
 
     if (!response.ok) {
       if (response.status === 401) {
-        authService.logout();
+        await authService.logout();
         window.location.href = '/login';
       }
       const errorData = await response.json().catch(() => ({}));
@@ -84,14 +84,16 @@ export class LocationService {
 
   async deleteLocation(locationId: string): Promise<void> {
     try {
+      // **CHANGED: Use fetchWithAuth for consistency and proper cookie handling**
       const response = await fetch(`${API_URL}/api/locations/${locationId}`, {
         method: 'DELETE',
-        headers: authService.getAuthHeaders(),
+        credentials: 'include', // **NEW: Required for httpOnly cookies**
       });
 
       if (!response.ok) {
         if (response.status === 401) {
-          authService.logout();
+          // **CHANGED: Made logout async since it now calls server**
+          await authService.logout();
           window.location.href = '/login';
         }
         throw new Error(`Failed to delete location: ${response.status}`);
