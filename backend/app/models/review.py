@@ -14,8 +14,8 @@ def validate_google_review(data):
 
 
 def validate_csv_review(data):
-    if "text" not in data:
-        raise ValueError("CSV review must contain at least 'text' field")
+    if "original_text" not in data:
+        raise ValueError("CSV review must contain at least 'original_text' field")
     return data
 
 
@@ -29,10 +29,11 @@ class ReviewBase(BaseModel):
     user_id: PyObjectId
     business_id: PyObjectId
     location_id: PyObjectId | None = None
-    source_id: PyObjectId
+    source_id: PyObjectId | None = None  # Optional field for upload jobs
     job_id: PyObjectId
     data: dict
     source_type: str
+    job_type: str
     created_at: datetime = Field(default_factory=lambda: datetime.now())
     analyzed_data: dict | None = Field(default=None)
 
@@ -55,6 +56,12 @@ class ReviewBase(BaseModel):
             raise ValueError(
                 f"Invalid source_type. Allowed: {settings.ALLOWED_SOURCE_TYPES}",
             )
+        return v
+
+    @field_validator("job_type")
+    def validate_job_type(cls, v):
+        if v not in settings.ALLOWED_JOB_TYPES:
+            raise ValueError(f"job_type must be one of {settings.ALLOWED_JOB_TYPES}")
         return v
 
 

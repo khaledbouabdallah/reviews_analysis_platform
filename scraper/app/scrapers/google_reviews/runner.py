@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from db_sync import sync_db
-from models.job import JobCreate, JobUpdateInternal
+from models.job import JobCreate
 from scrapers.google_reviews.scrapper import GoogleMapsReviewScraper, ScraperConfig
 
 # Configure logging
@@ -239,13 +239,6 @@ def run_scraper_job(job_id: str, job: JobCreate) -> dict[str, Any]:
     finally:
         # Always update final job status
         try:
-            final_update = JobUpdateInternal(
-                status=status,
-                ended_at=datetime.now(timezone.utc),
-                total_reviews=job_manager.total_reviews,
-                reviews_handled=job_manager.reviews_handled,
-                error=error,
-            )
             sync_db.update_job_status(
                 job_id=job_id,
                 status=status,

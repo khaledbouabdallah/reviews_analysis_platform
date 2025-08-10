@@ -15,12 +15,13 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
 
     async def create(self, job_create: JobCreate) -> JobInDB:
         try:
-            await ValidatorHelper.get_source_or_raise(
-                sources_collection,
-                job_create.user_id,
-                job_create.business_id,
-                job_create.source_id,
-            )
+            if job_create.job_type == "scraping":
+                await ValidatorHelper.get_source_or_raise(
+                    sources_collection,
+                    job_create.user_id,
+                    job_create.business_id,
+                    job_create.source_id,
+                )
 
             # Insert Job
             result = await self.collection.insert_one(

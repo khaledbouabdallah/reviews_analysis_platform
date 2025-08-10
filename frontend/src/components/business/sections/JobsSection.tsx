@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Filter, MoreVertical, Play, Pause, RotateCcw, Trash2, Eye, ExternalLink, Clock, AlertTriangle, CheckCircle, XCircle, Loader2, Database, Calendar } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, Play, Pause, RotateCcw, Trash2, Eye, ExternalLink, Clock, AlertTriangle, CheckCircle, XCircle, Loader2, Database, Calendar, Upload } from 'lucide-react';
 import { Job, jobService, getJobProgress, getJobStatusColor, getJobStatusLabel, isJobActive, JobStatusResponse, JobCreateResponse } from '@/services/job';
 import { Source } from '@/services/source';
 import { Location } from '@/services/location';
@@ -32,6 +32,14 @@ export function JobsSection({ businessId, sources, locations }: JobsSectionProps
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const [frontendDurations, setFrontendDurations] = useState<Record<string, string>>({});
+
+  const getJobTypeDisplay = (job: Job) => {
+    return job.job_type === 'csv_upload' ? 'CSV Upload' : 'Scraping';
+  };
+
+  const getJobTypeIcon = (job: Job) => {
+    return job.job_type === 'csv_upload' ? Upload : Database;
+  };
 
 
 
@@ -246,7 +254,7 @@ export function JobsSection({ businessId, sources, locations }: JobsSectionProps
 
           <button
             onClick={() => setIsAddModalOpen(true)}
-            disabled={sources.length === 0}
+            disabled={sources.length === 0 && !businessId} // Remove sources requirement for CSV uploads
             className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl flex-shrink-0"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -339,9 +347,9 @@ export function JobsSection({ businessId, sources, locations }: JobsSectionProps
         {sources.length === 0 && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
             <AlertTriangle className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
-            <h3 className="text-sm font-semibold text-yellow-800 mb-1">No Sources Available</h3>
+            <h3 className="text-sm font-semibold text-yellow-800 mb-1">Limited Job Options</h3>
             <p className="text-xs text-yellow-700">
-              You need to create at least one source before you can start scraping jobs.
+              You can upload CSV files, but need sources for scraping jobs.
             </p>
           </div>
         )}
@@ -454,13 +462,16 @@ export function JobsSection({ businessId, sources, locations }: JobsSectionProps
 
                       <td className="p-3">
                         <div className="flex items-center space-x-2">
-                          <Database className="h-4 w-4 text-gray-400" />
+                          {(() => {
+                            const IconComponent = getJobTypeIcon(job);
+                            return <IconComponent className="h-4 w-4 text-gray-400" />;
+                          })()}
                           <span className="text-gray-900 truncate max-w-32" title={source?.name}>
                             {source?.name || 'Unknown Source'}
                           </span>
                         </div>
                         <div className="text-xs text-gray-500 mt-1 capitalize">
-                          {job.job_type} • {job.source_type}
+                          {getJobTypeDisplay(job)} • {job.source_type}
                         </div>
                       </td>
 

@@ -1,4 +1,3 @@
-import os
 import random
 import re
 from datetime import datetime, timezone
@@ -70,7 +69,7 @@ class JobBase(BaseModel):
     user_id: PyObjectId
     business_id: PyObjectId
     location_id: PyObjectId | None = None
-    source_id: PyObjectId
+    source_id: PyObjectId | None = None  # Optional field for upload jobs
     source_type: str | None = None
 
     model_config = {
@@ -97,8 +96,8 @@ class JobBase(BaseModel):
 
     @field_validator("job_type")
     def validate_job_type(cls, v):
-        if v not in ["scraping", "analysis"]:
-            raise ValueError("job_type must be 'scraping' or 'analysis'")
+        if v not in settings.ALLOWED_JOB_TYPES:
+            raise ValueError(f"job_type must be one of {settings.ALLOWED_JOB_TYPES}")
         return v
 
     @model_validator(mode="after")
@@ -109,6 +108,9 @@ class JobBase(BaseModel):
 
         # URL and source_type validation only for scraping jobs
         if self.job_type == "scraping":
+            if not self.source_id:
+                raise ValueError("source_id must be set for scraping jobs")
+
             if not self.source_type:
                 raise ValueError("source_type must be set for scraping jobs")
             if self.source_type not in settings.ALLOWED_SOURCE_TYPES:
@@ -120,10 +122,10 @@ class JobBase(BaseModel):
 
             if self.source_type == "google":
                 self.validate_google_maps_url(self.url)
-            elif self.source_type == "csv":
-                self._validate_csv_file(self.url)
             else:
                 raise ValueError(f"Unsupported source_type: {self.source_type}")
+        elif self.job_type == "csv_upload":
+            pass  # No URL validation for CSV uploads
 
         return self  # required by Pydantic
 
@@ -143,14 +145,7 @@ class JobBase(BaseModel):
         # Method 3: Count !9m1!1b1 occurrences
         if v.count("!9m1!1b1") >= 2:
             return v
-
-    @staticmethod
-    def _validate_csv_file(v):
-        if not v.lower().endswith(".csv"):
-            raise ValueError("URL must point to a CSV file")
-        if not os.path.isfile(v):
-            raise ValueError("CSV file does not exist")
-        return v
+        raise ValueError
 
 
 class JobCreate(JobBase):

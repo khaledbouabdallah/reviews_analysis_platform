@@ -14,12 +14,13 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
 
     async def create(self, review_create: ReviewCreate) -> ReviewInDB:
         try:
-            await ValidatorHelper.get_source_or_raise(
-                sources_collection,
-                review_create.user_id,
-                review_create.business_id,
-                review_create.source_id,
-            )
+            if review_create.job_type == "scraping":
+                await ValidatorHelper.get_source_or_raise(
+                    sources_collection,
+                    review_create.user_id,
+                    review_create.business_id,
+                    review_create.source_id,
+                )
 
             result = await self.collection.insert_one(
                 review_create.model_dump(by_alias=True),

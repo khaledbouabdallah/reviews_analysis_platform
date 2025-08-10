@@ -2,8 +2,7 @@
 import { authService } from './auth';
 import { BusinessStorageService } from '@/services/businessStorage';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // Analysis schemas matching backend structure
 export interface LanguageAnalysis {
@@ -128,22 +127,21 @@ export class ReviewService {
     locations: Array<{id: string, name: string}>;
   } | null = null;
 
-
   private async fetchWithAuth(url: string, options: RequestInit = {}) {
     const headers = {
       'Content-Type': 'application/json',
-      ...authService.getAuthHeaders(),
       ...options.headers,
     };
 
     const response = await fetch(`${API_URL}${url}`, {
       ...options,
       headers,
+      credentials: 'include', 
     });
 
     if (!response.ok) {
       if (response.status === 401) {
-        authService.logout();
+        await authService.logout();
         window.location.href = '/login';
       }
       const errorData = await response.json().catch(() => ({}));
@@ -361,6 +359,7 @@ async getLocations(): Promise<Array<{id: string, name: string}>> {
     return [];
   }
 }
+
 private async loadEntitiesCache() {
   if (!this.entitiesCache) {
     const [sources, jobs, locations] = await Promise.all([
@@ -392,10 +391,6 @@ getLocationName(review: Review): string {
   return location?.name || `Location ${review.location_id.slice(-8)}`;
 }
 
-
-
 }
-
-
 
 export const reviewService = new ReviewService();

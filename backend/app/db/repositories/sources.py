@@ -16,7 +16,8 @@ class SourceRepository(BaseRepository[SourceCreate, SourceUpdate, SourceInDB]):
     async def create(self, business_create: SourceCreate) -> SourceInDB:
         try:
             await ValidatorHelper.get_user_or_raise(
-                users_collection, business_create.user_id,
+                users_collection,
+                business_create.user_id,
             )
             await ValidatorHelper.get_business_or_raise(
                 busniesses_collection,
@@ -51,7 +52,10 @@ class SourceRepository(BaseRepository[SourceCreate, SourceUpdate, SourceInDB]):
             raise RuntimeError(f"Unexpected error: {e!s}")
 
     async def get_by_user(
-        self, user_id: str, skip: int = 0, limit: int = 100,
+        self,
+        user_id: str,
+        skip: int = 0,
+        limit: int = 100,
     ) -> list[SourceInDB]:
         """Get all jobs of a user."""
         try:
@@ -70,7 +74,10 @@ class SourceRepository(BaseRepository[SourceCreate, SourceUpdate, SourceInDB]):
             raise RuntimeError("Database error")
 
     async def get_by_business(
-        self, business_id: str, skip: int = 0, limit: int = 100,
+        self,
+        business_id: str,
+        skip: int = 0,
+        limit: int = 100,
     ) -> list[SourceInDB]:
         """Get all jobs of a business."""
         try:
@@ -104,7 +111,6 @@ class SourceRepository(BaseRepository[SourceCreate, SourceUpdate, SourceInDB]):
         except PyMongoError as e:
             logger.error(f"Database error while deleting sources: {e!s}")
             raise RuntimeError("Database error while deleting sources")
-
 
     async def delete_by_location(self, location_id: str) -> bool:
         """Delete all sources of location."""

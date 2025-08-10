@@ -1,6 +1,5 @@
 // src/services/auth.ts
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
 console.log('🔍 API_URL in auth service:', API_URL);
 
 export interface LoginData {
@@ -21,8 +20,13 @@ export interface User {
   disabled: boolean;
 }
 
+interface LoginResponse {
+  message: string;
+  username: string;
+}
+
 export class AuthService {
-  async login(data: LoginData) {
+  async login(data: LoginData): Promise<LoginResponse> {
     const formData = new FormData();
     formData.append('username', data.username);
     formData.append('password', data.password);
@@ -30,6 +34,7 @@ export class AuthService {
     const response = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       body: formData,
+      credentials: 'include', // **REQUIRED: Include cookies**
     });
 
     if (!response.ok) {
@@ -37,12 +42,8 @@ export class AuthService {
       throw new Error(error.detail || 'Login failed');
     }
 
-    const result = await response.json();
-    
-    // TODO Store token in localStorage to cookie
-    localStorage.setItem('token', result.access_token);
-    
-    return result;
+    // **CHANGED: Return response data, no token storage needed**
+    return response.json();
   }
 
   async register(data: RegisterData) {
@@ -52,6 +53,7 @@ export class AuthService {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
+      credentials: 'include', // **REQUIRED: Include cookies**
     });
 
     if (!response.ok) {
@@ -63,20 +65,14 @@ export class AuthService {
   }
 
   async getCurrentUser(): Promise<User> {
-    const token = this.getToken();
-    if (!token) {
-      throw new Error('No token found');
-    }
-
     const response = await fetch(`${API_URL}/api/auth/me`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
+      credentials: 'include', // **REQUIRED: Cookies automatically sent**
     });
 
     if (!response.ok) {
       if (response.status === 401) {
-        this.logout();
+        // Token invalid/expired, but we can't manually clear httpOnly cookies
+        // The server should have already expired the cookie
       }
       throw new Error('Failed to fetch user profile');
     }
@@ -84,25 +80,28 @@ export class AuthService {
     return response.json();
   }
 
-  logout() {
-    localStorage.removeItem('token');
-  }
-
-  getToken() {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('token');
+  async logout() {
+    try {
+      await fetch(`${API_URL}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include', // **REQUIRED: Include cookies**
+      });
+    } catch (error) {
+      // Even if logout request fails, the user should be logged out on frontend
+      console.error('Logout request failed:', error);
     }
-    return null;
   }
 
-  isAuthenticated() {
-    return !!this.getToken();
+  async isAuthenticated(): Promise<boolean> {
+    try {
+      await this.getCurrentUser();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
-  getAuthHeaders(): Record<string, string> {
-    const token = this.getToken();
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
-  }
+
 }
 
 export const authService = new AuthService();
