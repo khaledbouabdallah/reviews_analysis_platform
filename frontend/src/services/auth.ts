@@ -1,6 +1,5 @@
 // src/services/auth.ts
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
 console.log('🔍 API_URL in auth service:', API_URL);
 
 export interface LoginData {
@@ -22,6 +21,30 @@ export interface User {
 }
 
 export class AuthService {
+  // **NEW: Cookie utility functions**
+  private setCookie(name: string, value: string, days: number = 7) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;secure;samesite=strict`;
+  }
+
+  private getCookie(name: string): string | null {
+    if (typeof window === 'undefined') return null;
+    
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for(let i = 0; i < ca.length; i++) {
+      let c = ca[i];
+      while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+      if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+  }
+
+  private deleteCookie(name: string) {
+    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:01 GMT;path=/;secure;samesite=strict`;
+  }
+
   async login(data: LoginData) {
     const formData = new FormData();
     formData.append('username', data.username);
@@ -30,6 +53,7 @@ export class AuthService {
     const response = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       body: formData,
+      credentials: 'include', // **NEW: Include cookies in request**
     });
 
     if (!response.ok) {
@@ -38,10 +62,8 @@ export class AuthService {
     }
 
     const result = await response.json();
-    
-    // TODO Store token in localStorage to cookie
-    localStorage.setItem('token', result.access_token);
-    
+    // **CHANGED: Store token in cookie instead of localStorage**
+    this.setCookie('token', result.access_token);
     return result;
   }
 
@@ -52,6 +74,7 @@ export class AuthService {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
+      credentials: 'include', // **NEW: Include cookies in request**
     });
 
     if (!response.ok) {
@@ -72,6 +95,7 @@ export class AuthService {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
+      credentials: 'include', // **NEW: Include cookies in request**
     });
 
     if (!response.ok) {
@@ -85,12 +109,14 @@ export class AuthService {
   }
 
   logout() {
-    localStorage.removeItem('token');
+    // **CHANGED: Delete cookie instead of localStorage**
+    this.deleteCookie('token');
   }
 
   getToken() {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('token');
+      // **CHANGED: Get token from cookie instead of localStorage**
+      return this.getCookie('token');
     }
     return null;
   }
