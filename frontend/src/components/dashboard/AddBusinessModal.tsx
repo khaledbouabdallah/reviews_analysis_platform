@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Building2, Loader2, Plus, Tag } from 'lucide-react';
+import { authService } from '@/services/auth'; // **NEW: Import authService for logout**
 
 interface AddBusinessModalProps {
   isOpen: boolean;
@@ -41,11 +42,7 @@ export function AddBusinessModal({ isOpen, onClose, onBusinessCreated }: AddBusi
 
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const token = localStorage.getItem('token');
-
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
+      // **REMOVED: localStorage token retrieval and validation - no longer needed**
 
       // Prepare the data to send
       const businessData = {
@@ -58,10 +55,18 @@ export function AddBusinessModal({ isOpen, onClose, onBusinessCreated }: AddBusi
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          // **REMOVED: Authorization header - cookies sent automatically**
         },
+        credentials: 'include', // **NEW: Required for httpOnly cookies**
         body: JSON.stringify(businessData),
       });
+
+      // **NEW: Handle 401 authentication errors**
+      if (response.status === 401) {
+        await authService.logout();
+        window.location.href = '/login';
+        return;
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -131,12 +136,12 @@ export function AddBusinessModal({ isOpen, onClose, onBusinessCreated }: AddBusi
         handleClose();
       }
     };
-    
+
     if (isOpen) {
       document.addEventListener('keydown', handleEsc);
       document.body.style.overflow = 'hidden';
     }
-    
+
     return () => {
       document.removeEventListener('keydown', handleEsc);
       document.body.style.overflow = 'unset';
@@ -148,21 +153,19 @@ export function AddBusinessModal({ isOpen, onClose, onBusinessCreated }: AddBusi
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop with subtle overlay */}
-      <div 
-        className={`fixed inset-0 transition-all duration-300 ease-out ${
-          isAnimating ? 'bg-black/20 backdrop-blur-[2px]' : 'bg-black/0'
-        }`}
+      <div
+        className={`fixed inset-0 transition-all duration-300 ease-out ${isAnimating ? 'bg-black/20 backdrop-blur-[2px]' : 'bg-black/0'
+          }`}
         onClick={handleClose}
       />
-      
+
       {/* Modal container */}
       <div className="flex min-h-full items-center justify-center p-4">
-        <div 
-          className={`relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 ease-out ${
-            isAnimating 
-              ? 'scale-100 opacity-100 translate-y-0' 
+        <div
+          className={`relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 ease-out ${isAnimating
+              ? 'scale-100 opacity-100 translate-y-0'
               : 'scale-95 opacity-0 translate-y-4'
-          }`}
+            }`}
           style={{
             background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.8)',
@@ -170,7 +173,7 @@ export function AddBusinessModal({ isOpen, onClose, onBusinessCreated }: AddBusi
         >
           {/* Decorative gradient border */}
           <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-3xl opacity-20 blur-sm" />
-          
+
           <div className="relative bg-white rounded-3xl p-8">
             {/* Header with icon animation */}
             <div className="flex items-center justify-between mb-8">
@@ -188,7 +191,7 @@ export function AddBusinessModal({ isOpen, onClose, onBusinessCreated }: AddBusi
                   <p className="text-sm text-gray-500 mt-1">Set up your business for review analysis</p>
                 </div>
               </div>
-              
+
               <button
                 onClick={handleClose}
                 disabled={loading}
@@ -249,7 +252,7 @@ export function AddBusinessModal({ isOpen, onClose, onBusinessCreated }: AddBusi
                 <label className="block text-sm font-semibold text-gray-700">
                   Review Segments
                 </label>
-                
+
                 {/* Segments Input */}
                 <div className="flex space-x-2">
                   <div className="relative flex-1">
@@ -350,8 +353,8 @@ export function AddBusinessModal({ isOpen, onClose, onBusinessCreated }: AddBusi
                   <h4 className="text-sm font-bold text-blue-800">What happens next?</h4>
                 </div>
                 <p className="text-xs text-blue-700 leading-relaxed">
-                  ✨ Your business dashboard will be ready instantly<br/>
-                  🎯 Add locations and start collecting reviews<br/>
+                  ✨ Your business dashboard will be ready instantly<br />
+                  🎯 Add locations and start collecting reviews<br />
                   📊 AI will analyze reviews using your custom segments
                 </p>
               </div>

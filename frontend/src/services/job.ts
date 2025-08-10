@@ -159,6 +159,8 @@ export class JobService {
 
   // CRUD Operations
   async createJob(jobData: JobCreate): Promise<JobCreateResponse> {
+    // log some debug information
+    console.log('Creating job with data:', jobData);
     try {
       return await this.fetchWithAuth('/api/jobs/', {
         method: 'POST',

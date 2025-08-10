@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { Edit, MapPin, Database, Play, Plus, X } from 'lucide-react';
+import { authService } from '@/services/auth'; // **NEW: Import authService for logout**
 
 interface Business {
   id: string;
@@ -62,16 +63,24 @@ export function BusinessHeader({
   const handleBusinessUpdate = async () => {
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const token = localStorage.getItem('token');
+      // **REMOVED: localStorage.getItem('token') - no longer needed**
 
       const response = await fetch(`${API_URL}/api/businesses/${business.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          // **REMOVED: Authorization header - cookies sent automatically**
         },
+        credentials: 'include', // **NEW: Required for httpOnly cookies**
         body: JSON.stringify(businessForm),
       });
+
+      // **NEW: Handle 401 authentication errors**
+      if (response.status === 401) {
+        await authService.logout();
+        window.location.href = '/login';
+        return;
+      }
 
       if (!response.ok) throw new Error('Failed to update business');
 

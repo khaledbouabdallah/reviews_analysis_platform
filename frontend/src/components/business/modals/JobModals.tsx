@@ -77,6 +77,15 @@ export function AddJobModal({ isOpen, onClose, onJobCreated, businessId, sources
                 console.log('CSV job created:', result);
             }
 
+            else {
+                if (!formData.source_id) {
+                    throw new Error('Please select a source to scrape');
+                }
+
+                const result = await jobService.createJob(formData);
+                console.log('Scraping job created:', result);
+            }
+
             onJobCreated();
             handleClose();
         } catch (err: any) {
