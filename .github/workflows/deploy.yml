@@ -26,6 +26,7 @@ permissions:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  PROJECT_NUMBER: ${{ secrets.GCP_PROJECT_NUMBER }}
   REGION: europe-west1 # Change to your preferred region
 
 jobs:
@@ -46,7 +47,7 @@ jobs:
         run: |
           # Install backend dependencies
           pip install -r backend/requirements.txt
-          # Install dev dependencies  
+          # Install dev dependencies
           pip install -r requirements-dev.txt
           # Verify installation
           python -c "
@@ -181,7 +182,7 @@ jobs:
             --region $REGION \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars="SCRAPER_SERVICE_URL=https://reviews-scraper-$PROJECT_ID.$REGION.run.app, MONGODB_URI=${{ secrets.MONGODB_URI }},REDIS_URL=${{ secrets.REDIS_URL }},GIMINI_API_KEY=${{ secrets.GIMINI_API_KEY }},GIMINI_MODEL_NAME=${{ secrets.GIMINI_MODEL_NAME }}" \
+            --set-env-vars="SCRAPER_SERVICE_URL=https://reviews-scraper-$PROJECT_NUMBER.$REGION.run.app, MONGODB_URI=${{ secrets.MONGODB_URI }},REDIS_URL=${{ secrets.REDIS_URL }},GIMINI_API_KEY=${{ secrets.GIMINI_API_KEY }},GIMINI_MODEL_NAME=${{ secrets.GIMINI_MODEL_NAME }}" \
             --memory 1Gi \
             --cpu 1 \
             --min-instances 0 \
@@ -195,7 +196,7 @@ jobs:
             --region $REGION \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars="NEXT_PUBLIC_API_URL=https://reviews-backend-$PROJECT_ID.$REGION.run.app," \
+            --set-env-vars="NEXT_PUBLIC_API_URL=https://reviews-backend-$PROJECT_NUMBER.$REGION.run.app," \
             --memory 512Mi \
             --cpu 1 \
             --min-instances 0 \
