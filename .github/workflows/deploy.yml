@@ -46,7 +46,7 @@ jobs:
         run: |
           # Install backend dependencies
           pip install -r backend/requirements.txt
-          # Install dev dependencies  
+          # Install dev dependencies
           pip install -r requirements-dev.txt
           # Verify installation
           python -c "
@@ -190,6 +190,10 @@ jobs:
       - name: Deploy frontend to Cloud Run
         if: inputs.service == 'frontend' || inputs.service == 'all'
         run: |
+          echo "Deploying frontend to Cloud Run..."
+          # print environment variables for debugging
+          echo "REGION: $REGION"
+          echo "PROJECT_ID: $PROJECT_ID"
           gcloud run deploy reviews-frontend \
             --image $REGION-docker.pkg.dev/$PROJECT_ID/reviews-app/frontend:$GITHUB_SHA \
             --region $REGION \
