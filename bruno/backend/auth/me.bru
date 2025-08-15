@@ -1,0 +1,23 @@
+meta {
+  name: me
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/api/auth/login
+  body: multipartForm
+  auth: inherit
+}
+
+body:json {
+  {
+          "username": "testuser3",
+          "password": "password123"
+  }
+}
+
+body:multipart-form {
+  username: testusername
+  password: testtest
+}

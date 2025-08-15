@@ -13,6 +13,7 @@ import '@/styles/business-page.css';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const [authLoading, setAuthLoading] = useState(true); // **NEW: Auth loading state**
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
     totalBusinesses: 0,
@@ -27,17 +28,38 @@ export default function DashboardPage() {
   });
 
   useEffect(() => {
-    // Check authentication
-    if (!authService.isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
+    console.log('🚀 Dashboard useEffect triggered');
 
-    loadDashboardData();
+    // **CHANGED: Make authentication check async with detailed logging**
+    const checkAuthAndLoad = async () => {
+      try {
+        console.log('🔍 Starting authentication check...');
+
+        const isAuthenticated = await authService.isAuthenticated();
+        console.log('🔍 Authentication result:', isAuthenticated);
+
+        if (!isAuthenticated) {
+          console.log('❌ User not authenticated, redirecting to login');
+          router.push('/login');
+          return;
+        }
+
+        console.log('✅ User authenticated, proceeding to load dashboard');
+        setAuthLoading(false); // **NEW: Mark auth complete**
+        await loadDashboardData();
+
+      } catch (error) {
+        console.error('💥 Auth check failed with error:', error);
+        router.push('/login');
+      }
+    };
+
+    checkAuthAndLoad();
   }, [router]);
 
   const loadDashboardData = async () => {
     try {
+      console.log('📊 Loading dashboard data...');
       setLoading(true);
 
       // Load all dashboard data in parallel
@@ -48,17 +70,33 @@ export default function DashboardPage() {
         dashboardService.getSystemStatus(),
       ]);
 
+      console.log('📊 Dashboard data loaded successfully');
       setStats(statsData);
       setBusinesses(businessesData);
       setActivities(activitiesData);
       setSystemStatus(statusData);
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      console.error('💥 Error loading dashboard data:', error);
       // If there's an auth error, the service will redirect to login
     } finally {
       setLoading(false);
     }
   };
+
+  // **NEW: Show loading during auth check to prevent flash**
+  if (authLoading) {
+    console.log('⏳ Showing auth loading screen');
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  console.log('🎨 Rendering dashboard page');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
