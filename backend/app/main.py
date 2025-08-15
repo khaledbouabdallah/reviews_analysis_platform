@@ -42,7 +42,10 @@ if settings.ENVIRONMENT == "development":
     ]
 elif settings.ENVIRONMENT == "production":
     allow_origins = [
-        settings.FRONTEND_URL,  # prod Next.js frontend
+        "https://reviewoli.com",
+        "https://www.reviewoli.com",
+        # Keep this temporarily during transition:
+        "https://reviews-frontend-317538160577.europe-west1.run.app",
     ]
 
 # Add CORS middleware
