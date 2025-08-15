@@ -36,7 +36,10 @@ app = FastAPI(
 
 
 if settings.ENVIRONMENT == "development":
-    allow_origins = ["http://localhost:3000"]  # local Next.js dev server
+    allow_origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
 elif settings.ENVIRONMENT == "production":
     allow_origins = [
         settings.FRONTEND_URL,  # prod Next.js frontend
