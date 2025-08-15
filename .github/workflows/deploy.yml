@@ -155,10 +155,10 @@ jobs:
         run: |
           docker build \
             --target production \
+            --build-arg NEXT_PUBLIC_API_URL=https://reviews-backend-$PROJECT_NUMBER.$REGION.run.app \
             --tag $REGION-docker.pkg.dev/$PROJECT_ID/reviews-app/frontend:$GITHUB_SHA \
             --tag $REGION-docker.pkg.dev/$PROJECT_ID/reviews-app/frontend:latest \
             ./frontend
-
           docker push $REGION-docker.pkg.dev/$PROJECT_ID/reviews-app/frontend:$GITHUB_SHA
           docker push $REGION-docker.pkg.dev/$PROJECT_ID/reviews-app/frontend:latest
 

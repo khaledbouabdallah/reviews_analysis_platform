@@ -50,7 +50,6 @@ services:
       - GIMINI_API_KEY=${GIMINI_API_KEY}
       - GIMINI_MODEL_NAME=${GIMINI_MODEL_NAME}
       - ENVIRONMENT=development
-      - FRONTEND_URL=http://localhost:3000
       - PYTHONUNBUFFERED=1
     volumes:
       - ./backend/app:/app/app
