@@ -217,7 +217,10 @@ jobs:
             --region $REGION \
             --platform managed \
             --no-allow-unauthenticated \
-            --set-env-vars="MONGODB_URI=${{ secrets.MONGODB_URI }},REDIS_URL=${{ secrets.REDIS_URL }},CLOUD_RUN_DEPLOYMENT=true" \
+            --set-env-vars="MONGODB_URI=${{ secrets.MONGODB_URI }},\
+            REDIS_URL=${{ secrets.REDIS_URL }},\
+            ENVIRONMENT=production,\
+            MONGODB_DB_NAME=${{ secrets.MONGODB_DB_NAME }}" \
             --memory 2Gi \
             --cpu 2 \
             --min-instances 0 \

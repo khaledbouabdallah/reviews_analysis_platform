@@ -2,7 +2,8 @@ import logging
 import os
 from pathlib import Path
 
-from pydantic_settings import BaseSettings, ValidationError
+from pydantic import ValidationError
+from pydantic_settings import BaseSettings
 
 logger = logging.getLogger("uvicorn")
 APP_DIR = os.getcwd()
