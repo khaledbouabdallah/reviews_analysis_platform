@@ -9,6 +9,7 @@ from typing import Any
 
 from api.routers import businesses, jobs, locations, review_analyzer, reviews, sources
 from api.routers.auth import router as auth_router
+from core.config import settings
 from db.mongodb import init_indexes
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -34,10 +35,17 @@ app = FastAPI(
 )
 
 
+if settings.ENVIRONMENT == "development":
+    allow_origins = ["http://localhost:3000"]  # local Next.js dev server
+elif settings.ENVIRONMENT == "production":
+    allow_origins = [
+        settings.FRONTEND_URL,  # prod Next.js frontend
+    ]
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify actual origins
+    allow_origins=allow_origins,  # In production, specify actual origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
