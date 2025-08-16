@@ -202,14 +202,14 @@ jobs:
             --min-instances 0 \
             --max-instances 5
 
-      - name: Deploy scraper as Cloud Run Service (Always Running)
+      - name: Deploy scraper as Cloud Run Service
         if: inputs.service == 'scraper' || inputs.service == 'all'
         run: |
           gcloud run deploy reviews-scraper \
             --image $REGION-docker.pkg.dev/$PROJECT_ID/reviews-app/scraper:$GITHUB_SHA \
             --region $REGION \
             --platform managed \
-            --no-allow-unauthenticated \
+            --allow-unauthenticated \  # **CHANGED: Remove 'no-'**
             --set-env-vars="MONGODB_URI=${{ secrets.MONGODB_URI }},REDIS_URL=${{ secrets.REDIS_URL }},ENVIRONMENT=production,MONGODB_DB_NAME=${{ secrets.MONGODB_DB_NAME }}" \
             --memory 2Gi \
             --cpu 2 \
