@@ -14,8 +14,9 @@ venv*/
 *.csv
 *.pkl
 
-# temporary ignore for now
-chromedriver
+# ignore notebooks
+*.ipynb
+notebooks/
 
 # Ignore compiled files
 *.pyc
