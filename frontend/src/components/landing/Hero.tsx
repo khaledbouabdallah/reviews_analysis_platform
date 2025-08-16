@@ -53,7 +53,7 @@ const Hero = () => {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in-up [animation-delay:0.6s]">
             <Button size="lg" className="btn-hero text-lg px-8 py-4 group" asChild>
-              <Link to="/dashboard">
+              <Link to="/signup">
                 Start Free Trial
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>

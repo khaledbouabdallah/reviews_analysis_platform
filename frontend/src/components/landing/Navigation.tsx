@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Menu, X, Star } from "lucide-react";
+import { Menu, X, Star, Link } from "lucide-react";
 import { useState } from "react";
 
 const Navigation = () => {
@@ -41,11 +41,11 @@ const Navigation = () => {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-4">
-            <Button variant="ghost" className="text-foreground hover:text-primary">
-              Sign In
+            <Button variant="ghost" className="text-foreground hover:text-primary" asChild>
+              <Link to="/signin">Sign In</Link>
             </Button>
-            <Button className="btn-hero">
-              Start Free Trial
+            <Button className="btn-hero" asChild>
+              <Link to="/signup">Start Free Trial</Link>
             </Button>
           </div>
 
@@ -75,11 +75,11 @@ const Navigation = () => {
                 </a>
               ))}
               <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-border/50">
-                <Button variant="ghost" className="justify-start">
-                  Sign In
+                <Button variant="ghost" className="justify-start" asChild>
+                  <Link to="/signin">Sign In</Link>
                 </Button>
-                <Button className="btn-hero justify-start">
-                  Start Free Trial
+                <Button className="btn-hero justify-start" asChild>
+                  <Link to="/signup">Start Free Trial</Link>
                 </Button>
               </div>
             </div>

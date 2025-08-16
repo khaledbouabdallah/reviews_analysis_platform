@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, CheckCircle, Star, Zap } from "lucide-react";
+import { ArrowRight, CheckCircle, Link, Star, Zap } from "lucide-react";
 
 const CallToAction = () => {
   const benefits = [
@@ -50,9 +50,11 @@ const CallToAction = () => {
 
               {/* CTA Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
-                <Button size="lg" className="btn-hero text-lg px-10 py-4 group">
-                  Start Free Trial
-                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                <Button size="lg" className="btn-hero text-lg px-10 py-4 group" asChild>
+                  <Link to="/signup">
+                    Start Free Trial
+                    <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
                 </Button>
                 <Button
                   size="lg"

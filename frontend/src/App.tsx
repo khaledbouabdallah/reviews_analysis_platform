@@ -4,6 +4,15 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
+import SignIn from "./pages/SignIn";
+import SignUp from "./pages/SignUp";
+// import ForgotPassword from "./pages/ForgotPassword";
+// import ResetPassword from "./pages/ResetPassword";
+// import VerifyEmail from "./pages/VerifyEmail";
+// import VerifyEmailSent from "./pages/VerifyEmailSent";
+// import ChangePassword from "./pages/ChangePassword";
+// import ChangeEmail from "./pages/ChangeEmail";
+// import UpdateProfile from "./pages/UpdateProfile";
 import Dashboard from "./pages/Dashboard";
 import DashboardHome from "./pages/DashboardHome";
 import Businesses from "./pages/Businesses";
@@ -19,6 +28,8 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/signin" element={<SignIn />} />
+          <Route path="/signup" element={<SignUp />} />
           <Route path="/dashboard" element={<Dashboard />}>
             <Route index element={<DashboardHome />} />
             <Route path="businesses" element={<Businesses />} />
