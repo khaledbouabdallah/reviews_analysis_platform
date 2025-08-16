@@ -14,8 +14,8 @@ def validate_google_review(data):
 
 
 def validate_csv_review(data):
-    if "text" not in data:
-        raise ValueError("CSV review must contain at least 'text' field")
+    if "original_text" not in data:
+        raise ValueError("CSV review must contain at least 'original_text' field")
     return data
 
 
@@ -25,26 +25,17 @@ SOURCE_VALIDATORS = {
 }
 
 
-class ProcessedData(BaseModel):
-    cleaned_text: str | None = None  # Cleaned version of review text
-    translated_text: str | None = None  # Translated version if applicable
-    detected_language: str | None = None  # Language code (en, fr, es, etc.)
-    sentiment: dict | None = None  # Full sentiment analysis results
-    processing_status: str = "pending"  # pending, completed, failed
-    processed_at: datetime | None = None  # When processing occurred
-    error_message: str | None = None  # Error if processing failed
-
-
 class ReviewBase(BaseModel):
     user_id: PyObjectId
     business_id: PyObjectId
     location_id: PyObjectId | None = None
-    source_id: PyObjectId
+    source_id: PyObjectId | None = None  # Optional field for upload jobs
     job_id: PyObjectId
     data: dict
     source_type: str
+    job_type: str
     created_at: datetime = Field(default_factory=lambda: datetime.now())
-    analyzed_data: ProcessedData | None = Field(default=None)
+    analyzed_data: dict | None = Field(default=None)
 
     @model_validator(mode="after")
     def validate_data_based_on_source(self):
@@ -65,6 +56,12 @@ class ReviewBase(BaseModel):
             raise ValueError(
                 f"Invalid source_type. Allowed: {settings.ALLOWED_SOURCE_TYPES}",
             )
+        return v
+
+    @field_validator("job_type")
+    def validate_job_type(cls, v):
+        if v not in settings.ALLOWED_JOB_TYPES:
+            raise ValueError(f"job_type must be one of {settings.ALLOWED_JOB_TYPES}")
         return v
 
 

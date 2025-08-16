@@ -15,7 +15,6 @@ class Settings(BaseSettings):
     MONGODB_DB_NAME: str = "reviews_prod"
     GIMINI_API_KEY: str
     ENVIRONMENT: str
-    FRONTEND_URL: str
     GIMINI_MODEL_NAME: str
     ALLOWED_SOURCE_TYPES: list[str] = ["google", "csv"]
     ALLOWED_SCRAPING_TYPES: list[str] = ["google"]

@@ -1,5 +1,5 @@
 // src/services/auth.ts
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 console.log('🔍 API_URL in auth service:', API_URL);
 
 export interface LoginData {

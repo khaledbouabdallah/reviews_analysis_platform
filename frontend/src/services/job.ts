@@ -1,7 +1,7 @@
 // src/services/job.ts
 import { authService } from './auth';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export type JobStatus = 'pending' | 'running' | 'saving' | 'completed' | 'failed' | 'cancelled' | 'partially_completed';
 export type SourceType = 'google' | 'csv';

@@ -54,15 +54,26 @@ async def login_for_access_token(
         expires_delta=access_token_expires,
     )
 
-    # **NEW: Set httpOnly cookie instead of returning token**
-    response.set_cookie(
-        key="token",
-        value=access_token,
-        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Convert to seconds
-        httponly=True,
-        secure=True,  # Only send over HTTPS in production
-        samesite="strict",  # CSRF protection
-    )
+    if settings.ENVIRONMENT == "development":
+        # **NEW: Set httpOnly cookie instead of returning token**
+        response.set_cookie(
+            key="token",
+            value=access_token,
+            max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Convert to seconds
+            httponly=True,
+            secure=True,  # Only send over HTTPS in production
+            samesite="strict",  # CSRF protection
+        )
+    elif settings.ENVIRONMENT == "production":
+        # **NEW: Set httpOnly cookie instead of returning token**
+        response.set_cookie(
+            key="token",
+            value=access_token,
+            max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Convert to seconds
+            httponly=True,
+            secure=True,  # Only send over HTTPS in production
+            samesite="none",  # CSRF protection
+        )
 
     logger.info(f"User {user.username} logged in successfully")
 

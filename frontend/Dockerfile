@@ -31,17 +31,20 @@ RUN npm ci --only=production --legacy-peer-deps && npm cache clean --force
 
 # Build stage
 FROM node:18-alpine as builder
-
 WORKDIR /app
+
+# Add this line to accept the build argument
+ARG NEXT_PUBLIC_API_URL
 
 # Copy package files
 COPY package*.json ./
-
 # Install all dependencies (including devDependencies for build) with legacy peer deps
 RUN npm ci --legacy-peer-deps
-
 # Copy source code
 COPY . .
+
+# Set environment variable for Next.js build
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 # Build the application
 RUN npm run build
