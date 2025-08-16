@@ -209,7 +209,7 @@ jobs:
             --image $REGION-docker.pkg.dev/$PROJECT_ID/reviews-app/scraper:$GITHUB_SHA \
             --region $REGION \
             --platform managed \
-            --allow-unauthenticated \  # **CHANGED: Remove 'no-'**
+            --allow-unauthenticated \
             --set-env-vars="MONGODB_URI=${{ secrets.MONGODB_URI }},REDIS_URL=${{ secrets.REDIS_URL }},ENVIRONMENT=production,MONGODB_DB_NAME=${{ secrets.MONGODB_DB_NAME }}" \
             --memory 2Gi \
             --cpu 2 \
