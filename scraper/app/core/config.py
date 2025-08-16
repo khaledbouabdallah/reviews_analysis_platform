@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     MONGODB_URI: str
     MONGODB_DB_NAME: str
     ALLOWED_SOURCE_TYPES: list[str] = ["google", "csv"]
+    ALLOWED_SCRAPING_TYPES: list[str] = ["google"]
+    ALLOWED_JOB_TYPES: list[str] = ["scraping", "analysis", "csv_upload"]
     ALLOWED_JOB_STATUSES: list[str] = [
         "pending",
         "running",
