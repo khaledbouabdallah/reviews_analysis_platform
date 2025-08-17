@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, CheckCircle, Link, Star, Zap } from "lucide-react";
+import { ArrowRight, CheckCircle, Star, Zap } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const CallToAction = () => {
   const benefits = [

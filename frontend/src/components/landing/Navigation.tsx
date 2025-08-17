@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Menu, X, Star, Link } from "lucide-react";
+import { Menu, X, Star } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useState } from "react";
 
 const Navigation = () => {
@@ -22,7 +23,7 @@ const Navigation = () => {
               <Star className="w-6 h-6 text-white fill-current" />
             </div>
             <span className="text-2xl font-bold text-foreground">
-              Review<span className="text-primary">oly</span>
+              Review<span className="text-accent">oly</span>
             </span>
           </div>
 

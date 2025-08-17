@@ -6,17 +6,12 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
-// import ForgotPassword from "./pages/ForgotPassword";
-// import ResetPassword from "./pages/ResetPassword";
-// import VerifyEmail from "./pages/VerifyEmail";
-// import VerifyEmailSent from "./pages/VerifyEmailSent";
-// import ChangePassword from "./pages/ChangePassword";
-// import ChangeEmail from "./pages/ChangeEmail";
-// import UpdateProfile from "./pages/UpdateProfile";
 import Dashboard from "./pages/Dashboard";
 import DashboardHome from "./pages/DashboardHome";
 import Businesses from "./pages/Businesses";
 import NotFound from "./pages/NotFound";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { AuthRedirect } from "./components/auth/AuthRedirect";
 
 const queryClient = new QueryClient();
 
@@ -28,9 +23,25 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/dashboard" element={<Dashboard />}>
+
+          {/* Auth routes - redirect to dashboard if already logged in */}
+          <Route path="/signin" element={
+            <AuthRedirect>
+              <SignIn />
+            </AuthRedirect>
+          } />
+          <Route path="/signup" element={
+            <AuthRedirect>
+              <SignUp />
+            </AuthRedirect>
+          } />
+
+          {/* Protected dashboard routes - require authentication */}
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }>
             <Route index element={<DashboardHome />} />
             <Route path="businesses" element={<Businesses />} />
             <Route path="analytics" element={<div className="p-6">Analytics Page (Coming Soon)</div>} />
@@ -38,7 +49,8 @@ const App = () => (
             <Route path="jobs" element={<div className="p-6">Jobs Page (Coming Soon)</div>} />
             <Route path="settings" element={<div className="p-6">Settings Page (Coming Soon)</div>} />
           </Route>
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+
+          {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

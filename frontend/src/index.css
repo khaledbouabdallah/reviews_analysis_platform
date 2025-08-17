@@ -142,7 +142,7 @@
 
   /* Animated Background */
   .hero-bg {
-    @apply bg-[var(--gradient-hero)];
+    background: var(--gradient-hero);
   }
 
   /* Glow Effects */
