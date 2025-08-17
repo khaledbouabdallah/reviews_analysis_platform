@@ -5,6 +5,7 @@ import { Star, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AuthHeader } from '@/components/auth/AuthHeader';
 import { authService } from '@/services/auth';
 
 export function LoginForm() {
@@ -50,29 +51,9 @@ export function LoginForm() {
       </div>
 
       {/* Header with navigation */}
-      <div className="relative z-10 p-6 ">
-        <div className="flex items-center justify-between">
-          {/* Back to landing */}
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/')}
-            className="group flex items-center text-white/80 hover:text-white transition-all duration-300 hover:bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/20"
-          >
-            <ArrowLeft className="h-5 w-5 mr-2 group-hover:-translate-x-1 transition-transform duration-300" />
-            <span className="font-medium">Back to Home</span>
-          </Button>
+      <AuthHeader />
 
-          {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-primary to-accent">
-              <Star className="w-6 h-6 text-white fill-current" />
-            </div>
-            <span className="text-2xl font-bold text-white">
-              Review<span className="text-accent">oly</span>
-            </span>
-          </div>
-        </div>
-      </div>
+      {/* Main content */}
 
       <div className="relative z-10 flex items-center justify-center min-h-screen px-4 sm:px-6 lg:px-8 -mt-20">
         <div className="max-w-md w-full space-y-8">
