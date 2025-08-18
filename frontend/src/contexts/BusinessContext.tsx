@@ -1,28 +1,18 @@
 // src/contexts/BusinessContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-
-export interface Business {
-    id: string;
-    name: string;
-    // TODO: Add other business properties as needed
-}
+import { businessService, Business } from '../services/business';
 
 interface BusinessContextType {
     selectedBusiness: Business | null;
     businesses: Business[];
     setSelectedBusiness: (business: Business | null) => void;
+    refreshBusinesses: () => Promise<void>;
     isLoading: boolean;
+    error: string | null;
     hasBusinesses: boolean;
 }
 
 const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
-
-// TODO: Replace with real API calls
-const FAKE_BUSINESSES: Business[] = [
-    { id: '1', name: 'Downtown Restaurant' },
-    { id: '2', name: 'Tech Solutions Inc' },
-    { id: '3', name: 'Coffee Shop Chain' },
-];
 
 interface BusinessProviderProps {
     children: ReactNode;
@@ -32,42 +22,46 @@ export function BusinessProvider({ children }: BusinessProviderProps) {
     const [businesses, setBusinesses] = useState<Business[]>([]);
     const [selectedBusiness, setSelectedBusinessState] = useState<Business | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Load businesses from API on mount
-    useEffect(() => {
-        const fetchBusinesses = async () => {
-            try {
-                setIsLoading(true);
-                // TODO: Replace with real API call
-                // const response = await fetch('/api/businesses');
-                // const businessData = await response.json();
+    // **CHANGED: Use businessService instead of fake data**
+    const fetchBusinesses = async () => {
+        try {
+            setIsLoading(true);
+            setError(null);
+            const businessData = await businessService.getBusinesses();
+            setBusinesses(businessData);
 
-                // Simulate API delay
-                await new Promise(resolve => setTimeout(resolve, 500));
-                setBusinesses(FAKE_BUSINESSES);
-
-                // Restore last selected business from localStorage
-                const savedBusinessId = localStorage.getItem('selectedBusinessId');
-                if (savedBusinessId && FAKE_BUSINESSES.length > 0) {
-                    const savedBusiness = FAKE_BUSINESSES.find(b => b.id === savedBusinessId);
-                    if (savedBusiness) {
-                        setSelectedBusinessState(savedBusiness);
-                    } else {
-                        // If saved business not found, select first business
-                        setSelectedBusinessState(FAKE_BUSINESSES[0]);
-                    }
-                } else if (FAKE_BUSINESSES.length > 0) {
-                    // No saved selection, select first business
-                    setSelectedBusinessState(FAKE_BUSINESSES[0]);
+            // Restore last selected business from localStorage
+            const savedBusinessId = localStorage.getItem('selectedBusinessId');
+            if (savedBusinessId && businessData.length > 0) {
+                const savedBusiness = businessData.find(b => b.id === savedBusinessId);
+                if (savedBusiness) {
+                    setSelectedBusinessState(savedBusiness);
+                } else {
+                    // If saved business not found, select first business
+                    setSelectedBusinessState(businessData[0]);
                 }
-            } catch (error) {
-                console.error('Failed to fetch businesses:', error);
-                setBusinesses([]);
-            } finally {
-                setIsLoading(false);
+            } else if (businessData.length > 0) {
+                // No saved selection, select first business
+                setSelectedBusinessState(businessData[0]);
             }
-        };
+        } catch (err) {
+            console.error('Failed to fetch businesses:', err);
+            setError(err instanceof Error ? err.message : 'Failed to fetch businesses');
+            setBusinesses([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
+    // **CHANGED: Expose refresh function for external use**
+    const refreshBusinesses = async () => {
+        await fetchBusinesses();
+    };
+
+    // Load businesses on mount
+    useEffect(() => {
         fetchBusinesses();
     }, []);
 
@@ -88,7 +82,9 @@ export function BusinessProvider({ children }: BusinessProviderProps) {
             selectedBusiness,
             businesses,
             setSelectedBusiness,
+            refreshBusinesses, // **NEW: Allow external refresh**
             isLoading,
+            error, // **NEW: Expose error state**
             hasBusinesses
         }}>
             {children}

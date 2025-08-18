@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,7 @@ import {
   Eye,
   Edit,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -37,58 +38,131 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-const mockBusinesses = [
-  {
-    id: 1,
-    name: "Downtown Restaurant",
-    category: "Restaurant",
-    locations: 3,
-    totalReviews: 456,
-    avgRating: 4.2,
-    status: "active",
-    lastScraped: "2 hours ago"
-  },
-  {
-    id: 2,
-    name: "Tech Solutions Inc",
-    category: "Technology",
-    locations: 5,
-    totalReviews: 234,
-    avgRating: 4.5,
-    status: "active",
-    lastScraped: "1 day ago"
-  },
-  {
-    id: 3,
-    name: "Coffee Shop Chain",
-    category: "Food & Beverage",
-    locations: 12,
-    totalReviews: 1023,
-    avgRating: 4.1,
-    status: "active",
-    lastScraped: "3 hours ago"
-  },
-  {
-    id: 4,
-    name: "Beauty Salon",
-    category: "Beauty & Wellness",
-    locations: 2,
-    totalReviews: 189,
-    avgRating: 4.7,
-    status: "inactive",
-    lastScraped: "1 week ago"
-  },
-];
+import { businessService, Business, BusinessWithStats, CreateBusinessData } from "../services/business";
+import { useBusiness } from "../contexts/BusinessContext";
 
 const Businesses = () => {
+  // **CHANGED: Get businesses from context instead of local state**
+  const { refreshBusinesses } = useBusiness();
+
+  // **NEW: Local state for page-specific functionality**
+  const [businesses, setBusinesses] = useState<BusinessWithStats[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [businesses] = useState(mockBusinesses);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // **NEW: Form state**
+  const [formData, setFormData] = useState<CreateBusinessData>({
+    name: "",
+    description: "",
+    segments: [],
+  });
+
+  // **NEW: Load businesses independently from context**
+  const loadBusinesses = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await businessService.getBusinessesWithStats();
+      setBusinesses(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load businesses');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadBusinesses();
+  }, []);
+
+  // **NEW: Create business handler**
+  const handleCreateBusiness = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setIsSubmitting(true);
+      await businessService.createBusiness(formData);
+      await loadBusinesses(); // **Refresh local data**
+      await refreshBusinesses(); // **Refresh context data**
+      setIsCreateDialogOpen(false);
+      setFormData({ name: "", description: "", segments: [] });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create business');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // **NEW: Update business handler**
+  const handleUpdateBusiness = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBusiness) return;
+
+    try {
+      setIsSubmitting(true);
+      await businessService.updateBusiness(editingBusiness.id, formData);
+      await loadBusinesses();
+      await refreshBusinesses();
+      setIsEditDialogOpen(false);
+      setEditingBusiness(null);
+      setFormData({ name: "", description: "", segments: [] });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update business');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // **NEW: Delete business handler**
+  const handleDeleteBusiness = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this business?')) return;
+
+    try {
+      await businessService.deleteBusiness(id);
+      await loadBusinesses();
+      await refreshBusinesses();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete business');
+    }
+  };
+
+  // **NEW: Edit business handler**
+  const handleEditBusiness = (business: Business) => {
+    setEditingBusiness(business);
+    setFormData({
+      name: business.name,
+      description: business.description || "",
+      segments: business.segments || [],
+    });
+    setIsEditDialogOpen(true);
+  };
 
   const filteredBusinesses = businesses.filter(business =>
-    business.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    business.category.toLowerCase().includes(searchTerm.toLowerCase())
+    business.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center text-red-600 p-4">
+        Error: {error}
+        <Button onClick={loadBusinesses} className="ml-4">
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -100,7 +174,7 @@ const Businesses = () => {
             Manage your businesses and track their review performance
           </p>
         </div>
-        <Dialog>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-gradient-to-r from-primary to-primary-glow hover:from-primary/90 hover:to-primary-glow/90">
               <Plus className="h-4 w-4 mr-2" />
@@ -114,21 +188,29 @@ const Businesses = () => {
                 Create a new business to start collecting and analyzing reviews.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <form onSubmit={handleCreateBusiness} className="space-y-4 py-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Business Name</label>
-                <Input placeholder="Enter business name" />
+                <Input
+                  placeholder="Enter business name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Category</label>
-                <Input placeholder="e.g., Restaurant, Retail, Service" />
+                <label className="text-sm font-medium">Description</label>
+                <Input
+                  placeholder="Enter business description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Website URL</label>
-                <Input placeholder="https://example.com" />
-              </div>
-              <Button className="w-full">Create Business</Button>
-            </div>
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Create Business
+              </Button>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
@@ -152,7 +234,7 @@ const Businesses = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {businesses.reduce((sum, b) => sum + b.locations, 0)}
+              {businesses.reduce((sum, b) => sum + b.locationCount, 0)}
             </div>
           </CardContent>
         </Card>
@@ -164,19 +246,19 @@ const Businesses = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {businesses.reduce((sum, b) => sum + b.totalReviews, 0).toLocaleString()}
+              {businesses.reduce((sum, b) => sum + b.reviewCount, 0).toLocaleString()}
             </div>
           </CardContent>
         </Card>
 
         <Card className="shadow-elegant">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Rating</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Sources</CardTitle>
             <Star className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {(businesses.reduce((sum, b) => sum + b.avgRating, 0) / businesses.length).toFixed(1)}
+              {businesses.reduce((sum, b) => sum + b.sourceCount, 0)}
             </div>
           </CardContent>
         </Card>
@@ -207,12 +289,10 @@ const Businesses = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Business</TableHead>
-                <TableHead>Category</TableHead>
                 <TableHead>Locations</TableHead>
+                <TableHead>Sources</TableHead>
                 <TableHead>Reviews</TableHead>
-                <TableHead>Rating</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Updated</TableHead>
+                <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -224,33 +304,24 @@ const Businesses = () => {
                       <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
                         <Building2 className="h-4 w-4 text-primary" />
                       </div>
-                      {business.name}
+                      <div>
+                        <div>{business.name}</div>
+                        {business.description && (
+                          <div className="text-sm text-muted-foreground">{business.description}</div>
+                        )}
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell>{business.category}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <MapPin className="h-3 w-3 text-muted-foreground" />
-                      {business.locations}
+                      {business.locationCount}
                     </div>
                   </TableCell>
-                  <TableCell>{business.totalReviews.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-3 w-3 text-yellow-500 fill-current" />
-                      {business.avgRating}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={business.status === "active" ? "default" : "secondary"}
-                      className={business.status === "active" ? "bg-emerald-100 text-emerald-800" : ""}
-                    >
-                      {business.status}
-                    </Badge>
-                  </TableCell>
+                  <TableCell>{business.sourceCount}</TableCell>
+                  <TableCell>{business.reviewCount.toLocaleString()}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">
-                    {business.lastScraped}
+                    {new Date(business.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
@@ -260,15 +331,14 @@ const Businesses = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditBusiness(business)}>
                           <Edit className="h-4 w-4 mr-2" />
                           Edit Business
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => handleDeleteBusiness(business.id)}
+                        >
                           <Trash2 className="h-4 w-4 mr-2" />
                           Delete
                         </DropdownMenuItem>
@@ -281,6 +351,41 @@ const Businesses = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Business</DialogTitle>
+            <DialogDescription>
+              Update business information.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateBusiness} className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Business Name</label>
+              <Input
+                placeholder="Enter business name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description</label>
+              <Input
+                placeholder="Enter business description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Update Business
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

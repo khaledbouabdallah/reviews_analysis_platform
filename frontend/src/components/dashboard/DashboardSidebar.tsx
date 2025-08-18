@@ -6,6 +6,7 @@ import {
   Settings,
   Home,
   MapPin,
+  Star,
   Zap,
   Mail,
   Play
@@ -49,11 +50,11 @@ export function DashboardSidebar() {
       <SidebarHeader className="p-4 border-b">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary-glow rounded-lg flex items-center justify-center">
-            <BarChart3 className="h-5 w-5 text-primary-foreground" />
+            <Star className="h-5 w-5 text-primary-foreground" />
           </div>
           {!collapsed && (
             <div>
-              <h2 className="text-lg font-bold text-primary">Reviewoly</h2>
+              <h2 className="text-lg font-bold text-primary">Review<span className="text-accent">oly</span></h2>
               <p className="text-xs text-muted-foreground">Dashboard</p>
             </div>
           )}
