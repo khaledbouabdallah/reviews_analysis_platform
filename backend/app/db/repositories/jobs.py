@@ -122,7 +122,7 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
             raise RuntimeError("Database error")
 
     async def delete_by_business(self, business_id: str) -> bool:
-        """Delete all sources of business."""
+        """Delete all jobs of a business."""
         try:
             # Convert string to PyObjectId for database query
             oid = PyObjectId(business_id)

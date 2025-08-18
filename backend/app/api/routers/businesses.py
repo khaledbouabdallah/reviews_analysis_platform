@@ -22,6 +22,8 @@ async def create_business(
         # Create business with current user's ID as string (will be converted in model)
         business_create = BusinessCreate(
             name=business_data["name"],
+            description=business_data.get("description"),
+            segments=business_data.get("segments"),
             user_id=str(current_user.id),  # Convert to string first
         )
 

@@ -1,7 +1,8 @@
 // src/services/location.ts
 import { authService } from './auth';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 export interface Location {
   id: string;
