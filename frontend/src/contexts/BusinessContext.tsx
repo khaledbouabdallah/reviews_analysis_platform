@@ -1,101 +1,89 @@
 // src/contexts/BusinessContext.tsx
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { businessService, Business } from '../services/business';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { Business } from '../services/business'
+import { useBusinesses } from '../hooks/useBusinesses'
 
 interface BusinessContextType {
-    selectedBusiness: Business | null;
-    businesses: Business[];
-    setSelectedBusiness: (business: Business | null) => void;
-    refreshBusinesses: () => Promise<void>;
-    isLoading: boolean;
-    error: string | null;
-    hasBusinesses: boolean;
+    selectedBusiness: Business | null
+    setSelectedBusiness: (business: Business | null) => void
+    // React Query provides these now:
+    businesses: Business[]
+    isLoading: boolean
+    error: Error | null
+    hasBusinesses: boolean
+    refreshBusinesses: () => void
 }
 
-const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
+const BusinessContext = createContext<BusinessContextType | undefined>(undefined)
 
 interface BusinessProviderProps {
-    children: ReactNode;
+    children: ReactNode
 }
 
 export function BusinessProvider({ children }: BusinessProviderProps) {
-    const [businesses, setBusinesses] = useState<Business[]>([]);
-    const [selectedBusiness, setSelectedBusinessState] = useState<Business | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    // ✅ LOCAL STATE: Just track which business is selected
+    const [selectedBusiness, setSelectedBusinessState] = useState<Business | null>(null)
 
-    // **CHANGED: Use businessService instead of fake data**
-    const fetchBusinesses = async () => {
-        try {
-            setIsLoading(true);
-            setError(null);
-            const businessData = await businessService.getBusinesses();
-            setBusinesses(businessData);
+    // ✅ SERVER STATE: Let React Query handle data fetching
+    const {
+        data: businesses = [],
+        isLoading,
+        error,
+        refetch: refreshBusinesses
+    } = useBusinesses()
 
-            // Restore last selected business from localStorage
-            const savedBusinessId = localStorage.getItem('selectedBusinessId');
-            if (savedBusinessId && businessData.length > 0) {
-                const savedBusiness = businessData.find(b => b.id === savedBusinessId);
-                if (savedBusiness) {
-                    setSelectedBusinessState(savedBusiness);
-                } else {
-                    // If saved business not found, select first business
-                    setSelectedBusinessState(businessData[0]);
-                }
-            } else if (businessData.length > 0) {
-                // No saved selection, select first business
-                setSelectedBusinessState(businessData[0]);
-            }
-        } catch (err) {
-            console.error('Failed to fetch businesses:', err);
-            setError(err instanceof Error ? err.message : 'Failed to fetch businesses');
-            setBusinesses([]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    // ✅ DERIVED STATE: Computed from React Query data
+    const hasBusinesses = businesses.length > 0
 
-    // **CHANGED: Expose refresh function for external use**
-    const refreshBusinesses = async () => {
-        await fetchBusinesses();
-    };
-
-    // Load businesses on mount
+    // Auto-select business when data loads
     useEffect(() => {
-        fetchBusinesses();
-    }, []);
+        if (businesses.length > 0 && !selectedBusiness) {
+            // Try to restore from localStorage
+            const savedBusinessId = localStorage.getItem('selectedBusinessId')
 
-    const setSelectedBusiness = (business: Business | null) => {
-        setSelectedBusinessState(business);
-        // Save to localStorage for persistence
-        if (business) {
-            localStorage.setItem('selectedBusinessId', business.id);
-        } else {
-            localStorage.removeItem('selectedBusinessId');
+            if (savedBusinessId) {
+                const savedBusiness = businesses.find(b => b.id === savedBusinessId)
+                if (savedBusiness) {
+                    setSelectedBusinessState(savedBusiness)
+                    return
+                }
+            }
+
+            // No saved selection or saved business not found, select first
+            setSelectedBusinessState(businesses[0])
         }
-    };
+    }, [businesses, selectedBusiness])
 
-    const hasBusinesses = businesses.length > 0;
+    // Update selection with localStorage persistence
+    const setSelectedBusiness = (business: Business | null) => {
+        setSelectedBusinessState(business)
+
+        if (business) {
+            localStorage.setItem('selectedBusinessId', business.id)
+        } else {
+            localStorage.removeItem('selectedBusinessId')
+        }
+    }
 
     return (
         <BusinessContext.Provider value={{
             selectedBusiness,
-            businesses,
             setSelectedBusiness,
-            refreshBusinesses, // **NEW: Allow external refresh**
-            isLoading,
-            error, // **NEW: Expose error state**
-            hasBusinesses
+            businesses,        // From React Query
+            isLoading,         // From React Query  
+            error,             // From React Query
+            hasBusinesses,     // Computed
+            refreshBusinesses, // From React Query
         }}>
             {children}
         </BusinessContext.Provider>
-    );
+    )
 }
 
 export function useBusiness() {
-    const context = useContext(BusinessContext);
+    const context = useContext(BusinessContext)
     if (context === undefined) {
-        throw new Error('useBusiness must be used within a BusinessProvider');
+        throw new Error('useBusiness must be used within a BusinessProvider')
     }
-    return context;
+    return context
 }

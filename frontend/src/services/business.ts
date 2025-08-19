@@ -3,7 +3,7 @@ import { authService } from './auth';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-// **CHANGED: Use your existing Business interface structure**
+// **KEEP: Core business interface**
 export interface Business {
   id: string;
   name: string;
@@ -14,14 +14,7 @@ export interface Business {
   segments?: string[];
 }
 
-// **NEW: Extended interface with stats for display**
-export interface BusinessWithStats extends Business {
-  locationCount: number;
-  sourceCount: number;
-  reviewCount: number;
-}
-
-// **CHANGED: Simplified create/update interfaces**
+// **KEEP: Simple create/update interfaces**
 export interface CreateBusinessData {
   name: string;
   description?: string;
@@ -35,7 +28,7 @@ export interface UpdateBusinessData {
 }
 
 export class BusinessService {
-  // **CHANGED: Use your existing fetchWithAuth pattern**
+  // **KEEP: Your existing auth pattern**
   private async fetchWithAuth(url: string, options: RequestInit = {}) {
     const headers = {
       'Content-Type': 'application/json',
@@ -63,6 +56,7 @@ export class BusinessService {
     return response.json();
   }
 
+  // **KEEP: Simple CRUD operations only**
   async getBusinesses(): Promise<Business[]> {
     try {
       return await this.fetchWithAuth('/api/businesses/');
@@ -81,34 +75,6 @@ export class BusinessService {
     }
   }
 
-  // **NEW: Get businesses with location/review stats**
-  async getBusinessesWithStats(): Promise<BusinessWithStats[]> {
-    try {
-      const [businesses, locations, sources, reviews] = await Promise.all([
-        this.fetchWithAuth('/api/businesses/'),
-        this.fetchWithAuth('/api/locations/'),
-        this.fetchWithAuth('/api/sources/'),
-        this.fetchWithAuth('/api/reviews/'),
-      ]);
-
-      return businesses.map((business: Business) => {
-        const businessLocations = locations.filter((loc: any) => loc.business_id === business.id);
-        const businessSources = sources.filter((src: any) => src.business_id === business.id);
-        const businessReviews = reviews.filter((rev: any) => rev.business_id === business.id);
-
-        return {
-          ...business,
-          locationCount: businessLocations.length,
-          sourceCount: businessSources.length,
-          reviewCount: businessReviews.length,
-        };
-      });
-    } catch (error) {
-      console.error('Error fetching businesses with stats:', error);
-      throw error;
-    }
-  }
-
   async createBusiness(data: CreateBusinessData): Promise<Business> {
     try {
       return await this.fetchWithAuth('/api/businesses/', {
@@ -121,7 +87,6 @@ export class BusinessService {
     }
   }
 
-  // **CHANGED: Use your existing update pattern**
   async updateBusiness(businessId: string, data: UpdateBusinessData): Promise<Business> {
     try {
       return await this.fetchWithAuth(`/api/businesses/${businessId}/`, {
@@ -134,7 +99,6 @@ export class BusinessService {
     }
   }
 
-  // **CHANGED: Use your existing delete pattern**
   async deleteBusiness(businessId: string): Promise<void> {
     try {
       const response = await this.fetchWithAuth(`/api/businesses/${businessId}/`, {
