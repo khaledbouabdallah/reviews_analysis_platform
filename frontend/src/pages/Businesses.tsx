@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -24,11 +25,12 @@ import {
   Search,
   MapPin,
   Star,
+  Users,
   MoreHorizontal,
+  Eye,
   Edit,
   Trash2,
   Loader2,
-  RefreshCw,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -37,39 +39,69 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CreateBusinessData } from "../services/business";
-import {
-  useBusinesses,
-  useCreateBusiness,
-  useUpdateBusiness,
-  useDeleteBusiness,
-  useBusinessCounts
-} from "../hooks/useBusinesses";
+import { useBusiness } from "../contexts/BusinessContext";
+import { useBusinesses, useCreateBusiness, useUpdateBusiness, useDeleteBusiness } from "../hooks/useBusinesses";
+import { businessService } from "../services/business";
 
 const Businesses = () => {
-  // ✅ React Query hooks - handles all data fetching and caching
-  const { data: businesses = [], isLoading, error, refetch } = useBusinesses();
-  const createMutation = useCreateBusiness();
-  const updateMutation = useUpdateBusiness();
-  const deleteMutation = useDeleteBusiness();
+  // **CHANGED: Use hooks instead of manual state**
+  const { refreshBusinesses } = useBusiness();
+  const { data: businesses = [], isLoading, error } = useBusinesses();
+  const createBusinessMutation = useCreateBusiness();
+  const updateBusinessMutation = useUpdateBusiness();
+  const deleteBusinessMutation = useDeleteBusiness();
 
-  // ✅ Local UI state only
+  // **KEPT: Manual counts loading - simpler approach**
+  const [businessCounts, setBusinessCounts] = useState<any[]>([]);
+  const [isLoadingCounts, setIsLoadingCounts] = useState(false);
+
+  // **KEPT: UI-specific state**
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState<any>(null);
 
-  // ✅ Form state
+  // **KEPT: Form state**
   const [formData, setFormData] = useState<CreateBusinessData>({
     name: "",
     description: "",
     segments: [],
   });
 
-  // ✅ Create business handler - much simpler now
+  // **KEPT: Helper function to get counts for a business**
+  const getBusinessCounts = (businessId: string) => {
+    return businessCounts.find(count => count.business_id === businessId);
+  };
+
+  // **KEPT: Manual counts loading but simplified**
+  const loadBusinessCounts = async () => {
+    if (!businesses.length) return;
+
+    try {
+      setIsLoadingCounts(true);
+      const countsPromises = businesses.map(business =>
+        businessService.getBusinessCounts(business.id)
+      );
+      const countsData = await Promise.all(countsPromises);
+      setBusinessCounts(countsData);
+    } catch (err) {
+      console.error('Failed to load business counts:', err);
+    } finally {
+      setIsLoadingCounts(false);
+    }
+  };
+
+  // **CHANGED: Load counts when businesses change**
+  useEffect(() => {
+    loadBusinessCounts();
+  }, [businesses]);
+
+  // **CHANGED: Use mutation hooks**
   const handleCreateBusiness = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await createMutation.mutateAsync(formData);
+      await createBusinessMutation.mutateAsync(formData);
+      await refreshBusinesses();
       setIsCreateDialogOpen(false);
       setFormData({ name: "", description: "", segments: [] });
     } catch (err) {
@@ -77,16 +109,17 @@ const Businesses = () => {
     }
   };
 
-  // ✅ Update business handler
+  // **CHANGED: Use mutation hooks**
   const handleUpdateBusiness = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingBusiness) return;
 
     try {
-      await updateMutation.mutateAsync({
+      await updateBusinessMutation.mutateAsync({
         id: editingBusiness.id,
         data: formData
       });
+      await refreshBusinesses();
       setIsEditDialogOpen(false);
       setEditingBusiness(null);
       setFormData({ name: "", description: "", segments: [] });
@@ -95,18 +128,19 @@ const Businesses = () => {
     }
   };
 
-  // ✅ Delete business handler
+  // **CHANGED: Use mutation hooks**
   const handleDeleteBusiness = async (id: string) => {
     if (!confirm('Are you sure you want to delete this business?')) return;
 
     try {
-      await deleteMutation.mutateAsync(id);
+      await deleteBusinessMutation.mutateAsync(id);
+      await refreshBusinesses();
     } catch (err) {
       console.error('Failed to delete business:', err);
     }
   };
 
-  // ✅ Edit business handler
+  // **KEPT: Edit business handler**
   const handleEditBusiness = (business: any) => {
     setEditingBusiness(business);
     setFormData({
@@ -117,10 +151,11 @@ const Businesses = () => {
     setIsEditDialogOpen(true);
   };
 
-  const filteredBusinesses = businesses.filter(business =>
+  const filteredBusinesses = businesses.filter((business: any) =>
     business.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // **CHANGED: Use hook loading state**
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -129,12 +164,12 @@ const Businesses = () => {
     );
   }
 
+  // **CHANGED: Use hook error state**
   if (error) {
     return (
       <div className="text-center text-red-600 p-4">
-        Error: {error.message}
-        <Button onClick={() => refetch()} className="ml-4">
-          <RefreshCw className="h-4 w-4 mr-2" />
+        Error: {error instanceof Error ? error.message : 'An error occurred'}
+        <Button onClick={() => window.location.reload()} className="ml-4">
           Retry
         </Button>
       </div>
@@ -183,12 +218,8 @@ const Businesses = () => {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
               </div>
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={createMutation.isPending}
-              >
-                {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              <Button type="submit" className="w-full" disabled={createBusinessMutation.isPending}>
+                {createBusinessMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Create Business
               </Button>
             </form>
@@ -196,7 +227,7 @@ const Businesses = () => {
         </Dialog>
       </div>
 
-      {/* Stats Cards - Using the counts you originally had */}
+      {/* CHANGED: Stats Cards - Updated to use new property names */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="shadow-elegant">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -214,10 +245,9 @@ const Businesses = () => {
             <MapPin className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Loading...</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Calculating from all businesses
-            </p>
+            <div className="text-2xl font-bold">
+              {businessCounts.reduce((sum, count) => sum + count.location_count, 0)}
+            </div>
           </CardContent>
         </Card>
 
@@ -227,10 +257,9 @@ const Businesses = () => {
             <Star className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Loading...</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Calculating from all businesses
-            </p>
+            <div className="text-2xl font-bold">
+              {businessCounts.reduce((sum, count) => sum + count.review_count, 0).toLocaleString()}
+            </div>
           </CardContent>
         </Card>
 
@@ -240,10 +269,9 @@ const Businesses = () => {
             <Star className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Loading...</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Calculating from all businesses
-            </p>
+            <div className="text-2xl font-bold">
+              {businessCounts.reduce((sum, count) => sum + count.source_count, 0)}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -251,23 +279,10 @@ const Businesses = () => {
       {/* Search and Filters */}
       <Card className="shadow-elegant">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Business Directory</CardTitle>
-              <CardDescription>
-                View and manage all your businesses in one place
-              </CardDescription>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetch()}
-              disabled={isLoading}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-          </div>
+          <CardTitle>Business Directory</CardTitle>
+          <CardDescription>
+            View and manage all your businesses in one place
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4 mb-6">
@@ -294,23 +309,61 @@ const Businesses = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredBusinesses.map((business) => (
-                <BusinessRow
-                  key={business.id}
-                  business={business}
-                  onEdit={handleEditBusiness}
-                  onDelete={handleDeleteBusiness}
-                  isDeleting={deleteMutation.isPending}
-                />
-              ))}
+              {filteredBusinesses.map((business: any) => {
+                const counts = getBusinessCounts(business.id);
+                return (
+                  <TableRow key={business.id} className="hover:bg-muted/50">
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                          <Building2 className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <div>{business.name}</div>
+                          {business.description && (
+                            <div className="text-sm text-muted-foreground">{business.description}</div>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3 text-muted-foreground" />
+                        {counts?.location_count || 0}
+                      </div>
+                    </TableCell>
+                    <TableCell>{counts?.source_count || 0}</TableCell>
+                    <TableCell>{(counts?.review_count || 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {new Date(business.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEditBusiness(business)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit Business
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => handleDeleteBusiness(business.id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
-
-          {filteredBusinesses.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              {searchTerm ? 'No businesses found matching your search.' : 'No businesses yet. Create your first business!'}
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -341,89 +394,14 @@ const Businesses = () => {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={updateMutation.isPending}
-            >
-              {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            <Button type="submit" className="w-full" disabled={updateBusinessMutation.isPending}>
+              {updateBusinessMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Update Business
             </Button>
           </form>
         </DialogContent>
       </Dialog>
     </div>
-  );
-};
-
-// ✅ Separate component for business row with stats
-const BusinessRow = ({ business, onEdit, onDelete, isDeleting }: {
-  business: any;
-  onEdit: (business: any) => void;
-  onDelete: (id: string) => void;
-  isDeleting: boolean;
-}) => {
-  // ✅ Get stats for this specific business
-  const { data: counts } = useBusinessCounts(business.id);
-
-  return (
-    <TableRow className="hover:bg-muted/50">
-      <TableCell className="font-medium">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-            <Building2 className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <div>{business.name}</div>
-            {business.description && (
-              <div className="text-sm text-muted-foreground">{business.description}</div>
-            )}
-          </div>
-        </div>
-      </TableCell>
-      <TableCell>
-        {counts ? (
-          <div className="flex items-center gap-1">
-            <MapPin className="h-3 w-3 text-muted-foreground" />
-            {counts.location_count}
-          </div>
-        ) : (
-          <div className="text-sm text-muted-foreground">...</div>
-        )}
-      </TableCell>
-      <TableCell>
-        {counts ? counts.source_count : '...'}
-      </TableCell>
-      <TableCell>
-        {counts ? counts.review_count.toLocaleString() : '...'}
-      </TableCell>
-      <TableCell className="text-muted-foreground text-sm">
-        {new Date(business.created_at).toLocaleDateString()}
-      </TableCell>
-      <TableCell className="text-right">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" disabled={isDeleting}>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onEdit(business)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Business
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-destructive"
-              onClick={() => onDelete(business.id)}
-              disabled={isDeleting}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </TableCell>
-    </TableRow>
   );
 };
 

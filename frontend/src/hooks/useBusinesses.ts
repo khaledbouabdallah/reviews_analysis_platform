@@ -1,4 +1,5 @@
 // src/hooks/useBusinesses.ts
+import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { businessService, Business, CreateBusinessData, UpdateBusinessData } from '../services/business'
 
@@ -28,7 +29,7 @@ export const useCreateBusiness = () => {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: businessService.createBusiness,
+    mutationFn: (data: CreateBusinessData) => businessService.createBusiness(data), // ✅ Add arrow function wrapper
     onSuccess: (newBusiness) => {
       // Add to businesses list
       queryClient.setQueryData(['businesses'], (old: Business[] = []) => 
@@ -79,7 +80,7 @@ export const useDeleteBusiness = () => {
 export const useBusinessCounts = (businessId: string) => {
   return useQuery({
     queryKey: ['stats', 'business-counts', businessId],
-    queryFn: () => fetch(`/api/stats/businesses/${businessId}`, { credentials: 'include' }).then(res => res.json()),
+    queryFn: () => businessService.getBusinessCounts(businessId),
     enabled: !!businessId,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
