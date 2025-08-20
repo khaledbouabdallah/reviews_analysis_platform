@@ -49,152 +49,201 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useBusiness } from "@/contexts/BusinessContext";
-
-import { locationService, Location, LocationCreate, LocationUpdate } from "@/services/location";
-
-// Extended interface for UI display (combines API data with computed fields)
-interface LocationWithStats extends Location {
-    sourceCount: number;
-    reviewCount: number;
-    avgRating: number;
-    status: 'active' | 'inactive' | 'pending';
-    lastScraped: string;
-}
-
-interface Source {
-    id: string;
-    name: string;
-    type: 'google' | 'yelp' | 'facebook' | 'tripadvisor' | 'other';
-    url: string;
-    status: 'active' | 'inactive' | 'error';
-    lastScraped: string;
-    reviewCount: number;
-}
-
-const AVAILABLE_SOURCES = [
-    { type: 'google', name: 'Google Reviews', icon: '🇬' },
-    { type: 'yelp', name: 'Yelp', icon: '🅨' },
-    { type: 'facebook', name: 'Facebook', icon: '🇫' },
-    { type: 'tripadvisor', name: 'TripAdvisor', icon: '🇹' },
-    { type: 'other', name: 'Other Source', icon: '🔗' },
-];
+import { LocationCreate } from "@/services/location";
+import { SourceCreate, SourceType } from "@/services/source";
+import {
+    useLocationsByBusiness,
+    useCreateLocation,
+    useUpdateLocation,
+    useDeleteLocation,
+    useLocationStats
+} from "@/hooks/useLocations";
+import {
+    useSourcesByBusiness,
+    useCreateSource,
+    useUpdateSource,
+    useDeleteSource
+} from "@/hooks/useSources";
 
 const Locations = () => {
     const { selectedBusiness, hasBusinesses } = useBusiness();
-    const [locations, setLocations] = useState<LocationWithStats[]>([]);
+
+    // **CHANGED: Use hooks instead of manual state**
+    const { data: locations = [], isLoading, error } = useLocationsByBusiness(selectedBusiness?.id || '');
+    const { data: sources = [] } = useSourcesByBusiness(selectedBusiness?.id || '');
+    const createLocationMutation = useCreateLocation();
+    const updateLocationMutation = useUpdateLocation();
+    const deleteLocationMutation = useDeleteLocation();
+    const createSourceMutation = useCreateSource();
+    const deleteSourceMutation = useDeleteSource();
+
+    // **KEPT: UI-specific state**
     const [searchTerm, setSearchTerm] = useState("");
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-    const [editingLocation, setEditingLocation] = useState<LocationWithStats | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [selectedLocationForSources, setSelectedLocationForSources] = useState<LocationWithStats | null>(null);
+    const [editingLocation, setEditingLocation] = useState<any>(null);
+    const [selectedLocationForSources, setSelectedLocationForSources] = useState<any>(null);
+    const [isSourceDialogOpen, setIsSourceDialogOpen] = useState(false);
 
-    // Form state - using backend field name 'adresse'
+    // **KEPT: Form state**
     const [formData, setFormData] = useState<LocationCreate>({
         name: "",
         adresse: "",
         business_id: selectedBusiness?.id || "",
     });
 
-    // Load locations for selected business
-    const loadLocations = async () => {
-        if (!selectedBusiness) {
-            setLocations([]);
-            setIsLoading(false);
-            return;
-        }
+    // **NEW: Source form state**
+    const [sourceFormData, setSourceFormData] = useState<SourceCreate>({
+        name: "",
+        type: "google" as SourceType,
+        url: "",
+        business_id: selectedBusiness?.id || "",
+        location_id: "",
+    });
+
+    // **KEPT: Manual stats loading - simpler approach avoiding hook rule violations**
+    const [locationStats, setLocationStats] = useState<any[]>([]);
+    const [isLoadingStats, setIsLoadingStats] = useState(false);
+
+    // **NEW: Helper function to get stats for a location**
+    const getLocationStats = (locationId: string) => {
+        return locationStats.find(stats => stats.location_id === locationId);
+    };
+
+    // **NEW: Load location stats manually when locations change**
+    const loadLocationStats = async () => {
+        if (!locations.length) return;
 
         try {
-            setIsLoading(true);
-            setError(null);
-            const data = await locationService.getLocationsByBusiness(selectedBusiness.id);
-
-            // Transform API data to include UI fields (with mock data for now)
-            const locationsWithStats: LocationWithStats[] = data.map(location => ({
-                ...location,
-                sourceCount: Math.floor(Math.random() * 5) + 1, // TODO: Get from sources API
-                reviewCount: Math.floor(Math.random() * 1000) + 100, // TODO: Get from reviews API
-                avgRating: Math.round((Math.random() * 2 + 3) * 10) / 10, // TODO: Get from reviews API
-                status: Math.random() > 0.8 ? 'inactive' : 'active' as const, // TODO: Get real status
-                lastScraped: '2 hours ago', // TODO: Get from scraping API
-            }));
-
-            setLocations(locationsWithStats);
+            setIsLoadingStats(true);
+            const statsPromises = locations.map((location: any) =>
+                fetch(`${import.meta.env.VITE_API_URL}/api/stats/locations/${location.id}`, {
+                    credentials: 'include'
+                }).then(res => res.ok ? res.json() : null).catch(() => null)
+            );
+            const statsData = await Promise.all(statsPromises);
+            setLocationStats(statsData.filter(Boolean));
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load locations');
+            console.error('Failed to load location stats:', err);
         } finally {
-            setIsLoading(false);
+            setIsLoadingStats(false);
         }
     };
 
+    // **NEW: Load stats when locations change**
     useEffect(() => {
-        loadLocations();
-    }, [selectedBusiness]);
+        loadLocationStats();
+    }, [locations]);
+    // **KEPT: Helper function to get sources for a location**
+    const getLocationSources = (locationId: string) => {
+        return sources.filter(source => source.location_id === locationId);
+    };
 
     // Update form business_id when selected business changes
     useEffect(() => {
-        setFormData(prev => ({
-            ...prev,
-            business_id: selectedBusiness?.id || "",
-        }));
+        if (selectedBusiness) {
+            setFormData(prev => ({
+                ...prev,
+                business_id: selectedBusiness.id,
+            }));
+            setSourceFormData(prev => ({
+                ...prev,
+                business_id: selectedBusiness.id,
+            }));
+        }
     }, [selectedBusiness]);
 
-    // Create location handler
+    // **CHANGED: Use mutation hooks**
     const handleCreateLocation = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedBusiness) return;
 
         try {
-            setIsSubmitting(true);
-            await locationService.createLocation(formData);
-            await loadLocations();
+            await createLocationMutation.mutateAsync(formData);
+            // **NEW: Refresh stats after creating location**
+            await loadLocationStats();
             setIsCreateDialogOpen(false);
             setFormData({ name: "", adresse: "", business_id: selectedBusiness.id });
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to create location');
-        } finally {
-            setIsSubmitting(false);
+            console.error('Failed to create location:', err);
         }
     };
 
-    // Edit location handler
+    // **CHANGED: Use mutation hooks**
     const handleEditLocation = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingLocation) return;
 
         try {
-            setIsSubmitting(true);
-            const updateData: LocationUpdate = {
-                name: formData.name,
-                adresse: formData.adresse,
-            };
-            await locationService.updateLocation(editingLocation.id, updateData);
-            await loadLocations();
+            await updateLocationMutation.mutateAsync({
+                id: editingLocation.id,
+                data: {
+                    name: formData.name,
+                    adresse: formData.adresse,
+                }
+            });
+            // **NEW: Refresh stats after updating location**  
+            await loadLocationStats();
             setIsEditDialogOpen(false);
             setEditingLocation(null);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to update location');
-        } finally {
-            setIsSubmitting(false);
+            console.error('Failed to update location:', err);
         }
     };
 
-    // Delete location handler
+    // **CHANGED: Use mutation hooks**
     const handleDeleteLocation = async (locationId: string) => {
         if (!confirm('Are you sure you want to delete this location?')) return;
 
         try {
-            await locationService.deleteLocation(locationId);
-            await loadLocations();
+            await deleteLocationMutation.mutateAsync(locationId);
+            // **NEW: Refresh stats after deleting location**
+            await loadLocationStats();
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to delete location');
+            console.error('Failed to delete location:', err);
+        }
+    };
+
+    // **NEW: Handle source creation**
+    const handleCreateSource = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedLocationForSources) return;
+
+        try {
+            await createSourceMutation.mutateAsync({
+                ...sourceFormData,
+                location_id: selectedLocationForSources.id,
+            });
+            // **NEW: Refresh stats after adding source**
+            await loadLocationStats();
+            setIsSourceDialogOpen(false);
+            setSourceFormData({
+                name: "",
+                type: "google" as SourceType,
+                url: "",
+                business_id: selectedBusiness?.id || "",
+                location_id: "",
+            });
+        } catch (err) {
+            console.error('Failed to create source:', err);
+        }
+    };
+
+    // **NEW: Handle source deletion**
+    const handleDeleteSource = async (sourceId: string) => {
+        if (!confirm('Are you sure you want to delete this source?')) return;
+
+        try {
+            await deleteSourceMutation.mutateAsync(sourceId);
+            // **NEW: Refresh stats after deleting source**
+            await loadLocationStats();
+        } catch (err) {
+            console.error('Failed to delete source:', err);
         }
     };
 
     // Open edit dialog
-    const openEditDialog = (location: LocationWithStats) => {
+    const openEditDialog = (location: any) => {
         setEditingLocation(location);
         setFormData({
             name: location.name,
@@ -204,8 +253,13 @@ const Locations = () => {
         setIsEditDialogOpen(true);
     };
 
+    // Open source management dialog
+    const openSourceDialog = (location: any) => {
+        setSelectedLocationForSources(location);
+    };
+
     // Filter locations
-    const filteredLocations = locations.filter(location =>
+    const filteredLocations = locations.filter((location: any) =>
         location.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         location.adresse.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -232,6 +286,27 @@ const Locations = () => {
                     <h2 className="text-xl font-semibold mb-2">Select a business</h2>
                     <p className="text-muted-foreground">Choose a business from the header to view its locations.</p>
                 </div>
+            </div>
+        );
+    }
+
+    // **CHANGED: Use hook loading state**
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        );
+    }
+
+    // **CHANGED: Use hook error state**
+    if (error) {
+        return (
+            <div className="text-center text-red-600 p-4">
+                Error: {error instanceof Error ? error.message : 'An error occurred'}
+                <Button onClick={() => window.location.reload()} className="ml-4">
+                    Retry
+                </Button>
             </div>
         );
     }
@@ -285,11 +360,6 @@ const Locations = () => {
                                     required
                                 />
                             </div>
-                            {error && (
-                                <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-                                    {error}
-                                </div>
-                            )}
                             <div className="flex gap-3 pt-4">
                                 <Button
                                     type="button"
@@ -302,9 +372,9 @@ const Locations = () => {
                                 <Button
                                     type="submit"
                                     className="flex-1"
-                                    disabled={isSubmitting}
+                                    disabled={createLocationMutation.isPending}
                                 >
-                                    {isSubmitting ? (
+                                    {createLocationMutation.isPending ? (
                                         <>
                                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                             Creating...
@@ -345,14 +415,7 @@ const Locations = () => {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {isLoading ? (
-                        <div className="flex items-center justify-center h-64">
-                            <div className="text-center">
-                                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-                                <p className="text-muted-foreground">Loading locations...</p>
-                            </div>
-                        </div>
-                    ) : filteredLocations.length === 0 ? (
+                    {filteredLocations.length === 0 ? (
                         <div className="text-center py-12">
                             <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                             <h3 className="text-lg font-semibold mb-2">No locations found</h3>
@@ -374,89 +437,27 @@ const Locations = () => {
                                     <TableHead>Sources</TableHead>
                                     <TableHead>Reviews</TableHead>
                                     <TableHead>Rating</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Last Scraped</TableHead>
+                                    <TableHead>Created</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredLocations.map((location) => (
-                                    <TableRow key={location.id} className="hover:bg-muted/50">
-                                        <TableCell className="font-medium">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                                                    <MapPin className="h-4 w-4 text-primary" />
-                                                </div>
-                                                <div>
-                                                    <div>{location.name}</div>
-                                                    <div className="text-sm text-muted-foreground">{location.adresse}</div>
-                                                </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => setSelectedLocationForSources(location)}
-                                                className="h-8"
-                                            >
-                                                <Globe className="h-3 w-3 mr-1" />
-                                                {location.sourceCount} sources
-                                            </Button>
-                                        </TableCell>
-                                        <TableCell>{location.reviewCount.toLocaleString()}</TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-1">
-                                                <Star className="h-3 w-3 text-yellow-400 fill-current" />
-                                                {location.avgRating.toFixed(1)}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge
-                                                variant={
-                                                    location.status === 'active' ? 'default' :
-                                                        location.status === 'inactive' ? 'secondary' : 'outline'
-                                                }
-                                            >
-                                                {location.status}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-muted-foreground">
-                                            {location.lastScraped}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => setSelectedLocationForSources(location)}>
-                                                        <Settings className="h-4 w-4 mr-2" />
-                                                        Manage Sources
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem>
-                                                        <Eye className="h-4 w-4 mr-2" />
-                                                        View Details
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => openEditDialog(location)}>
-                                                        <Edit className="h-4 w-4 mr-2" />
-                                                        Edit Location
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        onClick={() => handleDeleteLocation(location.id)}
-                                                        className="text-destructive"
-                                                    >
-                                                        <Trash2 className="h-4 w-4 mr-2" />
-                                                        Delete Location
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                {filteredLocations.map((location: any) => {
+                                    const locationSources = getLocationSources(location.id);
+                                    const stats = getLocationStats(location.id);
+
+                                    return (
+                                        <LocationRow
+                                            key={location.id}
+                                            location={location}
+                                            sources={locationSources}
+                                            stats={stats}
+                                            onEdit={() => openEditDialog(location)}
+                                            onDelete={() => handleDeleteLocation(location.id)}
+                                            onManageSources={() => openSourceDialog(location)}
+                                        />
+                                    );
+                                })}
                             </TableBody>
                         </Table>
                     )}
@@ -497,11 +498,6 @@ const Locations = () => {
                                 required
                             />
                         </div>
-                        {error && (
-                            <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-                                {error}
-                            </div>
-                        )}
                         <div className="flex gap-3 pt-4">
                             <Button
                                 type="button"
@@ -514,9 +510,9 @@ const Locations = () => {
                             <Button
                                 type="submit"
                                 className="flex-1"
-                                disabled={isSubmitting}
+                                disabled={updateLocationMutation.isPending}
                             >
-                                {isSubmitting ? (
+                                {updateLocationMutation.isPending ? (
                                     <>
                                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                         Saving...
@@ -544,26 +540,49 @@ const Locations = () => {
                     </DialogHeader>
 
                     <div className="space-y-4">
-                        {/* TODO: Replace with real source management component */}
-                        <div className="grid grid-cols-1 gap-3">
-                            {AVAILABLE_SOURCES.map((source) => (
-                                <div key={source.type} className="flex items-center justify-between p-4 border rounded-lg">
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-2xl">{source.icon}</span>
-                                        <div>
-                                            <div className="font-medium">{source.name}</div>
-                                            <div className="text-sm text-muted-foreground">
-                                                Configure scraping for this platform
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <Button size="sm" variant="outline">
+                        {/* Existing Sources */}
+                        {selectedLocationForSources && (
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="font-medium">Current Sources</h4>
+                                    <Button
+                                        size="sm"
+                                        onClick={() => setIsSourceDialogOpen(true)}
+                                    >
                                         <Plus className="h-4 w-4 mr-1" />
                                         Add Source
                                     </Button>
                                 </div>
-                            ))}
-                        </div>
+
+                                {getLocationSources(selectedLocationForSources.id).map((source: any) => (
+                                    <div key={source.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                        <div className="flex items-center gap-3">
+                                            <Globe className="h-4 w-4 text-muted-foreground" />
+                                            <div>
+                                                <div className="font-medium">{source.name}</div>
+                                                <div className="text-sm text-muted-foreground">
+                                                    {source.type} • {source.url}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => handleDeleteSource(source.id)}
+                                            disabled={deleteSourceMutation.isPending}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ))}
+
+                                {getLocationSources(selectedLocationForSources.id).length === 0 && (
+                                    <div className="text-center py-8 text-muted-foreground">
+                                        No sources configured for this location.
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         <div className="pt-4 border-t">
                             <Button
@@ -577,8 +596,146 @@ const Locations = () => {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Add Source Dialog */}
+            <Dialog open={isSourceDialogOpen} onOpenChange={setIsSourceDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add Source</DialogTitle>
+                        <DialogDescription>
+                            Add a new review source for {selectedLocationForSources?.name}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleCreateSource} className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Source Name</label>
+                            <Input
+                                value={sourceFormData.name}
+                                onChange={(e) => setSourceFormData({ ...sourceFormData, name: e.target.value })}
+                                placeholder="Google Reviews"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Source Type</label>
+                            <Select
+                                value={sourceFormData.type}
+                                onValueChange={(value: SourceType) => setSourceFormData({ ...sourceFormData, type: value })}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="google">Google</SelectItem>
+                                    <SelectItem value="csv">CSV</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Source URL</label>
+                            <Input
+                                value={sourceFormData.url}
+                                onChange={(e) => setSourceFormData({ ...sourceFormData, url: e.target.value })}
+                                placeholder="https://maps.google.com/..."
+                                required
+                            />
+                        </div>
+                        <div className="flex gap-3 pt-4">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => setIsSourceDialogOpen(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                className="flex-1"
+                                disabled={createSourceMutation.isPending}
+                            >
+                                {createSourceMutation.isPending ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Adding...
+                                    </>
+                                ) : (
+                                    'Add Source'
+                                )}
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
+
+// **NEW: Extracted LocationRow component for cleaner code**
+const LocationRow = ({ location, sources, stats, onEdit, onDelete, onManageSources }: any) => (
+    <TableRow className="hover:bg-muted/50">
+        <TableCell className="font-medium">
+            <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <MapPin className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                    <div>{location.name}</div>
+                    <div className="text-sm text-muted-foreground">{location.adresse}</div>
+                </div>
+            </div>
+        </TableCell>
+        <TableCell>
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={onManageSources}
+                className="h-8"
+            >
+                <Globe className="h-3 w-3 mr-1" />
+                {sources.length} sources
+            </Button>
+        </TableCell>
+        <TableCell>{stats ? stats.review_count.toLocaleString() : '-'}</TableCell>
+        <TableCell>
+            {stats && stats.average_rating > 0 ? (
+                <div className="flex items-center gap-1">
+                    <Star className="h-3 w-3 text-yellow-400 fill-current" />
+                    {stats.average_rating.toFixed(1)}
+                </div>
+            ) : '-'}
+        </TableCell>
+        <TableCell className="text-muted-foreground text-sm">
+            {new Date(location.created_at).toLocaleDateString()}
+        </TableCell>
+        <TableCell className="text-right">
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={onManageSources}>
+                        <Settings className="h-4 w-4 mr-2" />
+                        Manage Sources
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={onEdit}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Location
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                        onClick={onDelete}
+                        className="text-destructive"
+                    >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Location
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </TableCell>
+    </TableRow>
+);
 
 export default Locations;

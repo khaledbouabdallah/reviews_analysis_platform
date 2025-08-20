@@ -1,10 +1,11 @@
 // src/services/source.ts
 import { authService } from './auth';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = import.meta.env.VITE_API_URL;
 
 export type SourceType = 'google' | 'csv';
 
+// **KEEP: Core source interface**
 export interface Source {
   id: string;
   name: string;
@@ -17,6 +18,7 @@ export interface Source {
   updated_at?: string;
 }
 
+// **KEEP: Simple create/update interfaces**
 export interface SourceCreate {
   name: string;
   type: SourceType;
@@ -32,7 +34,15 @@ export interface SourceUpdate {
   location_id?: string | null;
 }
 
-// URL Validation functions (matching backend logic)
+// **NEW: Source stats interface matching backend model**
+export interface SourceStats {
+  source_id: string;
+  review_count: number;
+  job_count: number;
+  average_rating: number;
+}
+
+// **KEEP: URL Validation functions (matching backend logic)**
 export const validateGoogleMapsUrl = (url: string): boolean => {
   // Pattern to match Google Maps URLs
   const googleMapsPattern = /^https?:\/\/(www\.)?(google\.[a-z]{2,3}(\/maps)?|maps\.google\.[a-z]{2,3})\/.+$/;
@@ -88,6 +98,7 @@ export const validateSourceUrl = (url: string, type: SourceType): { valid: boole
 };
 
 export class SourceService {
+  // **KEEP: Your existing auth pattern**
   private async fetchWithAuth(url: string, options: RequestInit = {}) {
     const headers = {
       'Content-Type': 'application/json',
@@ -97,7 +108,7 @@ export class SourceService {
     const response = await fetch(`${API_URL}${url}`, {
       ...options,
       headers,
-      credentials: 'include', // **NEW: Required for httpOnly cookies**
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -105,13 +116,37 @@ export class SourceService {
         await authService.logout();
         window.location.href = '/login';
       }
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `API Error: ${response.status}`);
+      throw new Error(`API Error: ${response.status}`);
+    }
+
+    if (options.method === 'DELETE' || response.status === 204) {
+      return response;
     }
 
     return response.json();
   }
 
+  // **NEW: Get all sources for user (matching business/location service pattern)**
+  async getSources(): Promise<Source[]> {
+    try {
+      return await this.fetchWithAuth('/api/sources/');
+    } catch (error) {
+      console.error('Error fetching sources:', error);
+      throw error;
+    }
+  }
+
+  // **NEW: Get single source by ID (matching business/location service pattern)**
+  async getSource(id: string): Promise<Source> {
+    try {
+      return await this.fetchWithAuth(`/api/sources/${id}/`);
+    } catch (error) {
+      console.error('Error fetching source:', error);
+      throw error;
+    }
+  }
+
+  // **KEEP: Get sources by business**
   async getSourcesByBusiness(businessId: string): Promise<Source[]> {
     try {
       return await this.fetchWithAuth(`/api/sources/business/${businessId}`);
@@ -121,15 +156,12 @@ export class SourceService {
     }
   }
 
+  // **RENAMED: For consistency (was getAllUserSources)**
   async getAllUserSources(): Promise<Source[]> {
-    try {
-      return await this.fetchWithAuth('/api/sources/');
-    } catch (error) {
-      console.error('Error fetching user sources:', error);
-      throw error;
-    }
+    return this.getSources();
   }
 
+  // **CHANGED: Improved validation and error handling**
   async createSource(sourceData: SourceCreate): Promise<Source> {
     try {
       // Validate URL before sending
@@ -148,6 +180,7 @@ export class SourceService {
     }
   }
 
+  // **CHANGED: Improved validation and error handling**
   async updateSource(sourceId: string, sourceData: SourceUpdate): Promise<Source> {
     try {
       // Validate URL if it's being updated
@@ -168,23 +201,27 @@ export class SourceService {
     }
   }
 
+  // **CHANGED: Use fetchWithAuth for consistency like business/location services**
   async deleteSource(sourceId: string): Promise<void> {
     try {
-      const response = await fetch(`${API_URL}/api/sources/${sourceId}`, {
+      const response = await this.fetchWithAuth(`/api/sources/${sourceId}`, {
         method: 'DELETE',
-        credentials: 'include', 
       });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-
-          await authService.logout();
-          window.location.href = '/login';
-        }
-        throw new Error(`Failed to delete source: ${response.status}`);
+      if (response.status !== 204) {
+        throw new Error('Failed to delete source');
       }
     } catch (error) {
       console.error('Error deleting source:', error);
+      throw error;
+    }
+  }
+
+  // **NEW: Get source stats (matching business/location service pattern)**
+  async getSourceStats(sourceId: string): Promise<SourceStats> {
+    try {
+      return await this.fetchWithAuth(`/api/stats/sources/${sourceId}`);
+    } catch (error) {
+      console.error('Error fetching source stats:', error);
       throw error;
     }
   }

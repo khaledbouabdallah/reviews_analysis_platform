@@ -19,7 +19,7 @@ const queryClient = new QueryClient({
 
 const Dashboard = () => {
   return (
-    <QueryClientProvider client={queryClient}>  {/* ← Add this wrapper */}
+    <QueryClientProvider client={queryClient}>
       <BusinessProvider>
         <SidebarProvider>
           <div className="min-h-screen flex w-full bg-background">
