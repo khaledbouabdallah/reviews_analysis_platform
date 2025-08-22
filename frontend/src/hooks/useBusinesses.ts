@@ -64,7 +64,7 @@ export const useDeleteBusiness = () => {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: businessService.deleteBusiness,
+    mutationFn: (businessId: string) => businessService.deleteBusiness(businessId),
     onSuccess: (_, deletedId) => {
       // Remove from businesses list
       queryClient.setQueryData(['businesses'], (old: Business[] = []) =>
