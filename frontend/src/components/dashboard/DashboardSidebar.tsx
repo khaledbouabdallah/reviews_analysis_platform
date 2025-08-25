@@ -9,7 +9,8 @@ import {
   Star,
   Zap,
   Mail,
-  Play
+  Play,
+  BookOpen
 } from "lucide-react";
 import {
   Sidebar,
@@ -31,6 +32,7 @@ const navigationItems = [
   { title: "Analytics", url: "/dashboard/analytics", icon: BarChart3 },
   { title: "Campaigns", url: "/dashboard/campaigns", icon: Mail },
   { title: "Jobs", url: "/dashboard/jobs", icon: Play },
+  { title: "Documentation", url: "/dashboard/documentation", icon: BookOpen },
   { title: "Settings", url: "/dashboard/settings", icon: Settings },
 ];
 

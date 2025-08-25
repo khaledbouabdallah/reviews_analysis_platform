@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +61,15 @@ const Businesses = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState<any>(null);
+
+  const location = useLocation();
+
+    // 👇 open the dialog if navigation state says so
+    useEffect(() => {
+      if (location.state?.openCreateDialog) {
+        setIsCreateDialogOpen(true);
+      }
+    }, [location.state]);
 
   // **KEPT: Form state**
   const [formData, setFormData] = useState<CreateBusinessData>({

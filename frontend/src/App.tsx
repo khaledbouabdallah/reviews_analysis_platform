@@ -49,6 +49,7 @@ const App = () => (
             <Route path="analytics" element={<div className="p-6">Analytics Page (Coming Soon)</div>} />
             <Route path="campaigns" element={<div className="p-6">Campaigns Page (Coming Soon)</div>} />
             <Route path="jobs" element={<div className="p-6">Jobs Page (Coming Soon)</div>} />
+            <Route path="documentation" element={<div className="p-6">Documentation Page (Coming Soon)</div>} />
             <Route path="settings" element={<div className="p-6">Settings Page (Coming Soon)</div>} />
           </Route>
 

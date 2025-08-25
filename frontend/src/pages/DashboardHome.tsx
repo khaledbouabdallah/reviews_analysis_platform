@@ -16,6 +16,7 @@ import {
   Zap
 } from "lucide-react";
 import { useBusiness } from "@/contexts/BusinessContext";
+import { useNavigate } from "react-router-dom";
 
 // TODO: Replace with real data from API
 const FAKE_URGENT_ALERTS = [
@@ -89,6 +90,8 @@ const FAKE_ACTION_ITEMS = [
 const DashboardHome = () => {
   const { hasBusinesses, selectedBusiness, isLoading } = useBusiness();
 
+  const navigate = useNavigate();
+
   // Show loading state while fetching businesses
   if (isLoading) {
     return (
@@ -146,15 +149,16 @@ const DashboardHome = () => {
 
           {/* CTA Button */}
           <div className="pt-6">
-            <Button size="lg" className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90">
-              <Building2 className="w-5 h-5 mr-2" />
+            <Button size="lg" className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+            onClick={() => navigate("/dashboard/businesses", { state: { openCreateDialog: true } })}>
+              <Building2 className="w-5 h-5 mr-2"/>
               Create Your First Business
             </Button>
           </div>
 
           {/* Optional: Demo/Help Links */}
           <div className="pt-4 space-y-2">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard/documentation")}>
               <BookOpen className="w-4 h-4 mr-2" />
               View Documentation
             </Button>
