@@ -40,6 +40,7 @@ import {
     Loader2,
     ExternalLink,
     Settings,
+    Lock,
 } from "lucide-react";
 import {
     DropdownMenu,
@@ -50,7 +51,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { LocationCreate } from "@/services/location";
-import { SourceCreate, SourceType } from "@/services/source";
+import { SourceCreate, SourceType, SourceUpdate } from "@/services/source";
 import {
     useLocationsByBusiness,
     useCreateLocation,
@@ -65,6 +66,17 @@ import {
     useDeleteSource
 } from "@/hooks/useSources";
 
+// **NEW: Define available and coming soon source types**
+const SOURCE_TYPES = [
+    { value: "google", label: "Google Reviews", available: true, icon: "🔍" },
+    { value: "csv", label: "CSV Upload", available: true, icon: "📄" },
+    { value: "yelp", label: "Yelp", available: false, icon: "🟡" },
+    { value: "facebook", label: "Facebook", available: false, icon: "📘" },
+    { value: "tripadvisor", label: "TripAdvisor", available: false, icon: "🦉" },
+    { value: "trustpilot", label: "Trustpilot", available: false, icon: "⭐" },
+    { value: "glassdoor", label: "Glassdoor", available: false, icon: "🏢" },
+];
+
 const Locations = () => {
     const { selectedBusiness, hasBusinesses } = useBusiness();
 
@@ -75,6 +87,7 @@ const Locations = () => {
     const updateLocationMutation = useUpdateLocation();
     const deleteLocationMutation = useDeleteLocation();
     const createSourceMutation = useCreateSource();
+    const updateSourceMutation = useUpdateSource();
     const deleteSourceMutation = useDeleteSource();
 
     // **KEPT: UI-specific state**
@@ -84,6 +97,8 @@ const Locations = () => {
     const [editingLocation, setEditingLocation] = useState<any>(null);
     const [selectedLocationForSources, setSelectedLocationForSources] = useState<any>(null);
     const [isSourceDialogOpen, setIsSourceDialogOpen] = useState(false);
+    const [isEditSourceDialogOpen, setIsEditSourceDialogOpen] = useState(false);
+    const [editingSource, setEditingSource] = useState<any>(null);
 
     // **KEPT: Form state**
     const [formData, setFormData] = useState<LocationCreate>({
@@ -98,7 +113,7 @@ const Locations = () => {
         type: "google" as SourceType,
         url: "",
         business_id: selectedBusiness?.id || "",
-        location_id: "",
+        location_id: selectedLocationForSources?.id || "",
     });
 
     // **KEPT: Manual stats loading - simpler approach avoiding hook rule violations**
@@ -134,9 +149,20 @@ const Locations = () => {
     useEffect(() => {
         loadLocationStats();
     }, [locations]);
+
     // **KEPT: Helper function to get sources for a location**
     const getLocationSources = (locationId: string) => {
         return sources.filter(source => source.location_id === locationId);
+    };
+
+    // **NEW: Check if source has been used for scraping**
+    const hasBeenScraped = (source: any) => {
+        return source.last_collection_time !== null;
+    };
+
+    // **NEW: Check if source can be edited**
+    const canEditSource = (source: any) => {
+        return !hasBeenScraped(source);
     };
 
     // Update form business_id when selected business changes
@@ -204,7 +230,7 @@ const Locations = () => {
         }
     };
 
-    // **NEW: Handle source creation**
+    // **FIXED: Handle source creation - ensure location_id is properly set**
     const handleCreateSource = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedLocationForSources) return;
@@ -212,7 +238,7 @@ const Locations = () => {
         try {
             await createSourceMutation.mutateAsync({
                 ...sourceFormData,
-                location_id: selectedLocationForSources.id,
+                location_id: selectedLocationForSources.id, // **FIXED: This was the bug!**
             });
             // **NEW: Refresh stats after adding source**
             await loadLocationStats();
@@ -222,16 +248,50 @@ const Locations = () => {
                 type: "google" as SourceType,
                 url: "",
                 business_id: selectedBusiness?.id || "",
-                location_id: "",
+                location_id: selectedLocationForSources?.id || "", // Reset this too
             });
         } catch (err) {
             console.error('Failed to create source:', err);
         }
     };
 
-    // **NEW: Handle source deletion**
-    const handleDeleteSource = async (sourceId: string) => {
-        if (!confirm('Are you sure you want to delete this source?')) return;
+    // **NEW: Handle source update**
+    const handleUpdateSource = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingSource) return;
+
+        try {
+            await updateSourceMutation.mutateAsync({
+                id: editingSource.id,
+                data: {
+                    name: sourceFormData.name,
+                    type: sourceFormData.type,
+                    url: sourceFormData.url,
+                    // Don't change location_id on update
+                }
+            });
+            await loadLocationStats();
+            setIsEditSourceDialogOpen(false);
+            setEditingSource(null);
+            setSourceFormData({
+                name: "",
+                type: "google" as SourceType,
+                url: "",
+                business_id: selectedBusiness?.id || "",
+                location_id: selectedLocationForSources?.id || "",
+            });
+        } catch (err) {
+            console.error('Failed to update source:', err);
+        }
+    };
+
+    // **MODIFIED: Handle source deletion with warning for used sources**
+    const handleDeleteSource = async (sourceId: string, hasData = false) => {
+        const confirmMessage = hasData 
+            ? '⚠️ WARNING: This source has collected data. Deleting it will remove ALL reviews and analytics from this source. This action cannot be undone.\n\nAre you sure you want to proceed?'
+            : 'Are you sure you want to delete this source?';
+            
+        if (!confirm(confirmMessage)) return;
 
         try {
             await deleteSourceMutation.mutateAsync(sourceId);
@@ -256,6 +316,46 @@ const Locations = () => {
     // Open source management dialog
     const openSourceDialog = (location: any) => {
         setSelectedLocationForSources(location);
+    };
+
+    // **NEW: Open edit source dialog**
+    const openEditSourceDialog = (source: any) => {
+        setEditingSource(source);
+        setSourceFormData({
+            name: source.name,
+            type: source.type,
+            url: source.url,
+            business_id: source.business_id,
+            location_id: source.location_id,
+        });
+        setIsEditSourceDialogOpen(true);
+    };
+
+    // **NEW: Handle creating replacement source**
+    const handleCreateReplacementSource = async (oldSource: any) => {
+        // Pre-fill form with old source data
+        setSourceFormData({
+            name: `${oldSource.name} (Updated)`,
+            type: oldSource.type,
+            url: "", // User must enter new URL
+            business_id: selectedBusiness?.id || "",
+            location_id: oldSource.location_id,
+        });
+        setIsSourceDialogOpen(true);
+    };
+
+    // **FIX: Properly initialize form when opening add source dialog**
+    const openAddSourceDialog = () => {
+        if (selectedLocationForSources) {
+            setSourceFormData({
+                name: "",
+                type: "google" as SourceType,
+                url: "",
+                business_id: selectedBusiness?.id || "",
+                location_id: selectedLocationForSources.id, // Ensure location_id is set
+            });
+        }
+        setIsSourceDialogOpen(true);
     };
 
     // Filter locations
@@ -547,34 +647,73 @@ const Locations = () => {
                                     <h4 className="font-medium">Current Sources</h4>
                                     <Button
                                         size="sm"
-                                        onClick={() => setIsSourceDialogOpen(true)}
+                                        onClick={openAddSourceDialog}
                                     >
                                         <Plus className="h-4 w-4 mr-1" />
                                         Add Source
                                     </Button>
                                 </div>
 
-                                {getLocationSources(selectedLocationForSources.id).map((source: any) => (
-                                    <div key={source.id} className="flex items-center justify-between p-3 border rounded-lg">
-                                        <div className="flex items-center gap-3">
-                                            <Globe className="h-4 w-4 text-muted-foreground" />
-                                            <div>
-                                                <div className="font-medium">{source.name}</div>
-                                                <div className="text-sm text-muted-foreground">
-                                                    {source.type} • {source.url}
+                                {getLocationSources(selectedLocationForSources.id).map((source: any) => {
+                                    const isUsed = hasBeenScraped(source);
+                                    
+                                    return (
+                                        <div key={source.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                            <div className="flex items-center gap-3">
+                                                <Globe className="h-4 w-4 text-muted-foreground" />
+                                                <div className="flex-1">
+                                                    <div className="font-medium">{source.name}</div>
+                                                    <div className="text-sm text-muted-foreground">
+                                                        {source.type} • <a href={source.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">
+                                                            <ExternalLink className="inline h-3 w-3 mb-0.5" />
+                                                        </a>
+                                                    </div>
+                                                    {isUsed && (
+                                                        <div className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                                                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                                            Data collected - Source locked for integrity
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
+                                            <div className="flex gap-2">
+                                                {/* Only show edit if source hasn't been used */}
+                                                {!isUsed ? (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => openEditSourceDialog(source)}
+                                                        title="Edit source (only available before data collection)"
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                ) : (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => handleCreateReplacementSource(source)}
+                                                        title="Create a new source to replace this one"
+                                                        className="text-blue-600 hover:text-blue-700"
+                                                    >
+                                                        <Plus className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                                
+                                                {/* Delete with warning for used sources */}
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => handleDeleteSource(source.id, isUsed)}
+                                                    disabled={deleteSourceMutation.isPending}
+                                                    className={isUsed ? "text-orange-600 hover:text-orange-700" : ""}
+                                                    title={isUsed ? "⚠️ Will delete source AND all collected data" : "Delete source"}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         </div>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => handleDeleteSource(source.id)}
-                                            disabled={deleteSourceMutation.isPending}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                ))}
+                                    );
+                                })}
 
                                 {getLocationSources(selectedLocationForSources.id).length === 0 && (
                                     <div className="text-center py-8 text-muted-foreground">
@@ -626,8 +765,24 @@ const Locations = () => {
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="google">Google</SelectItem>
-                                    <SelectItem value="csv">CSV</SelectItem>
+                                    {SOURCE_TYPES.map((type) => (
+                                        <SelectItem 
+                                            key={type.value} 
+                                            value={type.value}
+                                            disabled={!type.available}
+                                            className={!type.available ? "opacity-60" : ""}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <span>{type.icon}</span>
+                                                <span>{type.label}</span>
+                                                {!type.available && (
+                                                    <Badge variant="secondary" className="ml-auto text-xs">
+                                                        Coming Soon
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -661,6 +816,93 @@ const Locations = () => {
                                     </>
                                 ) : (
                                     'Add Source'
+                                )}
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Edit Source Dialog */}
+            <Dialog open={isEditSourceDialogOpen} onOpenChange={setIsEditSourceDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit Source</DialogTitle>
+                        <DialogDescription>
+                            Update source details for {selectedLocationForSources?.name}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleUpdateSource} className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Source Name</label>
+                            <Input
+                                value={sourceFormData.name}
+                                onChange={(e) => setSourceFormData({ ...sourceFormData, name: e.target.value })}
+                                placeholder="Google Reviews"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Source Type</label>
+                            <Select
+                                value={sourceFormData.type}
+                                onValueChange={(value: SourceType) => setSourceFormData({ ...sourceFormData, type: value })}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {SOURCE_TYPES.map((type) => (
+                                        <SelectItem 
+                                            key={type.value} 
+                                            value={type.value}
+                                            disabled={!type.available}
+                                            className={!type.available ? "opacity-60" : ""}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <span>{type.icon}</span>
+                                                <span>{type.label}</span>
+                                                {!type.available && (
+                                                    <Badge variant="secondary" className="ml-auto text-xs">
+                                                        Coming Soon
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Source URL</label>
+                            <Input
+                                value={sourceFormData.url}
+                                onChange={(e) => setSourceFormData({ ...sourceFormData, url: e.target.value })}
+                                placeholder="https://maps.google.com/..."
+                                required
+                            />
+                        </div>
+                        <div className="flex gap-3 pt-4">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => setIsEditSourceDialogOpen(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                className="flex-1"
+                                disabled={updateSourceMutation.isPending}
+                            >
+                                {updateSourceMutation.isPending ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Updating...
+                                    </>
+                                ) : (
+                                    'Update Source'
                                 )}
                             </Button>
                         </div>
