@@ -7,7 +7,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 export interface Location {
   id: string;
   name: string;
-  adresse: string; // Backend uses 'adresse'
+  adresse?: string ; // Backend uses 'adresse'
   business_id: string;
   user_id: string;
   created_at: string;
@@ -17,7 +17,7 @@ export interface Location {
 // **KEEP: Simple create/update interfaces**
 export interface LocationCreate {
   name: string;
-  adresse: string;
+  adresse?: string;
   business_id: string;
 }
 

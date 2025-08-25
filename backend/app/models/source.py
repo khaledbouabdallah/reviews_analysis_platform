@@ -46,6 +46,11 @@ class SourceBase(BaseModel):
             is_valid = is_validate_google_maps_reviews_url(self.url)
             if not is_valid:
                 raise ValueError("URL must be a valid Google Maps reviews link")
+            
+        elif self.type == "csv":
+            if self.url:
+                # csv files are uploaded directly in job, no URL needed
+                raise ValueError("URL should not be provided for CSV sources")
                         
         return self
     

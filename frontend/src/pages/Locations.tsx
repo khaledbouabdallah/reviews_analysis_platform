@@ -99,6 +99,7 @@ const Locations = () => {
     const [isSourceDialogOpen, setIsSourceDialogOpen] = useState(false);
     const [isEditSourceDialogOpen, setIsEditSourceDialogOpen] = useState(false);
     const [editingSource, setEditingSource] = useState<any>(null);
+    const [sourceError, setSourceError] = useState<string>("");
 
     // **KEPT: Form state**
     const [formData, setFormData] = useState<LocationCreate>({
@@ -113,7 +114,7 @@ const Locations = () => {
         type: "google" as SourceType,
         url: "",
         business_id: selectedBusiness?.id || "",
-        location_id: selectedLocationForSources?.id || "",
+        location_id: "",
     });
 
     // **KEPT: Manual stats loading - simpler approach avoiding hook rule violations**
@@ -248,7 +249,7 @@ const Locations = () => {
                 type: "google" as SourceType,
                 url: "",
                 business_id: selectedBusiness?.id || "",
-                location_id: selectedLocationForSources?.id || "", // Reset this too
+                location_id: "", // Reset this too
             });
         } catch (err) {
             console.error('Failed to create source:', err);
@@ -278,7 +279,7 @@ const Locations = () => {
                 type: "google" as SourceType,
                 url: "",
                 business_id: selectedBusiness?.id || "",
-                location_id: selectedLocationForSources?.id || "",
+                location_id: "",
             });
         } catch (err) {
             console.error('Failed to update source:', err);
@@ -320,6 +321,7 @@ const Locations = () => {
 
     // **NEW: Open edit source dialog**
     const openEditSourceDialog = (source: any) => {
+        setSourceError(""); // Clear any previous errors
         setEditingSource(source);
         setSourceFormData({
             name: source.name,
@@ -346,6 +348,7 @@ const Locations = () => {
 
     // **FIX: Properly initialize form when opening add source dialog**
     const openAddSourceDialog = () => {
+        setSourceError(""); // Clear any previous errors
         if (selectedLocationForSources) {
             setSourceFormData({
                 name: "",
@@ -457,7 +460,6 @@ const Locations = () => {
                                     value={formData.adresse}
                                     onChange={(e) => setFormData({ ...formData, adresse: e.target.value })}
                                     placeholder="123 Main St, City, State 12345"
-                                    required
                                 />
                             </div>
                             <div className="flex gap-3 pt-4">
@@ -595,7 +597,6 @@ const Locations = () => {
                                 value={formData.adresse}
                                 onChange={(e) => setFormData({ ...formData, adresse: e.target.value })}
                                 placeholder="123 Main St, City, State 12345"
-                                required
                             />
                         </div>
                         <div className="flex gap-3 pt-4">
@@ -786,15 +787,18 @@ const Locations = () => {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Source URL</label>
-                            <Input
-                                value={sourceFormData.url}
-                                onChange={(e) => setSourceFormData({ ...sourceFormData, url: e.target.value })}
-                                placeholder="https://maps.google.com/..."
-                                required
-                            />
-                        </div>
+                        {/* Show URL input only for Google type */}
+                        {sourceFormData.type === "google" && (
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Source URL</label>
+                                <Input
+                                    value={sourceFormData.url}
+                                    onChange={(e) => setSourceFormData({ ...sourceFormData, url: e.target.value })}
+                                    placeholder="https://maps.google.com/..."
+                                    required
+                                />
+                            </div>
+                        )}
                         <div className="flex gap-3 pt-4">
                             <Button
                                 type="button"
@@ -873,15 +877,18 @@ const Locations = () => {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Source URL</label>
-                            <Input
-                                value={sourceFormData.url}
-                                onChange={(e) => setSourceFormData({ ...sourceFormData, url: e.target.value })}
-                                placeholder="https://maps.google.com/..."
-                                required
-                            />
-                        </div>
+                        {/* Show URL input only for Google type */}
+                        {sourceFormData.type === "google" && (
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Source URL</label>
+                                <Input
+                                    value={sourceFormData.url}
+                                    onChange={(e) => setSourceFormData({ ...sourceFormData, url: e.target.value })}
+                                    placeholder="https://maps.google.com/..."
+                                    required
+                                />
+                            </div>
+                        )}
                         <div className="flex gap-3 pt-4">
                             <Button
                                 type="button"

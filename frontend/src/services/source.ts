@@ -10,7 +10,7 @@ export interface Source {
   id: string;
   name: string;
   type: SourceType;
-  url: string;
+  url?: string;
   business_id: string;
   user_id: string;
   location_id?: string | null;
@@ -22,7 +22,7 @@ export interface Source {
 export interface SourceCreate {
   name: string;
   type: SourceType;
-  url: string;
+  url?: string;
   business_id: string;
   location_id?: string | null;
 }
@@ -164,11 +164,6 @@ export class SourceService {
   // **CHANGED: Improved validation and error handling**
   async createSource(sourceData: SourceCreate): Promise<Source> {
     try {
-      // Validate URL before sending
-      const validation = validateSourceUrl(sourceData.url, sourceData.type);
-      if (!validation.valid) {
-        throw new Error(validation.error);
-      }
 
       return await this.fetchWithAuth('/api/sources/', {
         method: 'POST',
