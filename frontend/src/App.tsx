@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import DashboardHome from "./pages/DashboardHome";
 import Businesses from "./pages/Businesses";
 import Locations from "./pages/Locations";
+import Jobs from "./pages/Jobs";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AuthRedirect } from "./components/auth/AuthRedirect";
@@ -48,7 +49,8 @@ const App = () => (
             <Route path="locations" element={<Locations />} />
             <Route path="analytics" element={<div className="p-6">Analytics Page (Coming Soon)</div>} />
             <Route path="campaigns" element={<div className="p-6">Campaigns Page (Coming Soon)</div>} />
-            <Route path="jobs" element={<div className="p-6">Jobs Page (Coming Soon)</div>} />
+            <Route path="jobs" element={<Jobs/>} />
+            <Route path="reviews" element={<div className="p-6">Reviews Page (Coming Soon)</div>} />
             <Route path="documentation" element={<div className="p-6">Documentation Page (Coming Soon)</div>} />
             <Route path="settings" element={<div className="p-6">Settings Page (Coming Soon)</div>} />
           </Route>
