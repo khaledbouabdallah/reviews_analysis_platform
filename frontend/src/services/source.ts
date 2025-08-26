@@ -116,7 +116,21 @@ export class SourceService {
         await authService.logout();
         window.location.href = '/login';
       }
-      throw new Error(`API Error: ${response.status}`);
+      
+      // Preserve the actual error message from the API
+      let errorDetail = `API Error: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.detail) {
+          errorDetail = errorData.detail;
+        }
+      } catch {
+        // If can't parse JSON, keep the generic error
+      }
+      
+      const error = new Error(errorDetail) as any;
+      error.response = { data: { detail: errorDetail } };
+      throw error;
     }
 
     if (options.method === 'DELETE' || response.status === 204) {

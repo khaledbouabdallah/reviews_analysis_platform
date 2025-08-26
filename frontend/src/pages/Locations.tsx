@@ -99,6 +99,8 @@ const Locations = () => {
     const [isSourceDialogOpen, setIsSourceDialogOpen] = useState(false);
     const [isEditSourceDialogOpen, setIsEditSourceDialogOpen] = useState(false);
     const [editingSource, setEditingSource] = useState<any>(null);
+    const [addSourceError, setAddSourceError] = useState<string>("");
+    const [editSourceError, setEditSourceError] = useState<string>("");
     const [sourceError, setSourceError] = useState<string>("");
 
     // **KEPT: Form state**
@@ -231,17 +233,17 @@ const Locations = () => {
         }
     };
 
-    // **FIXED: Handle source creation - ensure location_id is properly set**
+    // **FIXED: Handle source creation with error handling**
     const handleCreateSource = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedLocationForSources) return;
 
         try {
+            setAddSourceError(""); // Clear previous errors
             await createSourceMutation.mutateAsync({
                 ...sourceFormData,
-                location_id: selectedLocationForSources.id, // **FIXED: This was the bug!**
+                location_id: selectedLocationForSources.id,
             });
-            // **NEW: Refresh stats after adding source**
             await loadLocationStats();
             setIsSourceDialogOpen(false);
             setSourceFormData({
@@ -251,24 +253,52 @@ const Locations = () => {
                 business_id: selectedBusiness?.id || "",
                 location_id: "", // Reset this too
             });
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to create source:', err);
+            console.error('Error details:', err?.response); // Debug log
+            
+            // Better error extraction
+            let errorMessage = 'Failed to create source';
+            
+            // Check if it's an HTTP error with response data
+            if (err?.response?.data?.detail) {
+                errorMessage = err.response.data.detail;
+            } 
+            // Check if it's a direct error message
+            else if (err?.message && err.message !== 'API Error: 400') {
+                errorMessage = err.message;
+            }
+            // Check if there's a more specific error in the response
+            else if (err?.response?.statusText) {
+                errorMessage = `Error: ${err.response.statusText}`;
+            }
+            
+            // Clean up the error message if it's too technical
+            if (errorMessage.includes('validation error for SourceCreate')) {
+                if (errorMessage.includes('URL must be a valid Google Maps reviews link')) {
+                    errorMessage = 'Please provide a valid Google Maps reviews URL';
+                } else {
+                    errorMessage = 'Please check your input and try again';
+                }
+            }
+            
+            setAddSourceError(errorMessage);
         }
     };
 
-    // **NEW: Handle source update**
+    // **NEW: Handle source update with error handling**
     const handleUpdateSource = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingSource) return;
 
         try {
+            setEditSourceError(""); // Clear previous errors
             await updateSourceMutation.mutateAsync({
                 id: editingSource.id,
                 data: {
                     name: sourceFormData.name,
                     type: sourceFormData.type,
                     url: sourceFormData.url,
-                    // Don't change location_id on update
                 }
             });
             await loadLocationStats();
@@ -281,8 +311,36 @@ const Locations = () => {
                 business_id: selectedBusiness?.id || "",
                 location_id: "",
             });
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to update source:', err);
+            console.error('Error details:', err?.response); // Debug log
+            
+            // Better error extraction
+            let errorMessage = 'Failed to update source';
+            
+            // Check if it's an HTTP error with response data
+            if (err?.response?.data?.detail) {
+                errorMessage = err.response.data.detail;
+            } 
+            // Check if it's a direct error message
+            else if (err?.message && err.message !== 'API Error: 400') {
+                errorMessage = err.message;
+            }
+            // Check if there's a more specific error in the response
+            else if (err?.response?.statusText) {
+                errorMessage = `Error: ${err.response.statusText}`;
+            }
+            
+            // Clean up the error message if it's too technical
+            if (errorMessage.includes('validation error for SourceCreate')) {
+                if (errorMessage.includes('URL must be a valid Google Maps reviews link')) {
+                    errorMessage = 'Please provide a valid Google Maps reviews URL';
+                } else {
+                    errorMessage = 'Please check your input and try again';
+                }
+            }
+            
+            setEditSourceError(errorMessage);
         }
     };
 
@@ -321,7 +379,7 @@ const Locations = () => {
 
     // **NEW: Open edit source dialog**
     const openEditSourceDialog = (source: any) => {
-        setSourceError(""); // Clear any previous errors
+        setEditSourceError(""); // Clear any previous errors
         setEditingSource(source);
         setSourceFormData({
             name: source.name,
@@ -348,7 +406,7 @@ const Locations = () => {
 
     // **FIX: Properly initialize form when opening add source dialog**
     const openAddSourceDialog = () => {
-        setSourceError(""); // Clear any previous errors
+        setAddSourceError(""); // Clear any previous errors
         if (selectedLocationForSources) {
             setSourceFormData({
                 name: "",
@@ -460,6 +518,7 @@ const Locations = () => {
                                     value={formData.adresse}
                                     onChange={(e) => setFormData({ ...formData, adresse: e.target.value })}
                                     placeholder="123 Main St, City, State 12345"
+                                    required
                                 />
                             </div>
                             <div className="flex gap-3 pt-4">
@@ -597,6 +656,7 @@ const Locations = () => {
                                 value={formData.adresse}
                                 onChange={(e) => setFormData({ ...formData, adresse: e.target.value })}
                                 placeholder="123 Main St, City, State 12345"
+                                required
                             />
                         </div>
                         <div className="flex gap-3 pt-4">
@@ -797,6 +857,20 @@ const Locations = () => {
                                     placeholder="https://maps.google.com/..."
                                     required
                                 />
+                            </div>
+                        )}
+                        
+                        {/* Error message display */}
+                        {addSourceError && (
+                            <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                                <p className="text-sm text-red-600">{addSourceError}</p>
+                            </div>
+                        )}
+                        
+                        {/* Error message display */}
+                        {editSourceError && (
+                            <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                                <p className="text-sm text-red-600">{editSourceError}</p>
                             </div>
                         )}
                         <div className="flex gap-3 pt-4">

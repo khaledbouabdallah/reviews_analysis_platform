@@ -1,4 +1,5 @@
 // src/services/location.ts
+import { log } from 'console';
 import { authService } from './auth';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -54,7 +55,21 @@ export class LocationService {
         await authService.logout();
         window.location.href = '/login';
       }
-      throw new Error(`API Error: ${response.status}`);
+      
+      // Preserve the actual error message from the API
+      let errorDetail = `API Error: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.detail) {
+          errorDetail = errorData.detail;
+        }
+      } catch {
+        // If can't parse JSON, keep the generic error
+      }
+            
+      const error = new Error(errorDetail) as any;
+      error.response = { data: { detail: errorDetail } };
+      throw error;
     }
 
     if (options.method === 'DELETE' || response.status === 204) {
@@ -82,7 +97,7 @@ export class LocationService {
       console.error('Error fetching location:', error);
       throw error;
     }
-  }
+}
 
   // **KEEP: Get locations by business**
   async getLocationsByBusiness(businessId: string): Promise<Location[]> {
@@ -96,28 +111,18 @@ export class LocationService {
 
   // **KEEP: Create location**
   async createLocation(locationData: LocationCreate): Promise<Location> {
-    try {
-      return await this.fetchWithAuth('/api/locations/', {
-        method: 'POST',
-        body: JSON.stringify(locationData),
-      });
-    } catch (error) {
-      console.error('Error creating location:', error);
-      throw error;
-    }
+    return await this.fetchWithAuth('/api/locations/', {
+      method: 'POST',
+      body: JSON.stringify(locationData),
+    });
   }
 
   // **KEEP: Update location**
   async updateLocation(locationId: string, locationData: LocationUpdate): Promise<Location> {
-    try {
-      return await this.fetchWithAuth(`/api/locations/${locationId}`, {
-        method: 'PUT',
-        body: JSON.stringify(locationData),
-      });
-    } catch (error) {
-      console.error('Error updating location:', error);
-      throw error;
-    }
+    return await this.fetchWithAuth(`/api/locations/${locationId}/`, {
+      method: 'PUT',
+      body: JSON.stringify(locationData),
+    });
   }
 
   // **CHANGED: Use fetchWithAuth for consistency like business service**
