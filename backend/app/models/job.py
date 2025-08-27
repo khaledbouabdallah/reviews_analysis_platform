@@ -72,6 +72,7 @@ class JobBase(BaseModel):
     location_id: PyObjectId | None = None
     source_id: PyObjectId | None = None  # Optional field for upload jobs
     source_type: str | None = None
+    task_id: str | None = None  # Celery task ID
 
     model_config = {
         "arbitrary_types_allowed": True,
@@ -159,6 +160,7 @@ class JobUpdateInternal(BaseModel):
     total_reviews: int | None = None
     reviews_handled: int | None = None
     error: str | None = None
+    task_id: str | None = None  # Celery task ID
 
 
 class JobResponse(JobBase):
