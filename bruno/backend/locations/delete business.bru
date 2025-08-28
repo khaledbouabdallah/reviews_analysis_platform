@@ -1,0 +1,17 @@
+meta {
+  name: delete business
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{base_url}}/api/businesses
+  body: none
+  auth: inherit
+}
+
+body:json {
+  {
+    "username": "khaled_2026"
+  }
+}

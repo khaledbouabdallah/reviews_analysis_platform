@@ -70,7 +70,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18.20.8" # Exact match to your Docker
+          node-version: "20.11.1" # Exact match to your Docker
           cache: "npm"
           cache-dependency-path: "frontend/package-lock.json"
 
@@ -79,8 +79,7 @@ jobs:
           cd frontend
           echo "Node version: $(node --version)"
           echo "npm version: $(npm --version)"
-          # Use legacy peer deps to handle React 19 + react-beautiful-dnd conflict
-          npm install --legacy-peer-deps
+          npm ci
 
       - name: Run frontend build test
         run: |
@@ -155,7 +154,7 @@ jobs:
         run: |
           docker build \
             --target production \
-            --build-arg NEXT_PUBLIC_API_URL=https://reviews-backend-$PROJECT_NUMBER.$REGION.run.app \
+            --build-arg VITE_API_URL=https://reviews-backend-$PROJECT_NUMBER.$REGION.run.app \
             --tag $REGION-docker.pkg.dev/$PROJECT_ID/reviews-app/frontend:$GITHUB_SHA \
             --tag $REGION-docker.pkg.dev/$PROJECT_ID/reviews-app/frontend:latest \
             ./frontend
@@ -196,7 +195,7 @@ jobs:
             --region $REGION \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars="NEXT_PUBLIC_API_URL=https://reviews-backend-$PROJECT_NUMBER.$REGION.run.app" \
+            --set-env-vars="VITE_API_URL=https://reviews-backend-$PROJECT_NUMBER.$REGION.run.app" \
             --memory 512Mi \
             --cpu 1 \
             --min-instances 0 \

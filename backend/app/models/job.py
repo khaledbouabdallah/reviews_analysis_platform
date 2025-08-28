@@ -3,6 +3,7 @@ import re
 from datetime import datetime, timezone
 
 from core.config import settings
+from models.helpers import is_validate_google_maps_reviews_url
 from models import PyObjectId
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -71,6 +72,7 @@ class JobBase(BaseModel):
     location_id: PyObjectId | None = None
     source_id: PyObjectId | None = None  # Optional field for upload jobs
     source_type: str | None = None
+    task_id: str | None = None  # Celery task ID
 
     model_config = {
         "arbitrary_types_allowed": True,
@@ -121,32 +123,13 @@ class JobBase(BaseModel):
                 raise ValueError("url must be provided for scraping jobs")
 
             if self.source_type == "google":
-                self.validate_google_maps_url(self.url)
+                is_validate_google_maps_reviews_url(self.url)
             else:
                 raise ValueError(f"Unsupported source_type: {self.source_type}")
         elif self.job_type == "csv_upload":
             pass  # No URL validation for CSV uploads
 
         return self  # required by Pydantic
-
-    @staticmethod
-    def validate_google_maps_url(v):
-        # Pattern to match Google Maps URLs
-        google_maps_pattern = r"^https?://(www\.)?(google\.[a-z]{2,3}(/maps)?|maps\.google\.[a-z]{2,3})/.+$"
-
-        if not re.match(google_maps_pattern, v):
-            raise ValueError("URL must be a valid Google Maps link")
-        # Method 1: Check for !4m18 or !4m8 parameter
-        if re.search(r"!4m(18|8)\!", v):
-            return v
-        # Method 2: Check for !3m7 parameter
-        if re.search(r"!3m7!", v):
-            return v
-        # Method 3: Count !9m1!1b1 occurrences
-        if v.count("!9m1!1b1") >= 2:
-            return v
-        raise ValueError
-
 
 class JobCreate(JobBase):
     """Used for creating a new job."""
@@ -177,6 +160,7 @@ class JobUpdateInternal(BaseModel):
     total_reviews: int | None = None
     reviews_handled: int | None = None
     error: str | None = None
+    task_id: str | None = None  # Celery task ID
 
 
 class JobResponse(JobBase):

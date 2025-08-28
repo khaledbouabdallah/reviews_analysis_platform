@@ -6,7 +6,7 @@ from celery_app import celery_app
 from core.config import logger, settings
 from db.repositories import JobRepository, ReviewRepository, SourceRepository
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from models.job import JobCreate, JobResponse, JobUpdate
+from models.job import JobCreate, JobResponse, JobUpdate, JobUpdateInternal
 from models.user import UserInDB
 from services.csv_services import process_csv_upload
 
@@ -79,7 +79,10 @@ async def scrap_endpoint(
             args=[job_id, job_data_processed],
             queue="scraping",
         )
-
+        
+        job_update_internal = JobUpdateInternal(**{"task_id": task.id})
+        await job_repo.update_internal(job_id, job_update_internal)
+        
         # make http request to scraper service to force cloud run to start the service
 
         try:
@@ -108,6 +111,7 @@ async def scrap_endpoint(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        logger.error(f"Failed to create job: {e!s}")
         raise HTTPException(status_code=500, detail=f"Failed to create job: {e!s}")
 
 
@@ -273,45 +277,32 @@ async def cancel_job(
             )
 
         # Check if job is in a cancellable state
-        if job.status in ["completed", "failed", "cancelled"]:
+        if job.status in ["completed", "failed", "canceled"]:
             raise HTTPException(
                 status_code=400,
-                detail=f"Job cannot be cancelled - current status: {job.status}",
+                detail=f"Job cannot be canceled - current status: {job.status}",
             )
-
-        # Find and revoke active tasks for this job
-        cancelled = False
-        active_tasks = celery_app.control.inspect().active()
-
-        if active_tasks:
-            for worker, tasks in active_tasks.items():
-                for task in tasks:
-                    if (
-                        task["name"] == "celery_tasks.scraper_task"
-                        and len(task.get("args", [])) > 0
-                        and task["args"][0] == job_id
-                    ):
-                        celery_app.control.revoke(task["id"], terminate=True)
-                        cancelled = True
-                        break
-
-        # Also queue a cancellation task to update job status
-        if cancelled:
-            celery_app.send_task(
-                "celery_tasks.cancel_job_task",
-                args=[job_id],
-                queue="management",
-            )
-
+        
+        # remove task for redis queue
+        task_id = job.task_id
+        celery_app.control.revoke(task_id, terminate=False)
+        logger.info(f"removed {task_id} for queue")
+        
+        # Update job status to 'cancelling' to signal worker
+        job_update = JobUpdateInternal(status="canceled")
+        await job_repo.update_internal(job_id, job_update)
+        
         return {
             "id": job_id,
             "message": "Job cancellation requested",
-            "cancelled": cancelled,
+            "cancelled": True,
         }
 
     except HTTPException:
+        logger.error(f"Failed to cancel job {job_id}: {e!s}")
         raise
     except Exception as e:
+        logger.error(f"Failed to cancel job {job_id}: {e!s}")   
         raise HTTPException(status_code=500, detail=f"Failed to cancel job: {e!s}")
 
 

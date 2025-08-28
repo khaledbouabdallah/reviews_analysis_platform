@@ -25,6 +25,7 @@ async def create_source(
             type=source_data["type"],
             url=source_data["url"],
             business_id=source_data["business_id"],
+            location_id=source_data.get("location_id"),
             user_id=str(current_user.id),
         )
 

@@ -1,9 +1,9 @@
 // src/services/job.ts
 import { authService } from './auth';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = import.meta.env.VITE_API_URL;
 
-export type JobStatus = 'pending' | 'running' | 'saving' | 'completed' | 'failed' | 'cancelled' | 'partially_completed';
+export type JobStatus = 'pending' | 'running' | 'saving' | 'completed' | 'failed' | 'canceled' | 'partially_completed';
 export type SourceType = 'google' | 'csv';
 export type JobType = 'scraping' | 'analysis' | 'csv_upload';
 
@@ -93,7 +93,7 @@ export const getJobStatusColor = (status: JobStatus): string => {
       return 'bg-green-100 text-green-700 border-green-200';
     case 'failed':
       return 'bg-red-100 text-red-700 border-red-200';
-    case 'cancelled':
+    case 'canceled':
       return 'bg-gray-100 text-gray-700 border-gray-200';
     case 'partially_completed':
       return 'bg-orange-100 text-orange-700 border-orange-200';
@@ -115,8 +115,8 @@ export const getJobStatusLabel = (status: JobStatus): string => {
       return 'Completed';
     case 'failed':
       return 'Failed';
-    case 'cancelled':
-      return 'Cancelled';
+    case 'canceled':
+      return 'Canceled';
     case 'partially_completed':
       return 'Partial';
     default:
@@ -128,6 +128,7 @@ export class JobService {
   private activePolling = new Set<string>(); // Track which jobs are being polled
   private pollingIntervals = new Map<string, NodeJS.Timeout>(); // Store polling intervals
 
+  // **UPDATED: Match location service error handling pattern**
   private async fetchWithAuth(url: string, options: RequestInit = {}) {
     const headers = {
       'Content-Type': 'application/json',
@@ -137,29 +138,85 @@ export class JobService {
     const response = await fetch(`${API_URL}${url}`, {
       ...options,
       headers,
-      credentials: 'include', // **NEW: Required for httpOnly cookies**
+      credentials: 'include',
     });
 
     if (!response.ok) {
       if (response.status === 401) {
-        // **CHANGED: Made logout async since it now calls server**
         await authService.logout();
         window.location.href = '/login';
       }
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `API Error: ${response.status}`);
+      
+      // Preserve the actual error message from the API
+      let errorDetail = `API Error: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.detail) {
+          errorDetail = errorData.detail;
+        }
+      } catch {
+        // If can't parse JSON, keep the generic error
+      }
+            
+      const error = new Error(errorDetail) as any;
+      error.response = { data: { detail: errorDetail } };
+      throw error;
     }
 
-    if (response.status === 204) {
-      return null; // For DELETE requests
+    if (options.method === 'DELETE' || response.status === 204) {
+      return response;
     }
 
     return response.json();
   }
 
-  // CRUD Operations
+  // **NEW: Get all jobs for user (matching other services)**
+  async getJobs(): Promise<Job[]> {
+    try {
+      return await this.fetchWithAuth('/api/jobs/');
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+      throw error;
+    }
+  }
+
+  // **NEW: Get single job by ID (matching other services)**
+  async getJob(id: string): Promise<Job> {
+    try {
+      return await this.fetchWithAuth(`/api/jobs/${id}`);
+    } catch (error) {
+      console.error('Error fetching job:', error);
+      throw error;
+    }
+  }
+
+  // **UPDATED: Simplified, no client-side filtering**
+  async getJobsByBusiness(businessId: string): Promise<Job[]> {
+    try {
+      return await this.fetchWithAuth(`/api/jobs/business/${businessId}`);
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+      throw error;
+    }
+  }
+
+  // **UPDATED: Simplified, no client-side filtering**
+  async getJobsBySource(sourceId: string): Promise<Job[]> {
+    try {
+      return await this.fetchWithAuth(`/api/jobs/source/${sourceId}`);
+    } catch (error) {
+      console.error('Error fetching jobs by source:', error);
+      throw error;
+    }
+  }
+
+  // **RENAMED: For consistency with other services**
+  async getAllUserJobs(): Promise<Job[]> {
+    return this.getJobs();
+  }
+
+  // **UPDATED: Backend expects dict, not JobCreate for scraping jobs**
   async createJob(jobData: JobCreate): Promise<JobCreateResponse> {
-    // log some debug information
     console.log('Creating job with data:', jobData);
     try {
       return await this.fetchWithAuth('/api/jobs/', {
@@ -172,50 +229,6 @@ export class JobService {
     }
   }
 
-async getJobsByBusiness(businessId: string): Promise<Job[]> {
-  try {
-    const jobs = await this.fetchWithAuth(`/api/jobs/business/${businessId}`);
-    // log jobs for debugging
-    return jobs.filter((job: Job) => ['scraping', 'csv_upload'].includes(job.job_type)); // Add this line
-  } catch (error) {
-    console.error('Error fetching jobs:', error);
-    throw error;
-  }
-}
-
-async getJobsBySource(sourceId: string): Promise<Job[]> {
-  try {
-    const jobs = await this.fetchWithAuth(`/api/jobs/source/${sourceId}`);
-    return jobs.filter((job: Job) => ['scraping', 'csv_upload'].includes(job.job_type)); // Add this line
-  } catch (error) {
-    console.error('Error fetching jobs by source:', error);
-    throw error;
-  }
-}
-
-async getAllUserJobs(): Promise<Job[]> {
-  try {
-    const jobs = await this.fetchWithAuth('/api/jobs/');
-    return jobs.filter((job: Job) => ['scraping', 'csv_upload'].includes(job.job_type)); // Add this line
-  } catch (error) {
-    console.error('Error fetching user jobs:', error);
-    throw error;
-  }
-}
-
-async getJob(jobId: string): Promise<Job> {
-  try {
-    const job = await this.fetchWithAuth(`/api/jobs/${jobId}`);
-    // Optionally check if it's a scraping job and throw error if not
-    if (!['scraping', 'csv_upload'].includes(job.job_type)) {
-      throw new Error('Job is not a scraping job');
-    }
-    return job;
-  } catch (error) {
-    console.error('Error fetching job:', error);
-    throw error;
-  }
-}
   async updateJob(jobId: string, jobData: JobUpdate): Promise<Job> {
     try {
       return await this.fetchWithAuth(`/api/jobs/${jobId}`, {
@@ -228,11 +241,15 @@ async getJob(jobId: string): Promise<Job> {
     }
   }
 
+  // **UPDATED: Use fetchWithAuth pattern from location service**
   async deleteJob(jobId: string): Promise<void> {
     try {
-      await this.fetchWithAuth(`/api/jobs/${jobId}`, {
+      const response = await this.fetchWithAuth(`/api/jobs/${jobId}`, {
         method: 'DELETE',
       });
+      if (response.status !== 204) {
+        throw new Error('Failed to delete job');
+      }
     } catch (error) {
       console.error('Error deleting job:', error);
       throw error;
@@ -290,7 +307,7 @@ async getJob(jobId: string): Promise<Job> {
     }
   }
 
-  // Real-time Polling Management
+  // **KEEP: Job-specific polling functionality**
   startPolling(jobId: string, onUpdate: (status: JobStatusResponse) => void, onComplete?: () => void): void {
     // Don't start polling if already active
     if (this.activePolling.has(jobId)) {
@@ -344,25 +361,25 @@ async getJob(jobId: string): Promise<Job> {
     return this.activePolling.has(jobId);
   }
 
-  // Utility Methods
-getJobDuration(job: Job): string | null {
-  if (!job.started_at) return null;
-  
-  // Convert UTC timestamps to local time
-  const start = new Date(job.started_at + (job.started_at.endsWith('Z') ? '' : 'Z'));
-  const end = job.ended_at 
-    ? new Date(job.ended_at + (job.ended_at.endsWith('Z') ? '' : 'Z'))
-    : new Date();
-  const durationMs = end.getTime() - start.getTime();
-  
-  const minutes = Math.floor(durationMs / 60000);
-  const seconds = Math.floor((durationMs % 60000) / 1000);
-  
-  if (minutes > 0) {
-    return `${minutes}m ${seconds}s`;
+  // **KEEP: Job-specific utility methods**
+  getJobDuration(job: Job): string | null {
+    if (!job.started_at) return null;
+    
+    // Convert UTC timestamps to local time
+    const start = new Date(job.started_at + (job.started_at.endsWith('Z') ? '' : 'Z'));
+    const end = job.ended_at 
+      ? new Date(job.ended_at + (job.ended_at.endsWith('Z') ? '' : 'Z'))
+      : new Date();
+    const durationMs = end.getTime() - start.getTime();
+    
+    const minutes = Math.floor(durationMs / 60000);
+    const seconds = Math.floor((durationMs % 60000) / 1000);
+    
+    if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    }
+    return `${seconds}s`;
   }
-  return `${seconds}s`;
-}
 
   getReviewsPageUrl(jobId: string): string {
     return `/reviews?job_id=${jobId}`;
@@ -373,6 +390,7 @@ getJobDuration(job: Job): string | null {
     this.stopAllPolling();
   }
 
+  // **KEEP: Job-specific CSV upload functionality**
   async uploadCSV(file: File, jobName: string | null, businessId: string, locationId: string | null): Promise<any> {
     try {
       const formData = new FormData();
@@ -388,12 +406,11 @@ getJobDuration(job: Job): string | null {
       const response = await fetch(`${API_URL}/api/jobs/load_csv`, {
         method: 'POST',
         body: formData,
-        credentials: 'include', // **NEW: Required for httpOnly cookies**
+        credentials: 'include',
       });
 
       if (!response.ok) {
         if (response.status === 401) {
-          // **CHANGED: Made logout async since it now calls server**
           await authService.logout();
           window.location.href = '/login';
         }

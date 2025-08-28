@@ -34,7 +34,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: development 
+      target: development
     container_name: reviews_backend
     restart: always
     ports:
@@ -45,7 +45,7 @@ services:
     environment:
       - MONGODB_URI=mongodb://admin:password@mongodb:27017/reviews_local?authSource=admin
       - MONGODB_DB_NAME=reviews_local
-      - REDIS_URL=redis://redis:6379/0 
+      - REDIS_URL=redis://redis:6379/0
       - SCRAPER_SERVICE_URL=http://scraper_worker:8080
       - GIMINI_API_KEY=${GIMINI_API_KEY}
       - GIMINI_MODEL_NAME=${GIMINI_MODEL_NAME}
@@ -61,7 +61,7 @@ services:
     build:
       context: ./scraper
       dockerfile: Dockerfile
-      target: development 
+      target: development
     container_name: reviews_scraper_worker
     restart: always
     ports:
@@ -82,13 +82,13 @@ services:
     shm_size: '2gb'
     mem_limit: 4g
     cpus: 2.0
-  
+
   # Frontend Next.js - Development target
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: development  
+      target: development
     container_name: reviews_frontend
     restart: always
     ports:
@@ -97,11 +97,11 @@ services:
       - backend
     environment:
       - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - VITE_API_URL=http://localhost:8000
     volumes:
       - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
+   #   - /app/node_modules
+      - /app/dist
     networks:
       - reviews_network
 
