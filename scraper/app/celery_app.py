@@ -45,7 +45,6 @@ celery_app.conf.update(
     # Task routing
     task_routes={
         "celery_tasks.scraper_task": {"queue": "scraping"},
-        "celery_tasks.cancel_job_task": {"queue": "management"},
     },
     # Task time limits
     task_soft_time_limit=3600,  # 1 hour soft limit
@@ -54,5 +53,5 @@ celery_app.conf.update(
     result_expires=3600 * 24,  # Results expire after 24 hours
     # Retry settings
     task_default_retry_delay=60,  # Retry after 60 seconds
-    task_max_retries=3,  # Maximum 3 retries
+    task_max_retries=1,  # Maximum 1 retries
 )

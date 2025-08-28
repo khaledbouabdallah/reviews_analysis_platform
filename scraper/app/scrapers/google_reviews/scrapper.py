@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
 
+from exceptions import JobCancelledException
+
 import pandas as pd
 import undetected_chromedriver as uc
 from dateutil.relativedelta import relativedelta
@@ -300,6 +302,8 @@ class GoogleMapsReviewScraper:
             }
             try:
                 self.config.progress_callback(progress_data)
+            except JobCancelledException:
+                raise 
             except Exception as e:
                 self.logger.warning(f"Progress callback failed: {e}")
 
@@ -403,6 +407,8 @@ class GoogleMapsReviewScraper:
 
             return total_reviews
 
+        except JobCancelledException:
+            raise
         except Exception as e:
             self.logger.error(f"Connection failed: {e}")
             raise RuntimeError(f"Failed to connect to URL '{url}': {e}")
@@ -448,12 +454,12 @@ class GoogleMapsReviewScraper:
             RuntimeError: If extraction fails after retries
 
         """
-        self.logger.info(f"Starting review extraction for {total_reviews} reviews")
-        self._emit_progress("extraction_start", {"total_reviews": total_reviews})
-
-        extraction_start = time.time()
-
         try:
+            
+            self.logger.info(f"Starting review extraction for {total_reviews} reviews")
+            self._emit_progress("extraction_start", {"total_reviews": total_reviews})
+
+            extraction_start = time.time()
             # Setup for review extraction
             self._setup_review_extraction()
 
@@ -481,6 +487,8 @@ class GoogleMapsReviewScraper:
 
             return reviews_data
 
+        except JobCancelledException:
+            raise
         except Exception as e:
             self.logger.error(f"Review extraction failed: {e}")
             raise RuntimeError(f"Failed to extract reviews: {e}")
@@ -618,7 +626,8 @@ class GoogleMapsReviewScraper:
 
                 if len(reviews_data) == total_reviews:
                     return reviews_data
-
+            except JobCancelledException:
+                raise    
             except (StaleElementReferenceException, TimeoutException) as e:
                 self.logger.warning(f"Extraction attempt {attempt + 1} failed: {e}")
                 if attempt < max_retries - 1:
@@ -675,12 +684,10 @@ class GoogleMapsReviewScraper:
             List of review data or None if no reviews found
 
         """
-        self.logger.info(f"Starting scraping job for URL: {url}")
-        self._emit_progress("scraping_start", {"url": url})
-
-        scraping_start = time.time()
-
         try:
+            self.logger.info(f"Starting scraping job for URL: {url}")
+            self._emit_progress("scraping_start", {"url": url})            
+            scraping_start = time.time()
             # Connect and get total reviews
             total_reviews = self.connect(url)
 
@@ -715,7 +722,9 @@ class GoogleMapsReviewScraper:
             )
 
             return data
-
+        
+        except JobCancelledException:
+            raise
         except Exception as e:
             scraping_time = time.time() - scraping_start
             self.logger.error(f"Scraping failed after {scraping_time:.2f}s: {e}")

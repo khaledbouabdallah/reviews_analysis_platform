@@ -277,25 +277,32 @@ async def cancel_job(
             )
 
         # Check if job is in a cancellable state
-        if job.status in ["completed", "failed", "cancelled"]:
+        if job.status in ["completed", "failed", "canceled"]:
             raise HTTPException(
                 status_code=400,
-                detail=f"Job cannot be cancelled - current status: {job.status}",
+                detail=f"Job cannot be canceled - current status: {job.status}",
             )
-
+        
+        # remove task for redis queue
         task_id = job.task_id
-        if task_id:
-            celery_app.control.revoke(task_id, terminate=True)
-
+        celery_app.control.revoke(task_id, terminate=False)
+        logger.info(f"removed {task_id} for queue")
+        
+        # Update job status to 'cancelling' to signal worker
+        job_update = JobUpdateInternal(status="canceled")
+        await job_repo.update_internal(job_id, job_update)
+        
         return {
             "id": job_id,
             "message": "Job cancellation requested",
-            "cancelled": cancelled,
+            "cancelled": True,
         }
 
     except HTTPException:
+        logger.error(f"Failed to cancel job {job_id}: {e!s}")
         raise
     except Exception as e:
+        logger.error(f"Failed to cancel job {job_id}: {e!s}")   
         raise HTTPException(status_code=500, detail=f"Failed to cancel job: {e!s}")
 
 

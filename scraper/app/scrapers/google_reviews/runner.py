@@ -8,7 +8,7 @@ from typing import Any
 from db_sync import sync_db
 from models.job import JobCreate
 from scrapers.google_reviews.scrapper import GoogleMapsReviewScraper, ScraperConfig
-
+from exceptions import JobCancelledException
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,7 @@ class ScrapingJobManager:
             event_type = progress_info.get("event_type")
 
             logger.info("Handling progress update: %s", progress_info)
+            logger.info("bruuuuuuuuuuuuuuuuuuuuuh")
 
             if event_type == "connection_complete":
                 self.total_reviews = progress_info.get("total_reviews", 0)
@@ -53,6 +54,7 @@ class ScrapingJobManager:
                 )
 
                 # Update job with total review count
+                print("ioioioioioio")
                 self._update_job_progress()
 
             elif event_type == "extraction_progress":
@@ -71,9 +73,9 @@ class ScrapingJobManager:
                     f"Job {self.job_id}: Progress {progress_percent:.1f}% ({self.reviews_handled}/{self.total_reviews})",
                 )
 
-                # Update job progress every 25 reviews or every 10%
-                if self.reviews_handled % 25 == 0 or progress_percent % 10 < 1:
-                    logger.info("guess we need to update job progress")
+                # Update job progress every 10 reviews or every 5%
+                if self.reviews_handled % 10 == 0 or progress_percent % 5 < 1:
+                    logger.info("aaaaaaaaaaa=========aaaaaaaaaaaaaaaaaa")
                     self._update_job_progress()
 
             elif event_type == "scraping_complete":
@@ -84,7 +86,9 @@ class ScrapingJobManager:
                 logger.info(
                     f"Job {self.job_id}: Scraping completed with status {status}",
                 )
-
+                
+        except JobCancelledException:
+            raise
         except Exception as e:
             logger.warning(f"Job {self.job_id}: Progress callback error: {e}")
 
@@ -94,6 +98,13 @@ class ScrapingJobManager:
             logger.info(
                 f"Job {self.job_id}: Updating progress in database: {self.progress_data}"
             )
+            
+            current_job = sync_db.get_job_status(self.job_id)
+            
+            logger.info(f"Job {self.job_id}: Current job status from DB: {current_job}")
+            if current_job and current_job.get('status') == "canceled":
+                logger.info(f"Job {self.job_id} was canceled by user")
+                raise JobCancelledException(f"Job {self.job_id} canceled")
 
             sync_db.update_job_status(
                 job_id=self.job_id,
@@ -101,8 +112,12 @@ class ScrapingJobManager:
                 total_reviews=self.progress_data.get("total_reviews"),
                 reviews_handled=self.progress_data.get("current_reviews"),
             )
-
+        
             logger.info(f"Job {self.job_id}: Progress updated successfully")
+            
+                 
+        except JobCancelledException:
+            raise 
         except Exception as e:
             logger.warning(f"Job {self.job_id}: Failed to update progress: {e}")
 

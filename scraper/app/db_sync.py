@@ -62,6 +62,43 @@ class SyncDatabase:
             logger.error(f"Failed to update job {job_id} status: {e}")
             return False
 
+    def get_job_status(self, job_id: str) -> dict[str, Any] | None:
+        """Get current job status for cancellation checking"""
+        try:
+            job_doc = self.jobs_collection.find_one(
+                {"_id": ObjectId(job_id)},
+                {"status": 1, "error": 1}  # Only fetch status and error fields
+            )
+            
+            if job_doc:
+                return {
+                    "status": job_doc.get("status"),
+                    "error": job_doc.get("error")
+                }
+            
+            logger.warning(f"Job {job_id} not found")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Failed to get job {job_id} status: {e}")
+            return None
+        
+    def clean_job_reviews(self, job_id: str) -> int:
+       """Delete all reviews of a job when it gets canceled"""
+       try:
+           # Delete all reviews with matching job_id
+           result = self.reviews_collection.delete_many(
+               {"job_id": ObjectId(job_id)}
+           )
+           
+           deleted_count = result.deleted_count
+           logger.info(f"Deleted {deleted_count} reviews for cancelled job {job_id}")
+           return deleted_count
+           
+       except Exception as e:
+           logger.error(f"Failed to delete reviews for job {job_id}: {e}")
+           return 0
+            
     def create_review(
         self,
         job_id: str,

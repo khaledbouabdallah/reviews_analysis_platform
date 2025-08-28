@@ -42,11 +42,10 @@ celery_app.conf.update(
     worker_max_tasks_per_child=10,
     task_routes={
         "celery_tasks.scraper_task": {"queue": "scraping"},
-        "celery_tasks.cancel_job_task": {"queue": "management"},
     },
     task_soft_time_limit=3600,
     task_time_limit=3900,
     result_expires=3600 * 24,
     task_default_retry_delay=60,
-    task_max_retries=3,
+    task_max_retries=1,
 )

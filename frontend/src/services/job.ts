@@ -3,7 +3,7 @@ import { authService } from './auth';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-export type JobStatus = 'pending' | 'running' | 'saving' | 'completed' | 'failed' | 'cancelled' | 'partially_completed';
+export type JobStatus = 'pending' | 'running' | 'saving' | 'completed' | 'failed' | 'canceled' | 'partially_completed';
 export type SourceType = 'google' | 'csv';
 export type JobType = 'scraping' | 'analysis' | 'csv_upload';
 
@@ -93,7 +93,7 @@ export const getJobStatusColor = (status: JobStatus): string => {
       return 'bg-green-100 text-green-700 border-green-200';
     case 'failed':
       return 'bg-red-100 text-red-700 border-red-200';
-    case 'cancelled':
+    case 'canceled':
       return 'bg-gray-100 text-gray-700 border-gray-200';
     case 'partially_completed':
       return 'bg-orange-100 text-orange-700 border-orange-200';
@@ -115,8 +115,8 @@ export const getJobStatusLabel = (status: JobStatus): string => {
       return 'Completed';
     case 'failed':
       return 'Failed';
-    case 'cancelled':
-      return 'Cancelled';
+    case 'canceled':
+      return 'Canceled';
     case 'partially_completed':
       return 'Partial';
     default:
