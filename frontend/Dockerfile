@@ -7,7 +7,7 @@ COPY package*.json ./
 
 # Clear npm cache and install dependencies
 RUN npm cache clean --force
-RUN npm ci --legacy-peer-deps
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -22,14 +22,14 @@ CMD ["npm", "run", "dev"]
 FROM node:20-alpine as deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production --legacy-peer-deps && npm cache clean --force
+RUN npm ci --only=production && npm cache clean --force
 
 # Build stage
 FROM node:20-alpine as builder
 WORKDIR /app
 ARG VITE_API_URL
 COPY package*.json ./
-RUN npm ci --legacy-peer-deps
+RUN npm ci
 COPY . .
 ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build

@@ -72,7 +72,7 @@ import {
 } from "lucide-react";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { 
-    useJobs, 
+    useJobsByBusiness,
     useDeleteJob, 
     useCancelJob, 
     useRetryJob,
@@ -86,8 +86,8 @@ import {
     useAnalyzeLocationReviews,
     useAnalyzeBusinessReviews
 } from "@/hooks/useAnalysis";
-import { useSources } from "@/hooks/useSources";
-import { useLocations } from "@/hooks/useLocations";
+import { useSourcesByBusiness } from "@/hooks/useSources";
+import { useLocationsByBusiness } from "@/hooks/useLocations";
 import { 
     Job, 
     JobStatus, 
@@ -224,9 +224,9 @@ const JobDuration = ({ job }: { job: Job }) => {
 const Jobs = () => {
     const navigate = useNavigate();
     const { selectedBusiness, businesses } = useBusiness();
-    const { data: jobs = [], isLoading, error, refetch } = useJobs();
-    const { data: sources = [] } = useSources();
-    const { data: locations = [] } = useLocations();
+    const { data: jobs = [], isLoading, error, refetch } = useJobsByBusiness(selectedBusiness?.id || '');
+    const { data: locations = []} = useLocationsByBusiness(selectedBusiness?.id || '');
+    const { data: sources = [] } = useSourcesByBusiness(selectedBusiness?.id || '');
     
     // Mutations
     const deleteJobMutation = useDeleteJob();
@@ -261,6 +261,17 @@ const Jobs = () => {
     const [statusFilter, setStatusFilter] = useState("all");
     const [typeFilter, setTypeFilter] = useState("all");
     const [businessFilter, setBusinessFilter] = useState("all");
+    const [locationFilter, setLocationFilter] = useState("all");
+    const [sourceFilter, setSourceFilter] = useState("all");
+    const [timeFilter, setTimeFilter] = useState("all");
+
+    const TIME_FILTERS = [
+        { value: "all", label: "All Time" },
+        { value: "5min", label: "Last 5 minutes" },
+        { value: "1h", label: "Last hour" },
+        { value: "12h", label: "Last 12 hours" },
+        { value: "24h", label: "Last 24 hours" }
+    ];
     
     // Filter sources for data job type
     const getFilteredSources = () => {
@@ -365,14 +376,42 @@ const Jobs = () => {
         const matchesStatus = statusFilter === "all" || job.status === statusFilter;
         const matchesType = typeFilter === "all" || job.job_type === typeFilter;
         const matchesBusiness = businessFilter === "all" || job.business_id === businessFilter;
+        const matchesLocation = locationFilter === "all" || job.location_id === locationFilter;
+        const matchesSource = sourceFilter === "all" || job.source_id === sourceFilter;
+
+            // Time filter logic
+    const matchesTime = timeFilter === "all" || (() => {
+        const now = new Date();
+        const jobCreated = new Date(job.created_at + (job.created_at.endsWith('Z') ? '' : 'Z'));
+        const diffMs = now.getTime() - jobCreated.getTime();
         
-        return matchesSearch && matchesStatus && matchesType && matchesBusiness;
+        switch (timeFilter) {
+            case "5min": return diffMs <= 5 * 60 * 1000;
+            case "1h": return diffMs <= 60 * 60 * 1000;
+            case "12h": return diffMs <= 12 * 60 * 60 * 1000;
+            case "24h": return diffMs <= 24 * 60 * 60 * 1000;
+            default: return true;
+        }
+    })();
+        
+        return matchesSearch && matchesStatus && matchesType && matchesBusiness && matchesLocation && matchesSource && matchesTime;
     });
     
     // Get business name for job
     const getBusinessName = (businessId: string) => {
         return businesses?.find(b => b.id === businessId)?.name || 'Unknown Business';
     };
+
+        // Get location name for job
+    const getLocationName = (locationId: string | null | undefined) => {
+        if (!locationId) return 'N/A';
+        return locations.find(l => l.id === locationId)?.name || 'Unknown Location';
+      };
+
+      // Get source name for job
+      const getSourceName = (sourceId: string) => {
+        return sources.find(s => s.id === sourceId)?.name || 'Unknown Source';
+      };
     
     // Format date
     const formatDate = (dateString: string) => {
@@ -801,21 +840,46 @@ const Jobs = () => {
                             </SelectContent>
                         </Select>
                         
-                        {businesses && businesses.length > 1 && (
-                            <Select value={businessFilter} onValueChange={setBusinessFilter}>
-                                <SelectTrigger className="w-full md:w-48">
-                                    <SelectValue placeholder="Business" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Businesses</SelectItem>
-                                    {businesses.map(business => (
-                                        <SelectItem key={business.id} value={business.id}>
-                                            {business.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        )}
+                        <Select value={locationFilter} onValueChange={setLocationFilter}>
+                            <SelectTrigger className="w-full md:w-40">
+                                <SelectValue placeholder="Location" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Locations</SelectItem>
+                                {locations.map(location => (
+                                    <SelectItem key={location.id} value={location.id}>
+                                        {location.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        
+                        <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                            <SelectTrigger className="w-full md:w-40">
+                                <SelectValue placeholder="Source" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Sources</SelectItem>
+                                {sources.map(source => (
+                                    <SelectItem key={source.id} value={source.id}>
+                                        {source.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        
+                        <Select value={timeFilter} onValueChange={setTimeFilter}>
+                            <SelectTrigger className="w-full md:w-40">
+                                <SelectValue placeholder="Time" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {TIME_FILTERS.map(filter => (
+                                    <SelectItem key={filter.value} value={filter.value}>
+                                        {filter.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </CardContent>
             </Card>
@@ -841,7 +905,9 @@ const Jobs = () => {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Job</TableHead>
-                                    <TableHead>Business</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead>Location</TableHead>
+                                    <TableHead>Source</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Created</TableHead>
                                     <TableHead>Duration</TableHead>
@@ -872,8 +938,20 @@ const Jobs = () => {
                                             </TableCell>
                                             
                                             <TableCell>
+                                                <Badge variant="outline" className={`${config?.color} ${config?.bgColor} ${config?.borderColor}`}>
+                                                    {config?.label}
+                                                </Badge>
+                                            </TableCell>
+
+                                            <TableCell>
                                                 <div className="font-medium">
-                                                    {getBusinessName(job.business_id)}
+                                                    {getLocationName(job.location_id)}
+                                                </div>
+                                            </TableCell>
+
+                                            <TableCell>
+                                                <div className="font-medium">
+                                                    {getSourceName(job.source_id)}
                                                 </div>
                                             </TableCell>
                                             

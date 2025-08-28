@@ -102,7 +102,7 @@ class ScrapingJobManager:
             current_job = sync_db.get_job_status(self.job_id)
             
             logger.info(f"Job {self.job_id}: Current job status from DB: {current_job}")
-            if current_job and current_job.get('status') == "canceled":
+            if (current_job and current_job.get('status') == "canceled") or not current_job.get('status'):
                 logger.info(f"Job {self.job_id} was canceled by user")
                 raise JobCancelledException(f"Job {self.job_id} canceled")
 
