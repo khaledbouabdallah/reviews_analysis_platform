@@ -6,6 +6,7 @@ from models import PyObjectId
 from models.review import ReviewCreate, ReviewInDB, ReviewUpdate
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError, PyMongoError
+from typing import Optional, Dict, Any
 
 
 class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
@@ -70,49 +71,80 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             logger.error(f"Database error while updating review: {e!s}")
             raise RuntimeError("Database error while updating review")
 
-    async def get_by_user(self, user_id: str, skip: int = 0) -> list[ReviewInDB]:
-        try:
-            oid = PyObjectId(user_id)
-        except Exception:
-            raise ValueError("Invalid user_id format")
-
-        try:
-            reviews_data = (
-                await self.collection.find({"user_id": oid}).skip(skip).to_list()
-            )
-            return [self.db_model.model_validate(review) for review in reviews_data]
-        except PyMongoError:
-            raise RuntimeError("Database error")
-
     async def get_by_business(
         self,
         business_id: str,
+        user_id: str,
         skip: int = 0,
+        limit: int = 50,
+        filters: Optional[Dict[str, Any]] = None,
     ) -> list[ReviewInDB]:
+        """Get reviews by business with user filtering and optional filters."""
         try:
-            oid = PyObjectId(business_id)
+            business_oid = PyObjectId(business_id)
+            user_oid = PyObjectId(user_id)
         except Exception:
-            raise ValueError("Invalid business_id format")
+            raise ValueError("Invalid business_id or user_id format")
 
         try:
-            reviews_data = (
-                await self.collection.find({"business_id": oid}).skip(skip).to_list()
-            )
+            # Base query - always filter by business and user
+            query = {"business_id": business_oid, "user_id": user_oid}
+            
+            # Add additional filters if provided
+            if filters:
+                query.update(filters)
+
+            reviews_data = await self.collection.find(query).skip(skip).limit(limit).to_list()
             return [self.db_model.model_validate(review) for review in reviews_data]
-        except PyMongoError:
+        except PyMongoError as e:
+            logger.error(f"Database error while fetching reviews by business: {e!s}")
             raise RuntimeError("Database error")
 
-    async def get_by_source(self, source_id: str, skip: int = 0) -> list[ReviewInDB]:
-        """Get all reviews from a specific source."""
+    async def count_by_business(
+        self,
+        business_id: str,
+        user_id: str,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> int:
+        """Count reviews by business with user filtering and optional filters."""
         try:
-            oid = PyObjectId(source_id)
+            business_oid = PyObjectId(business_id)
+            user_oid = PyObjectId(user_id)
         except Exception:
-            raise ValueError("Invalid source_id format")
+            raise ValueError("Invalid business_id or user_id format")
 
         try:
-            reviews_data = (
-                await self.collection.find({"source_id": oid}).skip(skip).to_list()
-            )
+            # Base query - always filter by business and user
+            query = {"business_id": business_oid, "user_id": user_oid}
+            
+            # Add additional filters if provided
+            if filters:
+                query.update(filters)
+
+            return await self.collection.count_documents(query)
+        except PyMongoError as e:
+            logger.error(f"Database error while counting reviews by business: {e!s}")
+            raise RuntimeError("Database error")
+
+    async def get_by_source(
+        self, 
+        source_id: str, 
+        user_id: str,
+        skip: int = 0, 
+        limit: int = 50
+    ) -> list[ReviewInDB]:
+        """Get all reviews from a specific source (user-filtered)."""
+        try:
+            source_oid = PyObjectId(source_id)
+            user_oid = PyObjectId(user_id)
+        except Exception:
+            raise ValueError("Invalid source_id or user_id format")
+
+        try:
+            reviews_data = await self.collection.find({
+                "source_id": source_oid, 
+                "user_id": user_oid
+            }).skip(skip).limit(limit).to_list()
             return [self.db_model.model_validate(review) for review in reviews_data]
         except PyMongoError as e:
             logger.error(f"Database error while fetching reviews by source: {e!s}")
@@ -121,34 +153,46 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
     async def get_by_location(
         self,
         location_id: str,
+        user_id: str,
         skip: int = 0,
+        limit: int = 50,
     ) -> list[ReviewInDB]:
-        """Get all reviews from a specific location."""
+        """Get all reviews from a specific location (user-filtered)."""
         try:
-            oid = PyObjectId(location_id)
+            location_oid = PyObjectId(location_id)
+            user_oid = PyObjectId(user_id)
         except Exception:
-            raise ValueError("Invalid location_id format")
+            raise ValueError("Invalid location_id or user_id format")
 
         try:
-            reviews_data = (
-                await self.collection.find({"location_id": oid}).skip(skip).to_list()
-            )
+            reviews_data = await self.collection.find({
+                "location_id": location_oid,
+                "user_id": user_oid
+            }).skip(skip).limit(limit).to_list()
             return [self.db_model.model_validate(review) for review in reviews_data]
         except PyMongoError as e:
             logger.error(f"Database error while fetching reviews by location: {e!s}")
             raise RuntimeError("Database error")
 
-    async def get_by_job(self, job_id: str, skip: int = 0) -> list[ReviewInDB]:
-        """Get all reviews linked to a specific scraping job."""
+    async def get_by_job(
+        self, 
+        job_id: str, 
+        user_id: str,
+        skip: int = 0, 
+        limit: int = 50
+    ) -> list[ReviewInDB]:
+        """Get all reviews linked to a specific scraping job (user-filtered)."""
         try:
-            oid = PyObjectId(job_id)
+            job_oid = PyObjectId(job_id)
+            user_oid = PyObjectId(user_id)
         except Exception:
-            raise ValueError("Invalid job_id format")
+            raise ValueError("Invalid job_id or user_id format")
 
         try:
-            reviews_data = (
-                await self.collection.find({"job_id": oid}).skip(skip).to_list()
-            )
+            reviews_data = await self.collection.find({
+                "job_id": job_oid,
+                "user_id": user_oid
+            }).skip(skip).limit(limit).to_list()
             return [self.db_model.model_validate(review) for review in reviews_data]
         except PyMongoError as e:
             logger.error(f"Database error while fetching reviews by job: {e!s}")
@@ -214,21 +258,20 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             raise RuntimeError("Database error while deleting reviews")
 
     async def delete_by_location(self, location_id: str) -> bool:
-        """Delete all sources of location."""
+        """Delete all reviews of location."""
         try:
-            # Convert string to PyObjectId for database query
             oid = PyObjectId(location_id)
         except Exception:
-            raise ValueError("Invalid user_id or location_id format")
+            raise ValueError("Invalid location_id format")
 
         try:
             result = await self.collection.delete_many({"location_id": oid})
-            logger.info(f"Deleted {result.deleted_count} sources for location {oid}")
+            logger.info(f"Deleted {result.deleted_count} reviews for location {oid}")
             return result.deleted_count > 0
 
         except PyMongoError as e:
-            logger.error(f"Database error while deleting sources: {e!s}")
-            raise RuntimeError("Database error while deleting sources")
+            logger.error(f"Database error while deleting reviews: {e!s}")
+            raise RuntimeError("Database error while deleting reviews")
 
     async def delete_by_source(self, source_id: str) -> bool:
         """Delete all reviews of a source."""
@@ -248,9 +291,8 @@ class ReviewRepository(BaseRepository[ReviewCreate, ReviewUpdate, ReviewInDB]):
             raise RuntimeError("Database error while deleting reviews by source")
 
     async def delete_by_job(self, job_id: str) -> None:
-        """Delete all jobs of a source."""
+        """Delete all reviews of a job."""
         try:
-            # Convert string to PyObjectId for database query
             oid = PyObjectId(job_id)
         except Exception:
             raise ValueError("Invalid job_id format")

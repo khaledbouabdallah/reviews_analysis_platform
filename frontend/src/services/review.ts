@@ -83,6 +83,25 @@ export interface ReviewUpdate {
   source_type?: SourceType;
 }
 
+export interface ReviewFilters {
+  skip?: number;
+  limit?: number;
+  has_analysis?: boolean;
+  needs_attention?: boolean;
+  sentiment?: SentimentLabel;
+  is_spam?: boolean;
+  job_id?: string;
+  source_id?: string;
+  location_id?: string;
+}
+
+export interface PaginatedReviewResponse {
+  reviews: Review[];
+  total: number;
+  page: number;
+  pages: number;
+}
+
 // Helper function to get sentiment color
 export const getSentimentColor = (sentiment?: SentimentLabel): string => {
   if (!sentiment) return 'bg-gray-100 text-gray-700 border-gray-200';
@@ -148,6 +167,19 @@ export const reviewNeedsAttention = (review: Review): boolean => {
          false;
 };
 
+// Helper function to build query string from filters
+const buildQueryString = (filters: ReviewFilters = {}): string => {
+  const params = new URLSearchParams();
+  
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      params.append(key, value.toString());
+    }
+  });
+  
+  return params.toString() ? `?${params.toString()}` : '';
+};
+
 export class ReviewService {
   // Match location service error handling pattern
   private async fetchWithAuth(url: string, options: RequestInit = {}) {
@@ -191,16 +223,6 @@ export class ReviewService {
     return response.json();
   }
 
-  // Get all reviews for user
-  async getReviews(): Promise<Review[]> {
-    try {
-      return await this.fetchWithAuth('/api/reviews/');
-    } catch (error) {
-      console.error('Error fetching reviews:', error);
-      throw error;
-    }
-  }
-
   // Get single review by ID
   async getReview(id: string): Promise<Review> {
     try {
@@ -211,20 +233,39 @@ export class ReviewService {
     }
   }
 
-  // Get reviews by business ID
-  async getReviewsByBusiness(businessId: string): Promise<Review[]> {
+  // Primary method: Get reviews by business with optional filters
+  async getReviewsByBusiness(businessId: string, filters: ReviewFilters = {}): Promise<Review[]> {
     try {
-      return await this.fetchWithAuth(`/api/reviews/business/${businessId}`);
+      const queryString = buildQueryString(filters);
+      return await this.fetchWithAuth(`/api/reviews/business/${businessId}${queryString}`);
     } catch (error) {
       console.error('Error fetching reviews by business:', error);
       throw error;
     }
   }
 
-  // Get reviews by job ID
-  async getReviewsByJob(jobId: string): Promise<Review[]> {
+  // Get paginated reviews by business
+  async getReviewsByBusinessPaginated(
+    businessId: string, 
+    page: number = 1, 
+    limit: number = 50,
+    filters: Omit<ReviewFilters, 'skip' | 'limit'> = {}
+  ): Promise<PaginatedReviewResponse> {
     try {
-      return await this.fetchWithAuth(`/api/reviews/job/${jobId}`);
+      const paginationParams = { page, limit };
+      const queryString = buildQueryString({ ...filters, ...paginationParams });
+      return await this.fetchWithAuth(`/api/reviews/business/${businessId}/paginated${queryString}`);
+    } catch (error) {
+      console.error('Error fetching paginated reviews by business:', error);
+      throw error;
+    }
+  }
+
+  // Get reviews by job ID
+  async getReviewsByJob(jobId: string, filters: Pick<ReviewFilters, 'skip' | 'limit'> = {}): Promise<Review[]> {
+    try {
+      const queryString = buildQueryString(filters);
+      return await this.fetchWithAuth(`/api/reviews/job/${jobId}${queryString}`);
     } catch (error) {
       console.error('Error fetching reviews by job:', error);
       throw error;
@@ -232,9 +273,10 @@ export class ReviewService {
   }
 
   // Get reviews by source ID
-  async getReviewsBySource(sourceId: string): Promise<Review[]> {
+  async getReviewsBySource(sourceId: string, filters: Pick<ReviewFilters, 'skip' | 'limit'> = {}): Promise<Review[]> {
     try {
-      return await this.fetchWithAuth(`/api/reviews/source/${sourceId}`);
+      const queryString = buildQueryString(filters);
+      return await this.fetchWithAuth(`/api/reviews/source/${sourceId}${queryString}`);
     } catch (error) {
       console.error('Error fetching reviews by source:', error);
       throw error;
@@ -242,9 +284,10 @@ export class ReviewService {
   }
 
   // Get reviews by location ID
-  async getReviewsByLocation(locationId: string): Promise<Review[]> {
+  async getReviewsByLocation(locationId: string, filters: Pick<ReviewFilters, 'skip' | 'limit'> = {}): Promise<Review[]> {
     try {
-      return await this.fetchWithAuth(`/api/reviews/location/${locationId}`);
+      const queryString = buildQueryString(filters);
+      return await this.fetchWithAuth(`/api/reviews/location/${locationId}${queryString}`);
     } catch (error) {
       console.error('Error fetching reviews by location:', error);
       throw error;
@@ -279,69 +322,26 @@ export class ReviewService {
     }
   }
 
-  // Analysis-specific methods
-  async getAnalyzedReviews(): Promise<Review[]> {
-    try {
-      const reviews = await this.getReviews();
-      return reviews.filter(review => review.analyzed_data);
-    } catch (error) {
-      console.error('Error fetching analyzed reviews:', error);
-      throw error;
-    }
+  // Convenience methods for common filter combinations
+  async getAnalyzedReviewsByBusiness(businessId: string, filters: ReviewFilters = {}): Promise<Review[]> {
+    return this.getReviewsByBusiness(businessId, { ...filters, has_analysis: true });
   }
 
-  async getReviewsNeedingAttention(): Promise<Review[]> {
-    try {
-      const reviews = await this.getReviews();
-      return reviews.filter(reviewNeedsAttention);
-    } catch (error) {
-      console.error('Error fetching reviews needing attention:', error);
-      throw error;
-    }
+  async getReviewsNeedingAttentionByBusiness(businessId: string, filters: ReviewFilters = {}): Promise<Review[]> {
+    return this.getReviewsByBusiness(businessId, { ...filters, needs_attention: true });
   }
 
-  async getReviewsBySentiment(sentiment: SentimentLabel): Promise<Review[]> {
-    try {
-      const reviews = await this.getReviews();
-      return reviews.filter(review => 
-        review.analyzed_data?.sentiment?.label === sentiment
-      );
-    } catch (error) {
-      console.error('Error fetching reviews by sentiment:', error);
-      throw error;
-    }
+  async getReviewsBySentimentByBusiness(businessId: string, sentiment: SentimentLabel, filters: ReviewFilters = {}): Promise<Review[]> {
+    return this.getReviewsByBusiness(businessId, { ...filters, sentiment });
   }
 
-  async getSpamReviews(): Promise<Review[]> {
-    try {
-      const reviews = await this.getReviews();
-      return reviews.filter(review => 
-        review.analyzed_data?.spam_detection?.is_spam
-      );
-    } catch (error) {
-      console.error('Error fetching spam reviews:', error);
-      throw error;
-    }
+  async getSpamReviewsByBusiness(businessId: string, filters: ReviewFilters = {}): Promise<Review[]> {
+    return this.getReviewsByBusiness(businessId, { ...filters, is_spam: true });
   }
 
   // Utility methods
   getReviewUrl(reviewId: string): string {
     return `/reviews/${reviewId}`;
-  }
-
-  // Get reviews with pagination (if backend supports it)
-  async getReviewsPaginated(page: number = 1, limit: number = 50): Promise<{
-    reviews: Review[];
-    total: number;
-    page: number;
-    pages: number;
-  }> {
-    try {
-      return await this.fetchWithAuth(`/api/reviews/?page=${page}&limit=${limit}`);
-    } catch (error) {
-      console.error('Error fetching paginated reviews:', error);
-      throw error;
-    }
   }
 }
 

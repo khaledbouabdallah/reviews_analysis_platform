@@ -29,6 +29,7 @@ const navigationItems = [
   { title: "Overview", url: "/dashboard", icon: Home, exact: true },
   { title: "Businesses", url: "/dashboard/businesses", icon: Building2 },
   { title: "Locations", url: "/dashboard/locations", icon: MapPin },
+  { title: "Reviews", url: "/dashboard/reviews", icon: Users },
   { title: "Analytics", url: "/dashboard/analytics", icon: BarChart3 },
   { title: "Campaigns", url: "/dashboard/campaigns", icon: Mail },
   { title: "Jobs", url: "/dashboard/jobs", icon: Play },
