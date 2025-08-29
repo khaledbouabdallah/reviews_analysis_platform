@@ -124,6 +124,7 @@ async def register_user(user_data: dict):
     try:
         new_user = await user_repo.create(user_create)
     except Exception as e:
+        logger.error(f"Error creating user: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to register user",

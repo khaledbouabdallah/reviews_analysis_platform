@@ -47,7 +47,9 @@ async def analyze_job_reviews(
             )
 
         # Get all reviews for the job
-        reviews = await review_repo.get_by_job(job_id)
+        reviews = await review_repo.get_by_job(job_id=job_id,
+                                               user_id=current_user.id,
+                                               limit=0)  # No limit to get all reviews
         if not reviews:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
