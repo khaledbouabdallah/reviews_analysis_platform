@@ -76,6 +76,15 @@ export interface AnalyzedData {
   spam_detection?: SpamDetection;
   urgency?: UrgencyClassification;
   business_insights?: BusinessInsights;
+    analysis_results?: {
+        language_analysis?: LanguageAnalysis;
+        translation_analysis?: TranslationAnalysis;
+        sentiment?: SentimentAnalysis;
+        topics?: TopicAnalysis[];
+        spam_detection?: SpamDetection;
+        urgency_classification?: UrgencyClassification;
+        business_insights?: BusinessInsights;
+    };
 }
 
 export interface ReviewUpdate {
@@ -102,41 +111,45 @@ export interface PaginatedReviewResponse {
   pages: number;
 }
 
+export const getAnalysisResults = (review: Review) => {
+    return review.analyzed_data?.analysis_results;
+  };
+
 // Helper function to get sentiment color
 export const getSentimentColor = (sentiment?: SentimentLabel): string => {
-  if (!sentiment) return 'bg-gray-100 text-gray-700 border-gray-200';
-  
-  switch (sentiment) {
-    case 'positive':
-      return 'bg-green-100 text-green-700 border-green-200';
-    case 'negative':
-      return 'bg-red-100 text-red-700 border-red-200';
-    case 'neutral':
-      return 'bg-gray-100 text-gray-700 border-gray-200';
-    default:
-      return 'bg-gray-100 text-gray-700 border-gray-200';
-  }
-};
+    if (!sentiment) return 'bg-gray-100 text-gray-700 border-gray-200';
+    
+    switch (sentiment) {
+      case 'positive':
+        return 'bg-green-100 text-green-700 border-green-200';
+      case 'negative':
+        return 'bg-red-100 text-red-700 border-red-200';
+      case 'neutral':
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
 
 // Helper function to get urgency color
 export const getUrgencyColor = (urgency?: UrgencyLevel): string => {
-  if (!urgency) return 'bg-gray-100 text-gray-700 border-gray-200';
-  
-  switch (urgency) {
-    case 'critical':
-      return 'bg-red-100 text-red-700 border-red-200';
-    case 'high':
-      return 'bg-orange-100 text-orange-700 border-orange-200';
-    case 'medium':
-      return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-    case 'low':
-      return 'bg-blue-100 text-blue-700 border-blue-200';
-    case 'none':
-      return 'bg-gray-100 text-gray-700 border-gray-200';
-    default:
-      return 'bg-gray-100 text-gray-700 border-gray-200';
-  }
-};
+    if (!urgency) return 'bg-gray-100 text-gray-700 border-gray-200';
+    
+    switch (urgency) {
+      case 'critical':
+        return 'bg-red-100 text-red-700 border-red-200';
+      case 'high':
+        return 'bg-orange-100 text-orange-700 border-orange-200';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      case 'low':
+        return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'none':
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
 
 // Helper function to get rating from review data
 export const getReviewRating = (review: Review): number | null => {
@@ -147,25 +160,62 @@ export const getReviewRating = (review: Review): number | null => {
 };
 
 // Helper function to get review text
+// **FIXED: Updated review text helper to check translation in nested structure**
 export const getReviewText = (review: Review): string => {
-  // Try to get translated text first, then original text
-  if (review.analyzed_data?.translation?.english_translation) {
-    return review.analyzed_data.translation.english_translation;
-  }
-  
-  return review.data?.original_text || review.data?.translated_text || 'No text available';
-};
-
+    // Get analysis results from nested structure
+    const analysisResults = getAnalysisResults(review);
+    
+    // Try to get translated text first from analysis results
+    if (analysisResults?.translation_analysis?.english_translation) {
+      return analysisResults.translation_analysis.english_translation;
+    }
+    
+    // Fall back to original review data
+    return review.data?.original_text || review.data?.translated_text || 'No text available';
+  };
 // Helper function to check if review needs attention
 export const reviewNeedsAttention = (review: Review): boolean => {
-  const urgency = review.analyzed_data?.urgency;
-  const spam = review.analyzed_data?.spam_detection;
+    const analysisResults = getAnalysisResults(review);
+    const urgency = analysisResults?.urgency_classification;
+    const spam = analysisResults?.spam_detection;
+    
+    return urgency?.requires_immediate_response || 
+           urgency?.escalation_needed || 
+           (spam?.is_spam && spam.confidence > 0.8) ||
+           false;
+  };
   
-  return urgency?.requires_immediate_response || 
-         urgency?.escalation_needed || 
-         (spam?.is_spam && spam.confidence > 0.8) ||
-         false;
-};
+
+// **NEW: Helper to get sentiment from nested structure**
+export const getReviewSentiment = (review: Review): SentimentLabel | undefined => {
+    const analysisResults = getAnalysisResults(review);
+    return analysisResults?.sentiment?.label;
+  };
+  
+  // **NEW: Helper to get urgency level from nested structure**
+  export const getReviewUrgency = (review: Review): UrgencyLevel | undefined => {
+    const analysisResults = getAnalysisResults(review);
+    return analysisResults?.urgency_classification?.level;
+  };
+  
+  // **NEW: Helper to check if review is spam from nested structure**
+  export const isReviewSpam = (review: Review): boolean => {
+    const analysisResults = getAnalysisResults(review);
+    const spam = analysisResults?.spam_detection;
+    return spam?.is_spam || false;
+  };
+  
+  // **NEW: Helper to get topics from nested structure**
+  export const getReviewTopics = (review: Review) => {
+    const analysisResults = getAnalysisResults(review);
+    return analysisResults?.topics || [];
+  };
+  
+  // **NEW: Helper to get business insights from nested structure**
+  export const getBusinessInsights = (review: Review) => {
+    const analysisResults = getAnalysisResults(review);
+    return analysisResults?.business_insights;
+  };
 
 // Helper function to build query string from filters
 const buildQueryString = (filters: ReviewFilters = {}): string => {

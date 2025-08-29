@@ -1,207 +1,230 @@
+// frontend/src/components/reviews/ReviewRow.tsx
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { 
-    ChevronDown, 
-    ChevronRight, 
-    Star, 
-    Calendar, 
     MessageSquare, 
-    Flag, 
     Brain, 
     TrendingUp, 
     AlertTriangle, 
-    Target, 
-    CheckCircle, 
-    XCircle, 
-    Eye, 
-    RotateCcw 
+    Globe, 
+    Star,
+    Target,
+    Shield,
+    ExternalLink,
+    ChevronDown,
+    ChevronUp
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Review, getSentimentColor, getUrgencyColor, getReviewRating, getReviewText, reviewNeedsAttention } from '@/services/review';
+import { 
+    Review, 
+    getReviewRating, 
+    getReviewText, 
+    getSentimentColor,
+    getAnalysisResults,
+    getReviewSentiment,
+    getReviewUrgency,
+    getReviewTopics,
+    isReviewSpam,
+    reviewNeedsAttention
+} from '@/services/review';
 
 interface ReviewRowProps {
     review: Review;
-    isExpanded: boolean;
-    onToggleExpansion: () => void;
-    onViewDetails: () => void;
-    index: number;
+    onViewDetails: (reviewId: string) => void;
 }
 
-export const ReviewRow = ({ review, isExpanded, onToggleExpansion, onViewDetails, index }: ReviewRowProps) => {
+export const ReviewRow: React.FC<ReviewRowProps> = ({ review, onViewDetails }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+
     const rating = getReviewRating(review);
     const reviewText = getReviewText(review);
-    const needsAttention = reviewNeedsAttention(review);
-    const sentiment = review.analyzed_data?.sentiment;
-    const urgency = review.analyzed_data?.urgency;
-    const businessInsights = review.analyzed_data?.business_insights;
-    const topics = review.analyzed_data?.topics || [];
+    const analysisResults = getAnalysisResults(review);
+    const sentiment = getReviewSentiment(review);
+    const urgency = getReviewUrgency(review);
+    const topics = getReviewTopics(review);
 
-    const renderStars = (rating: number) => {
-        return (
-            <div className="flex items-center space-x-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                        key={star}
-                        className={`h-4 w-4 ${star <= rating
-                            ? 'text-yellow-400 fill-current'
-                            : 'text-gray-300'
-                        }`}
-                    />
-                ))}
-            </div>
-        );
-    };
+    // Truncated text for collapsed view
+    const truncatedText = reviewText.length > 150 ? `${reviewText.substring(0, 150)}...` : reviewText;
 
     return (
-        <div 
-            className="transition-all duration-300 hover:bg-white/30 border-b border-white/10 last:border-b-0"
-            style={{ animationDelay: `${index * 0.05}s` }}
-        >
-            {/* Main Row - IMPROVED STYLING */}
-            <div className="px-8 py-6 cursor-pointer bg-white/5 hover:bg-white/20 transition-colors duration-200" onClick={onToggleExpansion}>
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-6 flex-1">
-                        {/* Expansion Toggle */}
-                        <div className="flex items-center">
-                            {isExpanded ? (
-                                <ChevronDown className="w-5 h-5 text-gray-500" />
-                            ) : (
-                                <ChevronRight className="w-5 h-5 text-gray-500" />
-                            )}
-                        </div>
-
-                        {/* Date */}
-                        <div className="flex items-center space-x-2 min-w-[140px]">
-                            <Calendar className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm font-medium text-gray-700">
-                                {new Date(review.created_at).toLocaleDateString()}
-                            </span>
-                        </div>
-
-                        {/* Rating */}
-                        <div className="min-w-[130px]">
-                            {rating ? renderStars(rating) : (
-                                <span className="text-sm text-gray-500">No rating</span>
-                            )}
-                        </div>
-
-                        {/* Review Preview - IMPROVED */}
-                        <div className="flex-1 min-w-0 bg-white/30 rounded-lg p-3">
-                            <p className="text-gray-800 line-clamp-2 text-sm leading-relaxed">
-                                "{reviewText.substring(0, 120)}{reviewText.length > 120 ? '...' : ''}"
-                            </p>
-                        </div>
-
-                        {/* AI Analysis Badges */}
-                        <div className="flex items-center space-x-2">
-                            {/* Attention Flag */}
-                            {needsAttention && (
-                                <Badge variant="destructive" className="bg-red-100 text-red-700 border-red-200">
-                                    <Flag className="w-3 h-3 mr-1" />
-                                    Urgent
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-white/80 to-white/60 border border-white/40 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+            {/* Main Content */}
+            <div className="p-6">
+                <div className="flex items-start justify-between space-x-4">
+                    {/* Left Content */}
+                    <div className="flex-1 space-y-3">
+                        {/* Header with Rating and Source */}
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                                {rating && (
+                                    <div className="flex items-center">
+                                        {[...Array(5)].map((_, i) => (
+                                            <Star
+                                                key={i}
+                                                className={`w-4 h-4 ${
+                                                    i < rating
+                                                        ? 'text-yellow-400 fill-current'
+                                                        : 'text-gray-300'
+                                                }`}
+                                            />
+                                        ))}
+                                        <span className="text-sm text-gray-600 ml-2">({rating}/5)</span>
+                                    </div>
+                                )}
+                                
+                                <Badge variant="outline" className="text-xs">
+                                    <Globe className="w-3 h-3 mr-1" />
+                                    {review.source_type}
                                 </Badge>
-                            )}
 
-                            {/* Sentiment */}
-                            {sentiment && (
-                                <Badge className={getSentimentColor(sentiment.label)}>
-                                    <span className="capitalize">{sentiment.label}</span>
-                                    <span className="ml-1 text-xs">
-                                        {(sentiment.confidence * 100).toFixed(0)}%
-                                    </span>
+                                {review.data?.username && (
+                                    <span className="text-sm text-gray-600">by {review.data.username}</span>
+                                )}
+                            </div>
+
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setIsExpanded(!isExpanded)}
+                                className="text-gray-500 hover:text-gray-700"
+                            >
+                                {isExpanded ? (
+                                    <ChevronUp className="w-4 h-4" />
+                                ) : (
+                                    <ChevronDown className="w-4 h-4" />
+                                )}
+                            </Button>
+                        </div>
+
+                        {/* Review Text Preview */}
+                        <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-white/40">
+                            <blockquote className="text-gray-800 leading-relaxed italic">
+                                "{isExpanded ? reviewText : truncatedText}"
+                            </blockquote>
+                        </div>
+
+                        {/* Analysis Status Row */}
+                        <div className="flex items-center justify-between">
+                            {/* Analysis Badges */}
+                            <div className="flex items-center space-x-2">
+                                {/* AI Status Badge */}
+                                <Badge variant={analysisResults ? "default" : "secondary"}>
+                                    <Brain className="w-3 h-3 mr-1" />
+                                    {analysisResults ? 'AI ✓' : 'Pending'}
                                 </Badge>
-                            )}
 
-                            {/* Analysis Status */}
-                            <Badge variant={review.analyzed_data ? "default" : "secondary"}>
-                                <Brain className="w-3 h-3 mr-1" />
-                                {review.analyzed_data ? 'AI ✓' : 'Pending'}
-                            </Badge>
+                                {/* Sentiment Badge */}
+                                {sentiment && (
+                                    <Badge className={getSentimentColor(sentiment)}>
+                                        <TrendingUp className="w-3 h-3 mr-1" />
+                                        {sentiment}
+                                    </Badge>
+                                )}
+
+                                {/* Urgency Badge */}
+                                {urgency && urgency !== 'none' && (
+                                    <Badge variant={
+                                        urgency === 'critical' ? 'destructive' :
+                                        urgency === 'high' ? 'default' :
+                                        urgency === 'medium' ? 'secondary' :
+                                        'outline'
+                                    }>
+                                        <AlertTriangle className="w-3 h-3 mr-1" />
+                                        {urgency}
+                                    </Badge>
+                                )}
+
+                                {/* Spam Badge */}
+                                {isReviewSpam(review) && (
+                                    <Badge variant="destructive">
+                                        <Shield className="w-3 h-3 mr-1" />
+                                        SPAM
+                                    </Badge>
+                                )}
+
+                                {/* Needs Attention Badge */}
+                                {reviewNeedsAttention(review) && (
+                                    <Badge variant="destructive" className="animate-pulse">
+                                        <AlertTriangle className="w-3 h-3 mr-1" />
+                                        URGENT
+                                    </Badge>
+                                )}
+                            </div>
+
+                            {/* Date */}
+                            {review.data?.date && (
+                                <span className="text-xs text-gray-500">
+                                    {new Date(review.data.date).toLocaleDateString()}
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Expanded Content - ENHANCED */}
+            {/* Expanded Content */}
             {isExpanded && (
-                <div className="px-8 pb-8 border-t border-white/20 bg-gradient-to-r from-white/20 to-white/10 animate-in slide-in-from-top duration-300">
+                <div className="px-6 pb-6 border-t border-white/20 bg-gradient-to-r from-white/20 to-white/10 animate-in slide-in-from-top duration-300">
                     <div className="pt-6 space-y-6">
-                        {/* Full Review Text */}
-                        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
-                            <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-                                <MessageSquare className="w-5 h-5 mr-2 text-blue-600" />
-                                Full Review
-                            </h4>
-                            <blockquote className="text-gray-800 leading-relaxed italic border-l-4 border-blue-400 pl-4 bg-blue-50/50 rounded-r-lg p-4">
-                                "{reviewText}"
-                            </blockquote>
-                            
-                            {/* Review Metadata */}
-                            <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-600 space-y-1">
-                                <div>Source: {review.source_type}</div>
-                                <div>Job Type: {review.job_type}</div>
-                                <div>Review ID: {review.id}</div>
+                        {/* Review Metadata */}
+                        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 border border-white/40">
+                            <div className="text-xs text-gray-600 space-y-1">
+                                <div><strong>Source:</strong> {review.source_type}</div>
+                                <div><strong>Job Type:</strong> {review.job_type}</div>
+                                <div><strong>Review ID:</strong> {review.id}</div>
+                                <div><strong>Created:</strong> {new Date(review.created_at).toLocaleString()}</div>
                             </div>
                         </div>
 
-                        {/* AI Analysis */}
-                        {review.analyzed_data && (
+                        {/* AI Analysis Summary */}
+                        {analysisResults && (
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {/* Left Column */}
                                 <div className="space-y-4">
                                     {/* Sentiment Analysis */}
                                     {sentiment && (
-                                        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 border border-white/40">
-                                            <h5 className="font-semibold text-gray-900 mb-3 flex items-center">
-                                                <TrendingUp className="w-4 h-4 mr-2 text-green-600" />
+                                        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
+                                            <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                                                <TrendingUp className="w-5 h-5 mr-2 text-green-600" />
                                                 Sentiment Analysis
-                                            </h5>
-                                            <div className="space-y-3">
-                                                <div className="flex items-center justify-between">
-                                                    <span>Overall:</span>
-                                                    <Badge className={getSentimentColor(sentiment.label)}>
-                                                        {sentiment.label.toUpperCase()}
-                                                    </Badge>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span>Confidence:</span>
-                                                    <span className="font-medium">{(sentiment.confidence * 100).toFixed(1)}%</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span>Tone:</span>
-                                                    <span className="capitalize font-medium">{sentiment.emotional_tone}</span>
-                                                </div>
-                                                <div className="mt-3 p-3 bg-gray-100 rounded-lg">
-                                                    <p className="text-sm text-gray-700 font-medium">AI Reasoning:</p>
-                                                    <p className="text-sm text-gray-600 mt-1">{sentiment.reasoning}</p>
-                                                </div>
+                                            </h4>
+                                            <div className="flex items-center space-x-3">
+                                                <Badge className={getSentimentColor(sentiment)}>
+                                                    {sentiment.toUpperCase()}
+                                                </Badge>
+                                                <span className="text-sm text-gray-600">
+                                                    {Math.round((analysisResults.sentiment?.confidence || 0) * 100)}% confidence
+                                                </span>
                                             </div>
+                                            {analysisResults.sentiment?.emotional_tone && (
+                                                <p className="text-sm text-gray-600 mt-2">
+                                                    <strong>Tone:</strong> {analysisResults.sentiment.emotional_tone}
+                                                </p>
+                                            )}
                                         </div>
                                     )}
 
-                                    {/* Topics */}
+                                    {/* Topics Analysis */}
                                     {topics.length > 0 && (
-                                        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 border border-white/40">
-                                            <h5 className="font-semibold text-gray-900 mb-3 flex items-center">
-                                                <Target className="w-4 h-4 mr-2 text-indigo-600" />
-                                                Key Topics ({topics.length})
-                                            </h5>
-                                            <div className="space-y-3">
-                                                {topics.slice(0, 4).map((topic, i) => (
-                                                    <div key={i} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                                                        <div className="flex items-center space-x-2">
-                                                            <Badge className={getSentimentColor(topic.sentiment)} size="sm">
-                                                                {topic.topic}
-                                                            </Badge>
-                                                            <span className="text-sm text-gray-600">
-                                                                {(topic.confidence * 100).toFixed(0)}% confident
-                                                            </span>
-                                                        </div>
+                                        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
+                                            <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                                                <Target className="w-5 h-5 mr-2 text-purple-600" />
+                                                Key Topics
+                                            </h4>
+                                            <div className="space-y-2">
+                                                {topics.slice(0, 3).map((topic, i) => (
+                                                    <div key={i} className="flex items-center justify-between">
+                                                        <span className="text-sm font-medium text-gray-900">{topic.topic}</span>
+                                                        <Badge className={getSentimentColor(topic.sentiment)} size="sm">
+                                                            {topic.sentiment}
+                                                        </Badge>
                                                     </div>
                                                 ))}
-                                                {topics.length > 4 && (
-                                                    <Badge variant="secondary" className="mt-2">
-                                                        +{topics.length - 4} more topics
-                                                    </Badge>
+                                                {topics.length > 3 && (
+                                                    <p className="text-xs text-gray-500 mt-2">
+                                                        +{topics.length - 3} more topics
+                                                    </p>
                                                 )}
                                             </div>
                                         </div>
@@ -210,75 +233,45 @@ export const ReviewRow = ({ review, isExpanded, onToggleExpansion, onViewDetails
 
                                 {/* Right Column */}
                                 <div className="space-y-4">
-                                    {/* Urgency */}
+                                    {/* Urgency Classification */}
                                     {urgency && (
-                                        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 border border-white/40">
-                                            <h5 className="font-semibold text-gray-900 mb-3 flex items-center">
-                                                <AlertTriangle className="w-4 h-4 mr-2 text-orange-600" />
-                                                Urgency Assessment
-                                            </h5>
-                                            <div className="space-y-3">
-                                                <div className="text-center">
-                                                    <Badge className={getUrgencyColor(urgency.level)} size="lg">
-                                                        {urgency.level.toUpperCase()} PRIORITY
+                                        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
+                                            <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                                                <AlertTriangle className="w-5 h-5 mr-2 text-orange-600" />
+                                                Urgency Level
+                                            </h4>
+                                            <div className="flex items-center space-x-3">
+                                                <Badge variant={
+                                                    urgency === 'critical' ? 'destructive' :
+                                                    urgency === 'high' ? 'default' :
+                                                    urgency === 'medium' ? 'secondary' :
+                                                    'outline'
+                                                }>
+                                                    {urgency.toUpperCase()}
+                                                </Badge>
+                                                {analysisResults.urgency_classification?.requires_immediate_response && (
+                                                    <Badge variant="destructive" className="text-xs">
+                                                        IMMEDIATE
                                                     </Badge>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-3 text-xs">
-                                                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                                                        <div className="font-medium mb-2">Immediate Response</div>
-                                                        {urgency.requires_immediate_response ? (
-                                                            <CheckCircle className="w-5 h-5 text-green-600 mx-auto" />
-                                                        ) : (
-                                                            <XCircle className="w-5 h-5 text-gray-400 mx-auto" />
-                                                        )}
-                                                    </div>
-                                                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                                                        <div className="font-medium mb-2">Escalation Needed</div>
-                                                        {urgency.escalation_needed ? (
-                                                            <CheckCircle className="w-5 h-5 text-green-600 mx-auto" />
-                                                        ) : (
-                                                            <XCircle className="w-5 h-5 text-gray-400 mx-auto" />
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="mt-3 p-3 bg-orange-50 rounded-lg">
-                                                    <p className="text-sm text-orange-800 font-medium">Reason:</p>
-                                                    <p className="text-sm text-orange-700 mt-1">{urgency.reasoning}</p>
-                                                </div>
+                                                )}
                                             </div>
                                         </div>
                                     )}
 
-                                    {/* Business Insights Preview */}
-                                    {businessInsights && (
-                                        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 border border-white/40">
-                                            <h5 className="font-semibold text-gray-900 mb-3 flex items-center">
-                                                <Brain className="w-4 h-4 mr-2 text-purple-600" />
-                                                Business Impact
-                                            </h5>
-                                            <div className="space-y-3">
-                                                <div className="flex justify-between items-center">
-                                                    <span>Impact Level:</span>
-                                                    <Badge variant={businessInsights.estimated_impact === 'high' ? 'destructive' : 'secondary'}>
-                                                        {businessInsights.estimated_impact.toUpperCase()}
-                                                    </Badge>
-                                                </div>
-                                                <div className="flex justify-between items-center">
-                                                    <span>Follow-up Needed:</span>
-                                                    {businessInsights.follow_up_needed ? (
-                                                        <CheckCircle className="w-4 h-4 text-green-600" />
-                                                    ) : (
-                                                        <XCircle className="w-4 h-4 text-gray-400" />
-                                                    )}
-                                                </div>
-                                                {businessInsights.actionable_recommendations.length > 0 && (
-                                                    <div className="mt-3 p-3 bg-purple-50 rounded-lg">
-                                                        <span className="text-sm font-medium text-purple-800">Top Recommendation:</span>
-                                                        <p className="text-sm text-purple-700 mt-1">
-                                                            {businessInsights.actionable_recommendations[0]}
-                                                        </p>
-                                                    </div>
-                                                )}
+                                    {/* Spam Detection */}
+                                    {analysisResults.spam_detection && (
+                                        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
+                                            <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                                                <Shield className="w-5 h-5 mr-2 text-red-600" />
+                                                Spam Detection
+                                            </h4>
+                                            <div className="flex items-center space-x-3">
+                                                <Badge variant={isReviewSpam(review) ? "destructive" : "secondary"}>
+                                                    {isReviewSpam(review) ? 'SPAM' : 'LEGITIMATE'}
+                                                </Badge>
+                                                <span className="text-sm text-gray-600">
+                                                    {Math.round((analysisResults.spam_detection?.confidence || 0) * 100)}% confidence
+                                                </span>
                                             </div>
                                         </div>
                                     )}
@@ -286,28 +279,15 @@ export const ReviewRow = ({ review, isExpanded, onToggleExpansion, onViewDetails
                             </div>
                         )}
 
-                        {/* Action Buttons - ENHANCED */}
-                        <div className="flex items-center justify-between pt-4 border-t border-white/20">
-                            <div className="flex items-center space-x-3">
-                                <Button variant="outline" size="sm" className="text-orange-600 hover:text-orange-700">
-                                    <Flag className="w-4 h-4 mr-2" />
-                                    Report Issue
-                                </Button>
-                                <Button variant="outline" size="sm" className="text-blue-600 hover:text-blue-700">
-                                    <RotateCcw className="w-4 h-4 mr-2" />
-                                    Re-analyze
-                                </Button>
-                            </div>
-                            
+                        {/* Action Buttons */}
+                        <div className="flex items-center justify-end space-x-3 pt-4 border-t border-white/20">
                             <Button 
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onViewDetails();
-                                }} 
-                                size="sm" 
-                                className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => onViewDetails(review.id)}
+                                className="bg-white/80 hover:bg-white"
                             >
-                                <Eye className="w-4 h-4 mr-2" />
+                                <ExternalLink className="w-4 h-4 mr-2" />
                                 View Full Details
                             </Button>
                         </div>

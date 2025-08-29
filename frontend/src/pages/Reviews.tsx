@@ -247,7 +247,6 @@ const Reviews = () => {
             {/* Detail Modal */}
             {selectedReviewId && (
                 <ReviewDetailModal
-                    reviewId={selectedReviewId}
                     review={selectedReview}
                     isOpen={!!selectedReviewId}
                     onClose={() => setSelectedReviewId(null)}

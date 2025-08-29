@@ -1,4 +1,5 @@
-// src/hooks/useReviews.ts
+// frontend/src/hooks/useReviews.ts
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { 
   reviewService, 
@@ -6,10 +7,14 @@ import {
   ReviewUpdate,
   ReviewFilters,
   SentimentLabel,
-  PaginatedReviewResponse
+  PaginatedReviewResponse,
+  getAnalysisResults,
+  getReviewSentiment,
+  reviewNeedsAttention,
+  isReviewSpam
 } from '../services/review'
 
-// ✅ Get single review by ID
+// Get single review by ID
 export const useReview = (reviewId: string) => {
   return useQuery({
     queryKey: ['reviews', reviewId],
@@ -20,7 +25,7 @@ export const useReview = (reviewId: string) => {
   })
 }
 
-// ✅ PRIMARY: Get reviews by business ID with optional filters
+// PRIMARY: Get reviews by business ID with optional filters
 export const useReviewsByBusiness = (businessId: string, filters: ReviewFilters = {}) => {
   return useQuery({
     queryKey: ['reviews', 'business', businessId, filters],
@@ -31,7 +36,7 @@ export const useReviewsByBusiness = (businessId: string, filters: ReviewFilters 
   })
 }
 
-// ✅ Get paginated reviews by business
+// Get paginated reviews by business
 export const useReviewsByBusinessPaginated = (
   businessId: string, 
   page: number = 1, 
@@ -42,13 +47,13 @@ export const useReviewsByBusinessPaginated = (
     queryKey: ['reviews', 'business', businessId, 'paginated', page, limit, filters],
     queryFn: () => reviewService.getReviewsByBusinessPaginated(businessId, page, limit, filters),
     enabled: !!businessId,
-    staleTime: 2 * 60 * 1000, // 2 minutes (shorter for paginated data)
+    staleTime: 2 * 60 * 1000, // 2 minutes
     refetchOnWindowFocus: false,
-    placeholderData: (previousData) => previousData, // Keep previous page data while loading new page
+    placeholderData: (previousData) => previousData, // Keep previous page data while loading
   })
 }
 
-// ✅ Get reviews by job ID
+// Get reviews by job ID
 export const useReviewsByJob = (jobId: string, filters: Pick<ReviewFilters, 'skip' | 'limit'> = {}) => {
   return useQuery({
     queryKey: ['reviews', 'job', jobId, filters],
@@ -59,7 +64,7 @@ export const useReviewsByJob = (jobId: string, filters: Pick<ReviewFilters, 'ski
   })
 }
 
-// ✅ Get reviews by source ID
+// Get reviews by source ID
 export const useReviewsBySource = (sourceId: string, filters: Pick<ReviewFilters, 'skip' | 'limit'> = {}) => {
   return useQuery({
     queryKey: ['reviews', 'source', sourceId, filters],
@@ -70,7 +75,7 @@ export const useReviewsBySource = (sourceId: string, filters: Pick<ReviewFilters
   })
 }
 
-// ✅ Get reviews by location ID
+// Get reviews by location ID
 export const useReviewsByLocation = (locationId: string, filters: Pick<ReviewFilters, 'skip' | 'limit'> = {}) => {
   return useQuery({
     queryKey: ['reviews', 'location', locationId, filters],
@@ -81,7 +86,7 @@ export const useReviewsByLocation = (locationId: string, filters: Pick<ReviewFil
   })
 }
 
-// ✅ Convenience hooks for common filters
+// Convenience hooks for common filters
 export const useAnalyzedReviewsByBusiness = (businessId: string, filters: ReviewFilters = {}) => {
   return useReviewsByBusiness(businessId, { ...filters, has_analysis: true })
 }
@@ -98,7 +103,7 @@ export const useSpamReviewsByBusiness = (businessId: string, filters: ReviewFilt
   return useReviewsByBusiness(businessId, { ...filters, is_spam: true })
 }
 
-// ✅ Update review
+// Update review
 export const useUpdateReview = () => {
   const queryClient = useQueryClient()
   
@@ -109,19 +114,19 @@ export const useUpdateReview = () => {
       // Update single review cache
       queryClient.setQueryData(['reviews', updatedReview.id], updatedReview)
       
-      // Invalidate all business-related queries since we can't easily update all filter combinations
+      // Invalidate related queries
       queryClient.invalidateQueries({ 
         queryKey: ['reviews', 'business', updatedReview.business_id], 
         exact: false 
       })
       
-      // Invalidate job-specific queries
-      queryClient.invalidateQueries({ 
-        queryKey: ['reviews', 'job', updatedReview.job_id], 
-        exact: false 
-      })
+      if (updatedReview.job_id) {
+        queryClient.invalidateQueries({ 
+          queryKey: ['reviews', 'job', updatedReview.job_id], 
+          exact: false 
+        })
+      }
       
-      // Invalidate source-specific queries if source_id exists
       if (updatedReview.source_id) {
         queryClient.invalidateQueries({ 
           queryKey: ['reviews', 'source', updatedReview.source_id], 
@@ -129,7 +134,6 @@ export const useUpdateReview = () => {
         })
       }
       
-      // Invalidate location-specific queries if location_id exists
       if (updatedReview.location_id) {
         queryClient.invalidateQueries({ 
           queryKey: ['reviews', 'location', updatedReview.location_id], 
@@ -140,32 +144,32 @@ export const useUpdateReview = () => {
   })
 }
 
-// ✅ Delete review
+// Delete review
 export const useDeleteReview = () => {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: (reviewId: string) => reviewService.deleteReview(reviewId),
+    mutationFn: (id: string) => reviewService.deleteReview(id),
     onSuccess: (_, deletedId) => {
-      // Get the review before deletion to know which business/job/source/location it belonged to
-      const deletedReview = queryClient.getQueryData<Review>(['reviews', deletedId])
-      
-      // Remove single review cache
+      // Remove from cache
       queryClient.removeQueries({ queryKey: ['reviews', deletedId] })
       
-      // Invalidate related queries if we know the relationships
+      // Get the review data before deletion if available
+      const deletedReview = queryClient.getQueryData(['reviews', deletedId]) as Review
+      
       if (deletedReview) {
-        // Invalidate all business-related queries
+        // Invalidate related queries
         queryClient.invalidateQueries({ 
           queryKey: ['reviews', 'business', deletedReview.business_id], 
           exact: false 
         })
         
-        // Invalidate job-specific queries
-        queryClient.invalidateQueries({ 
-          queryKey: ['reviews', 'job', deletedReview.job_id], 
-          exact: false 
-        })
+        if (deletedReview.job_id) {
+          queryClient.invalidateQueries({ 
+            queryKey: ['reviews', 'job', deletedReview.job_id], 
+            exact: false 
+          })
+        }
         
         if (deletedReview.source_id) {
           queryClient.invalidateQueries({ 
@@ -181,35 +185,32 @@ export const useDeleteReview = () => {
           })
         }
         
-        // Invalidate business and location stats since review count changed
+        // Invalidate stats
         queryClient.invalidateQueries({ queryKey: ['stats', 'business-counts', deletedReview.business_id] })
         
         if (deletedReview.location_id) {
           queryClient.invalidateQueries({ queryKey: ['stats', 'location-stats', deletedReview.location_id] })
         }
       } else {
-        // If we don't have the review data, invalidate all review queries as fallback
+        // Fallback: invalidate all review queries
         queryClient.invalidateQueries({ queryKey: ['reviews'], exact: false })
       }
     }
   })
 }
 
-// ✅ Helper hook: Get review stats by business
+// **FIXED: Helper hook for review stats by business**
 export const useReviewStatsByBusiness = (businessId: string, filters: ReviewFilters = {}) => {
   const { data: reviews = [], isLoading } = useReviewsByBusiness(businessId, filters)
   
   const stats = {
     total: reviews.length,
-    analyzed: reviews.filter(r => r.analyzed_data).length,
-    needingAttention: reviews.filter(r => {
-      const urgency = r.analyzed_data?.urgency
-      return urgency?.requires_immediate_response || urgency?.escalation_needed
-    }).length,
-    positive: reviews.filter(r => r.analyzed_data?.sentiment?.label === 'positive').length,
-    negative: reviews.filter(r => r.analyzed_data?.sentiment?.label === 'negative').length,
-    neutral: reviews.filter(r => r.analyzed_data?.sentiment?.label === 'neutral').length,
-    spam: reviews.filter(r => r.analyzed_data?.spam_detection?.is_spam).length,
+    analyzed: reviews.filter(r => getAnalysisResults(r)).length,
+    needingAttention: reviews.filter(reviewNeedsAttention).length,
+    positive: reviews.filter(r => getReviewSentiment(r) === 'positive').length,
+    negative: reviews.filter(r => getReviewSentiment(r) === 'negative').length,
+    neutral: reviews.filter(r => getReviewSentiment(r) === 'neutral').length,
+    spam: reviews.filter(isReviewSpam).length,
     avgRating: reviews.reduce((acc, r) => {
       const rating = r.data?.rating
       return typeof rating === 'number' ? acc + rating : acc
@@ -219,27 +220,24 @@ export const useReviewStatsByBusiness = (businessId: string, filters: ReviewFilt
   return { stats, isLoading }
 }
 
-// ✅ Helper hook: Get review stats by job
+// **FIXED: Helper hook for review stats by job**
 export const useReviewStatsByJob = (jobId: string, filters: Pick<ReviewFilters, 'skip' | 'limit'> = {}) => {
   const { data: reviews = [], isLoading } = useReviewsByJob(jobId, filters)
   
   const stats = {
     total: reviews.length,
-    analyzed: reviews.filter(r => r.analyzed_data).length,
-    needingAttention: reviews.filter(r => {
-      const urgency = r.analyzed_data?.urgency
-      return urgency?.requires_immediate_response || urgency?.escalation_needed
-    }).length,
-    positive: reviews.filter(r => r.analyzed_data?.sentiment?.label === 'positive').length,
-    negative: reviews.filter(r => r.analyzed_data?.sentiment?.label === 'negative').length,
-    neutral: reviews.filter(r => r.analyzed_data?.sentiment?.label === 'neutral').length,
-    spam: reviews.filter(r => r.analyzed_data?.spam_detection?.is_spam).length,
+    analyzed: reviews.filter(r => getAnalysisResults(r)).length,
+    needingAttention: reviews.filter(reviewNeedsAttention).length,
+    positive: reviews.filter(r => getReviewSentiment(r) === 'positive').length,
+    negative: reviews.filter(r => getReviewSentiment(r) === 'negative').length,
+    neutral: reviews.filter(r => getReviewSentiment(r) === 'neutral').length,
+    spam: reviews.filter(isReviewSpam).length,
   }
   
   return { stats, isLoading }
 }
 
-// ✅ Helper hook: Advanced search across multiple filters
+// Advanced search across multiple filters
 export const useAdvancedReviewSearch = (
   businessId: string,
   searchFilters: {
