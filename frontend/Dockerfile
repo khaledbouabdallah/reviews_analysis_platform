@@ -38,13 +38,13 @@ RUN npm run build
 FROM node:20-alpine as production
 WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN adduser --system --uid 1001 viteuser
 COPY package*.json ./
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
-RUN chown -R nextjs:nodejs /app
-USER nextjs
-EXPOSE 3000
 ENV NODE_ENV=production
 RUN npm install -g serve
+RUN chown -R viteuser:nodejs /app
+USER viteuser
+EXPOSE 3000
 CMD ["serve", "-s", "dist", "-l", "3000"]

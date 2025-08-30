@@ -9,6 +9,7 @@ from db.repositories.reviews import ReviewRepository
 from db.repositories.sources import SourceRepository
 from models import PyObjectId
 from models.user import UserCreate, UserInDB, UserUpdate
+from models.subscription import SubscriptionInfo
 from pymongo import ReturnDocument
 from pymongo.errors import PyMongoError
 
@@ -53,6 +54,14 @@ class UserRepository:
         user_dict["hashed_password"] = get_password_hash(user.password)
         user_dict["created_at"] = datetime.now(timezone.utc)
         user_dict["updated_at"] = datetime.now(timezone.utc)
+        
+        # Initialize subscription
+        user_dict["subscription"] = SubscriptionInfo(
+            tier=user.subscription_tier,
+            billing_cycle="monthly",
+            status="active"
+        ).model_dump()
+        
         result = await users_collection.insert_one(user_dict)
         user_dict["_id"] = result.inserted_id
 

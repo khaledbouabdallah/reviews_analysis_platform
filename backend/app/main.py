@@ -15,6 +15,7 @@ from api.routers import (
     reviews,
     sources,
     stats,
+    usage,
 )
 from api.routers.auth import router as auth_router
 from core.config import settings
@@ -76,6 +77,7 @@ app.include_router(jobs.router, prefix="/api")
 app.include_router(reviews.router, prefix="/api")
 app.include_router(review_analyzer.router, prefix="/api")
 app.include_router(stats.router, prefix="/api")
+app.include_router(usage.router, prefix="/api")
 
 
 @app.get("/")
