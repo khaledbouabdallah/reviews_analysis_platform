@@ -29,13 +29,17 @@ const Hero = () => {
       <div className="container mx-auto px-6 relative z-10">
         <div className="text-center max-w-4xl mx-auto">
           {/* Logo/Brand */}
-          <div className="mb-8">
-            <h1 className="text-6xl md:text-8xl font-bold text-white mb-4 animate-fade-in-up">
-              Review
-              <span className="text-accent">oly</span>
-            </h1>
-            <div className="w-24 h-1 bg-accent mx-auto animate-pulse-glow"></div>
-          </div>
+          <div className="mb-8 flex flex-col items-center">
+  <img 
+    src="/logo.png" 
+    alt="Reviewoly" 
+    className="w-24 h-24 md:w-32 md:h-32 mb-4 object-contain animate-fade-in-up"
+  />
+  <h1 className="text-6xl md:text-8xl font-bold text-white mb-4 animate-fade-in-up">
+    Review<span className="text-accent">oly</span>
+  </h1>
+  <div className="w-24 h-1 bg-accent mx-auto animate-pulse-glow"></div>
+</div>
 
           {/* Main Headline */}
           <h2 className="text-2xl md:text-4xl font-light text-white/90 mb-8 animate-fade-in-up [animation-delay:0.2s]">

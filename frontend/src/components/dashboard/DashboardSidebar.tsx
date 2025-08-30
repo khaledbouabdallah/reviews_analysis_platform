@@ -53,9 +53,11 @@ export function DashboardSidebar() {
     <Sidebar className={collapsed ? "w-16" : "w-64"} collapsible="icon">
       <SidebarHeader className="p-4 border-b">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary-glow rounded-lg flex items-center justify-center">
-            <Star className="h-5 w-5 text-primary-foreground" />
-          </div>
+        <img 
+    src="/logo.png" 
+    alt="Reviewoly Logo" 
+    className="w-8 h-8 object-contain"
+  />
           {!collapsed && (
             <div>
               <h2 className="text-lg font-bold text-primary">Review<span className="text-accent">oly</span></h2>
