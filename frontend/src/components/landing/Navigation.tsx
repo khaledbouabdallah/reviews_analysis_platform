@@ -19,11 +19,11 @@ const Navigation = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center gap-2">
-  <img 
-    src="/logo.png" 
-    alt="Reviewoly Logo" 
-    className="w-8 h-8 object-contain"
-  />
+          <img 
+            src="/logo.png" 
+            alt="Reviewoly Logo" 
+            className="w-8 h-8 object-contain"
+          />
             <span className="text-2xl font-bold text-foreground">
               Review<span className="text-accent">oly</span>
             </span>

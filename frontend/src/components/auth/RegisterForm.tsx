@@ -8,6 +8,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AuthHeader } from '@/components/auth/AuthHeader';
 import { authService } from '@/services/auth';
 
+// ADD: reCAPTCHA type declaration
+declare global {
+  interface Window {
+    grecaptcha: {
+      ready: (callback: () => void) => void;
+      execute: (siteKey: string, options: { action: string }) => Promise<string>;
+    };
+  }
+}
+
 export function RegisterForm() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -19,6 +29,22 @@ export function RegisterForm() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  // ADD: reCAPTCHA execution function
+  const executeRecaptcha = (): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      if (typeof window !== 'undefined' && window.grecaptcha) {
+        window.grecaptcha.ready(() => {
+          window.grecaptcha
+            .execute('6LcbALcrAAAAAO1nEcagBHCTxpjucAtwf7xgVOQN', { action: 'signup' })
+            .then(resolve)
+            .catch(reject);
+        });
+      } else {
+        reject(new Error('reCAPTCHA not loaded'));
+      }
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,10 +64,15 @@ export function RegisterForm() {
     setLoading(true);
 
     try {
+      // ADD: Execute reCAPTCHA before registration
+      const recaptchaToken = await executeRecaptcha();
+
+      // MODIFY: Add recaptcha_token to registration data
       await authService.register({
         username: formData.username,
         email: formData.email,
         password: formData.password,
+        recaptcha_token: recaptchaToken, // ADD this line
       });
 
       setSuccess(true);
@@ -166,10 +197,10 @@ export function RegisterForm() {
                     />
                   </div>
 
-                  {/* Success Message */}
+                  {/* Success Message - MODIFY: Update message to mention email verification */}
                   {success && (
                     <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg animate-fade-in-up">
-                      ✅ Account created successfully! Redirecting to sign in...
+                      ✅ Account created successfully! Please check your email to verify your account, then sign in.
                     </div>
                   )}
 
@@ -196,6 +227,19 @@ export function RegisterForm() {
                     )}
                   </Button>
                 </form>
+
+                {/* ADD: reCAPTCHA notice */}
+                <div className="mt-4 text-xs text-center text-muted-foreground">
+                  This site is protected by reCAPTCHA and the Google{' '}
+                  <a href="https://policies.google.com/privacy" className="text-primary hover:underline">
+                    Privacy Policy
+                  </a>{' '}
+                  and{' '}
+                  <a href="https://policies.google.com/terms" className="text-primary hover:underline">
+                    Terms of Service
+                  </a>{' '}
+                  apply.
+                </div>
 
                 {/* Login Link */}
                 <div className="mt-6 text-center">
