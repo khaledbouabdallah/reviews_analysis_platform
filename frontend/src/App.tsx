@@ -13,6 +13,11 @@ import Locations from "./pages/Locations";
 import Jobs from "./pages/Jobs";
 import Reviews from "./pages/Reviews";
 import NotFound from "./pages/NotFound";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService"; 
+import CookiePolicy from "./pages/CookiePolicy";
+import { CookieConsent } from "./components/legal/CookieConsent";
+import Footer from "./components/common/Footer";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AuthRedirect } from "./components/auth/AuthRedirect";
 
@@ -39,6 +44,11 @@ const App = () => (
             </AuthRedirect>
           } />
 
+          {/* ADD: Legal pages - accessible to everyone */}
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
+          <Route path="/cookie-policy" element={<CookiePolicy />} />
+
           {/* Protected dashboard routes - require authentication */}
           <Route path="/dashboard" element={
             <ProtectedRoute>
@@ -59,6 +69,9 @@ const App = () => (
           {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+      {/* ADD: Global components */}
+      <CookieConsent />
+      <Footer />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
