@@ -49,6 +49,8 @@ services:
       - SCRAPER_SERVICE_URL=http://scraper_worker:8080
       - GIMINI_API_KEY=${GIMINI_API_KEY}
       - GIMINI_MODEL_NAME=${GIMINI_MODEL_NAME}
+      # - RECAPTCHA_SECRET_KEY=${RECAPTCHA_SECRET_KEY}
+      - RECAPTCHA_URL=${RECAPTCHA_URL}
       - ENVIRONMENT=development
       - PYTHONUNBUFFERED=1
     volumes:
