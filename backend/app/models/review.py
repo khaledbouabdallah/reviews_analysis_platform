@@ -5,6 +5,7 @@ from models import PyObjectId
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
+
 def validate_google_review(data):
     required_fields = ["original_text", "translated_text", "date", "rating", "username"]
     missing = [f for f in required_fields if f not in data]

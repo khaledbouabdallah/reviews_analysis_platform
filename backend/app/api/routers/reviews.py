@@ -110,7 +110,7 @@ async def list_business_reviews(
     business_id: str,
     current_user: UserInDB = Depends(get_current_active_user),
     skip: int = Query(0, ge=0, description="Number of reviews to skip"),
-    limit: int = Query(50, ge=1, le=1000, description="Number of reviews to return"),
+    limit: int = Query(50, ge=1, le=10000, description="Number of reviews to return"),
     has_analysis: Optional[bool] = Query(None, description="Filter by analysis presence"),
     needs_attention: Optional[bool] = Query(None, description="Filter by urgency flags"),
     sentiment: Optional[str] = Query(None, regex="^(positive|negative|neutral)$", description="Filter by sentiment"),
