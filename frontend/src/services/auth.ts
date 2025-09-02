@@ -1,8 +1,6 @@
 // src/services/auth.ts
 // Change this line in your auth service:
 const API_URL = import.meta.env.VITE_API_URL;
-console.log('🔍 API_URL in auth service:', API_URL);
-
 export interface LoginData {
   username: string;
   password: string;

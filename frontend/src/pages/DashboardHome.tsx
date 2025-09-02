@@ -13,10 +13,15 @@ import {
   ExternalLink,
   BookOpen,
   Target,
-  Zap
+  Zap,
+  Bold
 } from "lucide-react";
 import { useBusiness } from "@/contexts/BusinessContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { reviewService } from "@/services/review";
+
+
 
 // TODO: Replace with real data from API
 const FAKE_URGENT_ALERTS = [
@@ -25,10 +30,11 @@ const FAKE_URGENT_ALERTS = [
     type: "negative_review",
     business: "Downtown Restaurant",
     location: "Main Street",
-    message: "3 new 1-star reviews need immediate response",
+    message: "reviews that need immediate response",
     count: 3,
     priority: "high"
-  }
+  },
+
 ];
 
 const FAKE_STATS = {
@@ -89,9 +95,13 @@ const FAKE_ACTION_ITEMS = [
 
 const DashboardHome = () => {
   const { hasBusinesses, selectedBusiness, isLoading } = useBusiness();
-
+  const { currentUser, setCurrentUser, loading} = useAuth();
   const navigate = useNavigate();
 
+  if (hasBusinesses) {
+    var reviewsNeedAttention = reviewService.getReviewsNeedingAttentionByBusiness(selectedBusiness?.id || "");
+  } 
+  
   // Show loading state while fetching businesses
   if (isLoading) {
     return (
@@ -178,8 +188,8 @@ const DashboardHome = () => {
             Dashboard Overview
           </h1>
           <p className="text-sm text-muted-foreground">
-            {/* TODO: Replace with dynamic greeting and real-time updates */}
-            Welcome back! Here's what needs your attention today.
+            Welcome back <span className="font-semibold text-primary">{currentUser.username}</span>
+            ! Here's what needs your attention today.
             {selectedBusiness && (
               <span className="ml-2 text-primary font-medium">
                 • {selectedBusiness.name}

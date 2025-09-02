@@ -17,7 +17,6 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService"; 
 import CookiePolicy from "./pages/CookiePolicy";
 import { CookieConsent } from "./components/legal/CookieConsent";
-import Footer from "./components/common/Footer";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AuthRedirect } from "./components/auth/AuthRedirect";
 
@@ -71,7 +70,6 @@ const App = () => (
         </Routes>
       {/* ADD: Global components */}
       <CookieConsent />
-      <Footer />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

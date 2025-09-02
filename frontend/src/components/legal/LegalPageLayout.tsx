@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ArrowLeft, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import Footer from "@/components/common/Footer";
 import { Link } from "react-router-dom";
 
 interface LegalPageLayoutProps {
@@ -217,9 +218,12 @@ const LegalPageLayout: React.FC<LegalPageLayoutProps> = ({
               </CardContent>
             </Card>
           </div>
+          <Footer />
         </main>
       </div>
+      
     </div>
+    
   );
 };
 

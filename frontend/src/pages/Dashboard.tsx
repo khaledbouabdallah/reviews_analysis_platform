@@ -2,7 +2,9 @@ import { Outlet } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import Footer from "@/components/common/Footer";
 import { BusinessProvider } from "@/contexts/BusinessContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
@@ -20,6 +22,7 @@ const queryClient = new QueryClient({
 const Dashboard = () => {
   return (
     <QueryClientProvider client={queryClient}>
+      <AuthProvider>
       <BusinessProvider>
         <SidebarProvider>
           <div className="min-h-screen flex w-full bg-background">
@@ -29,14 +32,18 @@ const Dashboard = () => {
               <main className="flex-1 p-6 overflow-auto">
                 <Outlet />
               </main>
+              <Footer />
             </div>
           </div>
         </SidebarProvider>
       </BusinessProvider>
-
+      </AuthProvider>
+      
       {/* Dev tools - only shows in development */}
       <ReactQueryDevtools initialIsOpen={false} />
+      
     </QueryClientProvider>
+    
   )
 }
 

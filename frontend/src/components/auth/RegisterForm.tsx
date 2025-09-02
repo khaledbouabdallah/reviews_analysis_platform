@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AuthHeader } from '@/components/auth/AuthHeader';
+import Footer from "@/components/common/Footer";
 import { authService } from '@/services/auth';
 
 // ADD: reCAPTCHA type declaration
@@ -259,6 +260,7 @@ export function RegisterForm() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }
