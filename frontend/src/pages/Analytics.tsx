@@ -152,7 +152,10 @@ const Analytics: React.FC = () => {
             mainData={mainData} 
             comparisonData={comparisonData} 
           />
-          <TimeSeriesChart data={mainData?.timeSeriesData || []} />
+          <TimeSeriesChart 
+            data={mainData?.timeSeriesData || []} 
+            grouping={mainData?.grouping || 'day'} 
+          />
         </div>
 
         {/* Charts Row 2 */}

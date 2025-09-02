@@ -1,6 +1,6 @@
 // frontend/src/components/analytics/AnalyticsFilters.tsx
 import React from 'react';
-import { MapPin, Eye, RotateCcw } from 'lucide-react';
+import { MapPin, Eye, RotateCcw, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -66,6 +66,25 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
           <SelectItem value="positive">Positive</SelectItem>
           <SelectItem value="negative">Negative</SelectItem>
           <SelectItem value="neutral">Neutral</SelectItem>
+        </SelectContent>
+      </Select>
+
+      {/* Analysis Status Filter */}
+      <Select
+        value={filters.hasAnalysis === 'all' ? 'all' : filters.hasAnalysis ? 'analyzed' : 'unanalyzed'}
+        onValueChange={(value) => setFilters(prev => ({ 
+          ...prev, 
+          hasAnalysis: value === 'all' ? 'all' : value === 'analyzed' 
+        }))}
+      >
+        <SelectTrigger className="w-40">
+          <Brain className="h-4 w-4 mr-2" />
+          <SelectValue placeholder="Analysis Status" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Reviews</SelectItem>
+          <SelectItem value="analyzed">Analyzed Only</SelectItem>
+          <SelectItem value="unanalyzed">Unanalyzed Only</SelectItem>
         </SelectContent>
       </Select>
 

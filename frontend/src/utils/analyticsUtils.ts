@@ -63,8 +63,15 @@ export const processReviewsData = (reviews: Review[]): ProcessedAnalyticsData =>
   // Emotional tone analysis
   const emotionalToneCounts = new Map<string, number>();
   
-  // Time series data
-  const timeSeriesMap = new Map<string, { total: number; positive: number; negative: number; neutral: number }>();
+  // Time series data - aggregate by week/month based on date spread
+  const timeSeriesMap = new Map<string, { 
+    total: number; 
+    positive: number; 
+    negative: number; 
+    neutral: number;
+    ratings: number[];
+    avgRating: number;
+  }>();
   
   // Business insights
   const allIssues: string[] = [];
@@ -74,11 +81,48 @@ export const processReviewsData = (reviews: Review[]): ProcessedAnalyticsData =>
   let spamCount = 0;
   let analyzedCount = 0;
 
+  // Determine time grouping frequency based on data spread
+  const dates = reviews.map(review => {
+    const reviewDate = review.data?.date || review.created_at;
+    return new Date(reviewDate);
+  }).sort((a, b) => a.getTime() - b.getTime());
+
+  const getTimeGrouping = (dates: Date[]): 'day' | 'week' | 'month' => {
+    if (dates.length === 0) return 'day';
+    
+    const firstDate = dates[0];
+    const lastDate = dates[dates.length - 1];
+    const daysDiff = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24);
+    
+    if (daysDiff <= 60) return 'day';        // ≤2 months: daily
+    if (daysDiff <= 365) return 'week';      // ≤1 year: weekly  
+    return 'month';                          // >1 year: monthly
+  };
+
+  const grouping = getTimeGrouping(dates);
+
+  const formatDateForGrouping = (date: Date, grouping: 'day' | 'week' | 'month'): string => {
+    switch (grouping) {
+      case 'day':
+        return date.toISOString().split('T')[0]; // YYYY-MM-DD
+      case 'week':
+        // Get start of week (Monday)
+        const startOfWeek = new Date(date);
+        const day = startOfWeek.getDay();
+        const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Sunday
+        startOfWeek.setDate(diff);
+        return `${startOfWeek.getFullYear()}-W${Math.ceil(startOfWeek.getDate() / 7).toString().padStart(2, '0')}`;
+      case 'month':
+        return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+    }
+  };
+
   reviews.forEach(review => {
     const analysisResults = getAnalysisResults(review);
     const sentiment = getReviewSentiment(review) || 'neutral';
     const urgency = getReviewUrgency(review) || 'none';
     const isSpam = isReviewSpam(review);
+    const rating = typeof review.data?.rating === 'number' ? review.data.rating : null;
     
     // Count analyzed reviews
     if (analysisResults) analyzedCount++;
@@ -109,15 +153,28 @@ export const processReviewsData = (reviews: Review[]): ProcessedAnalyticsData =>
       topicData.sentiment[topic.sentiment]++;
     });
     
-    // Time series data - use actual review date from data, fallback to created_at
+    // Time series data with dynamic grouping
     const reviewDate = review.data?.date || review.created_at;
-    const date = new Date(reviewDate).toISOString().split('T')[0];
-    if (!timeSeriesMap.has(date)) {
-      timeSeriesMap.set(date, { total: 0, positive: 0, negative: 0, neutral: 0 });
+    const dateKey = formatDateForGrouping(new Date(reviewDate), grouping);
+    
+    if (!timeSeriesMap.has(dateKey)) {
+      timeSeriesMap.set(dateKey, { 
+        total: 0, 
+        positive: 0, 
+        negative: 0, 
+        neutral: 0,
+        ratings: [],
+        avgRating: 0
+      });
     }
-    const dayData = timeSeriesMap.get(date)!;
+    const dayData = timeSeriesMap.get(dateKey)!;
     dayData.total++;
     dayData[sentiment]++;
+    
+    // Add rating if available
+    if (rating !== null) {
+      dayData.ratings.push(rating);
+    }
     
     // Business insights
     const insights = getBusinessInsights(review);
@@ -130,10 +187,27 @@ export const processReviewsData = (reviews: Review[]): ProcessedAnalyticsData =>
     }
   });
 
+  // Calculate average ratings and format time series data
+  const timeSeriesData = Array.from(timeSeriesMap.entries())
+    .map(([date, data]) => ({
+      date,
+      displayDate: formatDisplayDate(date, grouping),
+      total: data.total,
+      positive: data.positive,
+      negative: data.negative,
+      neutral: data.neutral,
+      avgRating: data.ratings.length > 0 
+        ? Math.round((data.ratings.reduce((sum, r) => sum + r, 0) / data.ratings.length) * 10) / 10
+        : 0,
+      ratingCount: data.ratings.length
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
   return {
     totalReviews: reviews.length,
     analyzedCount,
     spamCount,
+    grouping, // Add grouping info for chart display
     sentimentData: [
       { name: 'Positive', value: sentimentCounts.positive, color: '#22c55e' },
       { name: 'Negative', value: sentimentCounts.negative, color: '#ef4444' },
@@ -157,13 +231,33 @@ export const processReviewsData = (reviews: Review[]): ProcessedAnalyticsData =>
         fullMark: Math.max(...Array.from(emotionalToneCounts.values())) 
       }))
       .sort((a, b) => b.count - a.count),
-    timeSeriesData: Array.from(timeSeriesMap.entries())
-      .map(([date, data]) => ({ date, ...data }))
-      .sort((a, b) => a.date.localeCompare(b.date)),
+    timeSeriesData,
     topIssues: Array.from(new Set(allIssues)).slice(0, 5),
     topHighlights: Array.from(new Set(allHighlights)).slice(0, 5),
     needsAttention: needsAttention.slice(0, 10)
   };
+};
+
+// Helper function to format display dates
+const formatDisplayDate = (dateKey: string, grouping: 'day' | 'week' | 'month'): string => {
+  switch (grouping) {
+    case 'day':
+      return new Date(dateKey).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    case 'week':
+      // Extract year and week number from format YYYY-W##
+      const [year, weekPart] = dateKey.split('-W');
+      return `Week ${weekPart}, ${year}`;
+    case 'month':
+      // Format YYYY-MM to "Jan 2024"
+      const [yr, month] = dateKey.split('-');
+      return new Date(parseInt(yr), parseInt(month) - 1).toLocaleDateString('en-US', { 
+        month: 'short', 
+        year: 'numeric' 
+      });
+  }
 };
 
 export const processAnalyticsData = (reviews: Review[], filters: AnalyticsFilters, locations: any[]) => {

@@ -4,7 +4,7 @@ from typing import Annotated, Literal, Optional
 
 from models import PyObjectId
 from pydantic import BaseModel, EmailStr, Field, field_serializer, model_validator
-from models.subscription import SUBSCRIPTION_LIMITS, UsageLimits, SubscriptionTier, SubscriptionInfo
+from models.subscription import SUBSCRIPTION_PLANS, UsageLimits, SubscriptionTier, SubscriptionInfo
 
 
 # Base User model with common fields
@@ -37,14 +37,7 @@ class UserInDB(UserBase):
     
     def get_limits(self) -> UsageLimits:
         """Get current usage limits based on subscription tier"""
-        limits = SUBSCRIPTION_LIMITS[self.subscription.tier]
-        return UsageLimits(
-            businesses=limits["businesses"],
-            locations=limits["locations"], 
-            sources=limits["sources"],
-            reviews_per_month=limits["reviews_per_month"],
-            tokens_per_month=limits["tokens_per_month"]
-        )
+        return SUBSCRIPTION_PLANS[self.subscription.tier].limits
     
     def is_subscription_active(self) -> bool:
         """Check if subscription is currently active"""

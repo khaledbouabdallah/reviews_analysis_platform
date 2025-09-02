@@ -28,10 +28,13 @@ export interface TopicData {
 
 export interface TimeSeriesData {
   date: string;
+  displayDate: string;
   total: number;
   positive: number;
   negative: number;
   neutral: number;
+  avgRating: number;
+  ratingCount: number;
 }
 
 export interface UrgencyData {
@@ -50,6 +53,7 @@ export interface ProcessedAnalyticsData {
   totalReviews: number;
   analyzedCount: number;
   spamCount: number;
+  grouping: 'day' | 'week' | 'month';
   sentimentData: SentimentData[];
   topicData: TopicData[];
   urgencyData: UrgencyData[];

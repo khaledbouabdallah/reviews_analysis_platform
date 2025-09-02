@@ -85,7 +85,7 @@ def location_data():
     unique_id = str(uuid.uuid4())[:8]
     return {
         "name": f"Test Location {unique_id}",
-        "adresse": "Test adresse",  # Simulating a business ID
+        "address": "Test address",  # Simulating a business ID
     }
 
 
