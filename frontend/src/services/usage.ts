@@ -25,8 +25,9 @@ export interface CurrentUsage {
   limit_warnings: string[];
 }
 
+// Updated to match backend model exactly
 export interface SubscriptionPlan {
-  tier: string;
+  tier: 'starter' | 'growth' | 'scale';
   name: string;
   description: string;
   limits: {
@@ -36,8 +37,8 @@ export interface SubscriptionPlan {
     reviews_per_month: number;
     tokens_per_month: number;
   };
-  price_monthly: number;
-  price_yearly: number;
+  price_monthly: number; // in cents
+  price_yearly: number;   // in cents
   features: string[];
 }
 
@@ -107,41 +108,69 @@ class UsageService {
     }
   }
 
-  // Helper methods for formatting
+  // Utility methods for pricing display
+  formatPrice(priceInCents: number): string {
+    return (priceInCents / 1).toFixed(2);
+  }
+
+  formatPriceWithCurrency(priceInCents: number, currency: string = '€'): string {
+    return `${currency}${this.formatPrice(priceInCents)}`;
+  }
+
+  // Calculate yearly discount percentage
+  getYearlyDiscount(monthlyPrice: number, yearlyPrice: number): number {
+    if (monthlyPrice === 0 && yearlyPrice === 0) return 0;
+    const annualMonthlyPrice = monthlyPrice * 12;
+    return Math.round(((annualMonthlyPrice - yearlyPrice) / annualMonthlyPrice) * 100);
+  }
+
+  // Format numbers for display (e.g., 1000 -> 1K, 1000000 -> 1M)
   formatNumber(num: number): string {
-    if (num === -1) return '∞';
+    if (num === -1) return 'Unlimited';
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-    return num.toLocaleString();
+    if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
+    return num.toString();
   }
 
-  formatTokens(tokens: number): string {
-    if (tokens >= 1000000) return `${(tokens / 1000000).toFixed(1)}M`;
-    if (tokens >= 1000) return `${(tokens / 1000).toFixed(0)}K`;
-    return tokens.toString();
-  }
-
+  // Get color for usage percentage
   getUsageColor(percentage: number): 'green' | 'yellow' | 'red' | 'blue' {
     if (percentage >= 90) return 'red';
     if (percentage >= 75) return 'yellow';
     return 'green';
   }
 
-  getTierDisplayName(tier: string): string {
-    return tier.charAt(0).toUpperCase() + tier.slice(1);
+  // Get color for tier
+  getTierColor(tier: string): 'gray' | 'blue' | 'purple' {
+    switch (tier) {
+      case 'starter': return 'gray';
+      case 'growth': return 'blue';
+      case 'scale': return 'purple';
+      default: return 'gray';
+    }
   }
 
-  getTierColor(tier: string): string {
-    switch (tier.toLowerCase()) {
-      case 'starter':
-        return 'gray';
-      case 'growth':
-        return 'blue';
-      case 'scale':
-        return 'purple';
-      default:
-        return 'gray';
+  getTierDisplayName(tier: string): string {
+    switch (tier) {
+      case 'starter': return 'Starter';
+      case 'growth': return 'Growth';
+      case 'scale': return 'Scale';
+      default: return tier;
     }
+  }
+
+  // Check if plan is recommended
+  isRecommended(tier: string): boolean {
+    return tier === 'growth';
+  }
+
+  // Get plan features with proper formatting
+  getFormattedFeatures(plan: SubscriptionPlan): string[] {
+    return plan.features.map(feature => {
+      // Replace token counts with properly formatted numbers
+      return feature
+        .replace(/(\d+)K/g, (match, num) => this.formatNumber(parseInt(num) * 1000))
+        .replace(/(\d+)M/g, (match, num) => this.formatNumber(parseInt(num) * 1000000));
+    });
   }
 }
 

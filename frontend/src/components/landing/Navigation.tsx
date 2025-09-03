@@ -7,10 +7,10 @@ const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   const navItems = [
-    { label: "Features", href: "#features" },
-    { label: "How it Works", href: "#how-it-works" },
-    { label: "Pricing", href: "#pricing" },
-    { label: "Resources", href: "#resources" }
+    { label: "Features", href: "/#features" },
+    { label: "How it Works", href: "/#how-it-works" },
+    { label: "Pricing", href: "/pricing" },
+    // { label: "Resources", href: "#resources" }
   ];
 
   return (
@@ -18,16 +18,12 @@ const Navigation = () => {
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center gap-2">
-          <img 
-            src="/logo.png" 
-            alt="Reviewoly Logo" 
-            className="w-8 h-8 object-contain"
-          />
+          <a href="/#hero" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <img src="/logo.png" alt="Reviewoly Logo" className="w-8 h-8 object-contain" />
             <span className="text-2xl font-bold text-foreground">
               Review<span className="text-accent">oly</span>
             </span>
-          </div>
+          </a>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">

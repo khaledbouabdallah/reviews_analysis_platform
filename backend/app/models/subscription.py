@@ -38,10 +38,10 @@ SUBSCRIPTION_PLANS = {
             locations=1,
             sources=2,
             reviews_per_month=100,
-            tokens_per_month=1000,
+            tokens_per_month=50000,
         ),
-        price_monthly=0,
-        price_yearly=0,
+        price_monthly=0.00,
+        price_yearly=0.00,
         features=[
             "1 business",
             "1 location",
@@ -61,16 +61,16 @@ SUBSCRIPTION_PLANS = {
             locations=10,
             sources=20,
             reviews_per_month=1000,
-            tokens_per_month=20000,
+            tokens_per_month=1000000,
         ),
-        price_monthly=3900,  # $39.00 in cents
-        price_yearly=39000,  # $390.00 in cents
+        price_monthly=20.00,  # €20.00 in euros
+        price_yearly=200.00,  # €200.00 in euros
         features=[
             "5 businesses",
             "10 locations",
             "20 review sources",
-            "1,000 reviews scraped/month",
-            "20K AI analysis tokens/month",
+            "1,000 reviews collected/month",
+            "1M AI analysis tokens/month",
             "Upload CSVs for analysis",
             "Invite clients to leave reviews",
             "Advanced analytics & insights",
@@ -87,15 +87,15 @@ SUBSCRIPTION_PLANS = {
             locations=-1,   # Unlimited
             sources=-1,     # Unlimited
             reviews_per_month=25000,
-            tokens_per_month=1000000, # 1M
+            tokens_per_month=10000000, # 10M
         ),
-        price_monthly=12900,  # $129.00 in cents
-        price_yearly=129000,  # $1,290.00 in cents
+        price_monthly=79.00,  # €79.00 in euros
+        price_yearly=790.00,  # €790.00 in euros
         features=[
             "Unlimited businesses & locations",
             "Unlimited review sources",
-            "25,000 reviews scraped/month",
-            "1M AI analysis tokens/month",
+            "25,000 reviews collected/month",
+            "10M AI analysis tokens/month",
             "Generate AI review responses (RAG)",
             "Custom analytics & reporting",
             "Real-time alerts & webhooks",
@@ -123,7 +123,3 @@ class SubscriptionInfo(BaseModel):
     stripe_subscription_id: str | None = Field(default=None, description="Stripe subscription ID")
     last_payment_date: datetime | None = Field(default=None, description="Last successful payment date")
     next_payment_date: datetime | None = Field(default=None, description="Next payment due date")
-
-
-
-

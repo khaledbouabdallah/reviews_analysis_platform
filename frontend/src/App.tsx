@@ -17,6 +17,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService"; 
 import CookiePolicy from "./pages/CookiePolicy";
 import Analytics from "./pages/Analytics";
+import PricingPage from "./pages/Pricing";
 import { CookieConsent } from "./components/legal/CookieConsent";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AuthRedirect } from "./components/auth/AuthRedirect";
@@ -44,10 +45,10 @@ const App = () => (
             </AuthRedirect>
           } />
 
-          {/* ADD: Legal pages - accessible to everyone */}
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/cookie-policy" element={<CookiePolicy />} />
+          <Route path="/pricing" element={<PricingPage />} />
 
           {/* Protected dashboard routes - require authentication */}
           <Route path="/dashboard" element={
