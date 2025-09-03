@@ -26,6 +26,7 @@ export function RegisterForm() {
     email: '',
     password: '',
     confirmPassword: '',
+    acceptTerms: false, // ✅ ADD: Terms acceptance field
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -62,6 +63,12 @@ export function RegisterForm() {
       return;
     }
 
+    // ✅ ADD: Terms acceptance validation
+    if (!formData.acceptTerms) {
+      setError('You must accept the Terms of Service to continue');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -90,9 +97,11 @@ export function RegisterForm() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // ✅ ADD: Handle checkbox changes
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [e.target.name]: value,
     });
   };
 
@@ -109,7 +118,6 @@ export function RegisterForm() {
       <AuthHeader />
 
       {/* Main content */}
-
       <div className="relative z-10 flex items-center justify-center min-h-screen px-4 sm:px-6 lg:px-8 -mt-20">
         <div className="max-w-md w-full space-y-8">
           {/* Header */}
@@ -196,6 +204,31 @@ export function RegisterForm() {
                       placeholder="Confirm your password"
                       className="transition-all duration-300 focus:ring-4 focus:ring-primary/20"
                     />
+                  </div>
+
+                  {/* ✅ ADD: Terms of Service Checkbox */}
+                  <div className="space-y-2">
+                    <div className="flex items-start space-x-3">
+                      <input
+                        id="acceptTerms"
+                        name="acceptTerms"
+                        type="checkbox"
+                        checked={formData.acceptTerms}
+                        onChange={handleChange}
+                        className="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary focus:ring-2 transition-all duration-200"
+                      />
+                      <label htmlFor="acceptTerms" className="text-sm text-foreground leading-relaxed">
+                        I agree to the{' '}
+                        <a
+                          href="/terms-of-service"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:text-primary/80 underline font-medium transition-colors duration-200"
+                        >
+                          Terms of Service
+                        </a>
+                      </label>
+                    </div>
                   </div>
 
                   {/* Success Message - MODIFY: Update message to mention email verification */}
