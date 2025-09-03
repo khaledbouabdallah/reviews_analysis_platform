@@ -285,7 +285,7 @@ const DashboardHome = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              Good morning, {currentUser?.name || 'User'}! 👋
+              Good morning, {currentUser?.username || 'User'}! 👋
             </h1>
             <p className="text-muted-foreground">
               Here's what's happening with your reviews today.
@@ -529,45 +529,6 @@ const DashboardHome = () => {
             )}
           </CardContent>
         </Card>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-4 gap-4">
-        <Button 
-          variant="outline" 
-          className="h-16 flex flex-col items-center justify-center gap-2"
-          onClick={() => navigate('/dashboard/jobs')}
-        >
-          <BarChart3 className="h-5 w-5" />
-          <span className="text-xs">New Job</span>
-        </Button>
-        
-        <Button 
-          variant="outline" 
-          className="h-16 flex flex-col items-center justify-center gap-2"
-          onClick={() => navigate('/dashboard/analytics')}
-        >
-          <TrendingUp className="h-5 w-5" />
-          <span className="text-xs">Analytics</span>
-        </Button>
-        
-        <Button 
-          variant="outline" 
-          className="h-16 flex flex-col items-center justify-center gap-2"
-          onClick={() => navigate('/dashboard/reviews?needs_attention=true')}
-        >
-          <AlertTriangle className="h-5 w-5" />
-          <span className="text-xs">Urgent Reviews</span>
-        </Button>
-        
-        <Button 
-          variant="outline" 
-          className="h-16 flex flex-col items-center justify-center gap-2"
-          onClick={() => navigate('/dashboard/locations')}
-        >
-          <Building2 className="h-5 w-5" />
-          <span className="text-xs">Locations</span>
-        </Button>
       </div>
     </div>
   );

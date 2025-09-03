@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Loader2, RefreshCw, AlertTriangle, MessageSquare, Zap, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Review } from '@/services/review';
+import { Review, getReviewSentiment, getReviewUrgency, getAnalysisResults } from '@/services/review';
 import { ReviewRow } from './ReviewRow';
 
 type SortField = 'date' | 'rating' | 'sentiment' | 'urgency';
@@ -15,6 +15,8 @@ interface ReviewTableProps {
     hasActiveFilters: boolean;
     onRefresh: () => void;
     onViewDetails: (reviewId: string) => void;
+    // ADDED: Column visibility control
+    visibleColumns: string[];
 }
 
 export const ReviewTable = ({
@@ -23,7 +25,8 @@ export const ReviewTable = ({
     error,
     hasActiveFilters,
     onRefresh,
-    onViewDetails
+    onViewDetails,
+    visibleColumns
 }: ReviewTableProps) => {
     const [sortField, setSortField] = useState<SortField>('date');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -37,6 +40,11 @@ export const ReviewTable = ({
             setSortField(field);
             setSortDirection('desc');
         }
+    };
+
+    // ADDED: Double-click handler for expand/collapse
+    const handleDoubleClick = (reviewId: string) => {
+        toggleRowExpansion(reviewId);
     };
 
     // Toggle row expansion
@@ -68,81 +76,88 @@ export const ReviewTable = ({
                 bValue = typeof bRating === 'number' ? bRating : 0;
                 break;
             case 'sentiment':
-                const sentimentOrder = { 'positive': 3, 'neutral': 2, 'negative': 1 };
-                aValue = sentimentOrder[a.analyzed_data?.sentiment?.label as keyof typeof sentimentOrder] || 0;
-                bValue = sentimentOrder[b.analyzed_data?.sentiment?.label as keyof typeof sentimentOrder] || 0;
+                const aSentiment = getReviewSentiment(a) || 'neutral';
+                const bSentiment = getReviewSentiment(b) || 'neutral';
+                const sentimentOrder = { negative: 0, neutral: 1, positive: 2 };
+                aValue = sentimentOrder[aSentiment as keyof typeof sentimentOrder];
+                bValue = sentimentOrder[bSentiment as keyof typeof sentimentOrder];
                 break;
             case 'urgency':
-                const urgencyOrder = { 'critical': 5, 'high': 4, 'medium': 3, 'low': 2, 'none': 1 };
-                aValue = urgencyOrder[a.analyzed_data?.urgency?.level as keyof typeof urgencyOrder] || 0;
-                bValue = urgencyOrder[b.analyzed_data?.urgency?.level as keyof typeof urgencyOrder] || 0;
+                const aUrgency = getReviewUrgency(a) || 'none';
+                const bUrgency = getReviewUrgency(b) || 'none';
+                const urgencyOrder = { none: 0, low: 1, medium: 2, high: 3, critical: 4 };
+                aValue = urgencyOrder[aUrgency as keyof typeof urgencyOrder];
+                bValue = urgencyOrder[bUrgency as keyof typeof urgencyOrder];
                 break;
             default:
                 return 0;
         }
-        
+
         if (sortDirection === 'asc') {
-            return aValue - bValue;
+            return aValue > bValue ? 1 : -1;
         } else {
-            return bValue - aValue;
+            return aValue < bValue ? 1 : -1;
         }
     });
 
     return (
         <div className="relative">
-            <div className="absolute inset-0 bg-white/40 backdrop-blur-xl rounded-3xl border border-white/30 shadow-xl"></div>
-            <div className="relative">
-                {/* Table Header */}
-                <div className="px-8 py-6 border-b border-white/20 bg-white/20 backdrop-blur-sm rounded-t-3xl">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-xl font-semibold text-gray-900 flex items-center">
-                            <Zap className="w-5 h-5 mr-2 text-primary" />
-                            Smart Review Analysis
-                            <Badge variant="secondary" className="ml-3 bg-primary/10 text-primary border-primary/20">
-                                {sortedReviews.length} reviews
+            <div className="absolute inset-0 bg-white/40 backdrop-blur-xl rounded-3xl border border-white/30 shadow-xl" />
+            <div className="relative p-6">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center space-x-3">
+                        <MessageSquare className="h-6 w-6 text-blue-600" />
+                        <h2 className="text-xl font-bold text-gray-900">Reviews</h2>
+                        {reviews.length > 0 && (
+                            <Badge variant="outline" className="text-sm">
+                                {reviews.length} review{reviews.length !== 1 ? 's' : ''}
                             </Badge>
-                        </h3>
-                        
-                        {/* Sort Controls */}
+                        )}
+                    </div>
+
+                    {/* Sort Controls */}
+                    {reviews.length > 0 && (
                         <div className="flex items-center space-x-2">
-                            <span className="text-sm text-gray-600 mr-2">Sort by:</span>
+                            <span className="text-sm text-gray-600">Sort by:</span>
                             {(['date', 'rating', 'sentiment', 'urgency'] as SortField[]).map((field) => (
                                 <Button
                                     key={field}
-                                    variant={sortField === field ? "default" : "outline"}
+                                    variant={sortField === field ? "default" : "ghost"}
                                     size="sm"
                                     onClick={() => handleSort(field)}
                                     className="capitalize"
                                 >
                                     {field}
                                     {sortField === field && (
-                                        <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${sortDirection === 'desc' ? 'rotate-180' : ''}`} />
+                                        <ChevronDown className={`h-3 w-3 ml-1 transition-transform ${sortDirection === 'desc' ? 'rotate-180' : ''}`} />
                                     )}
                                 </Button>
                             ))}
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* Loading State */}
                 {isLoading && (
-                    <div className="p-12 text-center">
-                        <div className="relative">
-                            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-accent/10 blur-3xl rounded-full"></div>
-                            <Loader2 className="relative w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+                    <div className="flex items-center justify-center p-12">
+                        <div className="text-center">
+                            <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+                            <p className="text-gray-600">Loading reviews...</p>
                         </div>
-                        <p className="text-gray-600">Loading reviews...</p>
                     </div>
                 )}
 
                 {/* Error State */}
-                {error && (
-                    <div className="p-12 text-center">
-                        <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                {error && !isLoading && (
+                    <div className="text-center p-12">
+                        <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Reviews</h3>
-                        <p className="text-gray-600 mb-6">{error instanceof Error ? error.message : 'An error occurred'}</p>
+                        <p className="text-gray-600 mb-4">
+                            {error.message || 'Something went wrong while loading reviews.'}
+                        </p>
                         <Button onClick={onRefresh} variant="outline">
-                            <RefreshCw className="w-4 h-4 mr-2" />
+                            <RefreshCw className="h-4 w-4 mr-2" />
                             Try Again
                         </Button>
                     </div>
@@ -150,11 +165,8 @@ export const ReviewTable = ({
 
                 {/* Empty State */}
                 {!isLoading && !error && sortedReviews.length === 0 && (
-                    <div className="p-12 text-center">
-                        <div className="relative mb-6">
-                            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 blur-3xl rounded-full"></div>
-                            <MessageSquare className="relative w-12 h-12 text-blue-500 mx-auto" />
-                        </div>
+                    <div className="text-center p-12">
+                        <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">No Reviews Found</h3>
                         <p className="text-gray-600">
                             {hasActiveFilters 
@@ -167,17 +179,32 @@ export const ReviewTable = ({
 
                 {/* Reviews List */}
                 {!isLoading && !error && sortedReviews.length > 0 && (
-                    <div className="divide-y divide-white/20">
+                    <div className="space-y-4">
                         {sortedReviews.map((review, index) => (
-                            <ReviewRow
+                            <div
                                 key={review.id}
-                                review={review}
-                                isExpanded={expandedRows.has(review.id)}
-                                onToggleExpansion={() => toggleRowExpansion(review.id)}
-                                onViewDetails={() => onViewDetails(review.id)}
-                                index={index}
-                            />
+                                onDoubleClick={() => handleDoubleClick(review.id)}
+                                className="cursor-pointer"
+                            >
+                                <ReviewRow
+                                    review={review}
+                                    isExpanded={expandedRows.has(review.id)}
+                                    onToggleExpansion={() => toggleRowExpansion(review.id)}
+                                    onViewDetails={() => onViewDetails(review.id)}
+                                    index={index}
+                                    visibleColumns={visibleColumns}
+                                />
+                            </div>
                         ))}
+                    </div>
+                )}
+
+                {/* Helper Text */}
+                {!isLoading && !error && sortedReviews.length > 0 && (
+                    <div className="mt-6 text-center">
+                        <p className="text-xs text-gray-500">
+                            💡 Double-click any review to expand/collapse • Click "View Details" for full analysis
+                        </p>
                     </div>
                 )}
             </div>
