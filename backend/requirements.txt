@@ -45,3 +45,6 @@ kombu==5.4.0
 
 # Flower for Celery monitoring
 flower==2.0.1
+
+# Email
+resend==2.13.1
