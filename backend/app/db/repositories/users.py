@@ -87,6 +87,17 @@ class UserRepository:
         if updated_user:
             return UserInDB.model_validate(updated_user)
         return None
+    
+    async def get_by_verification_token(self, verification_token: str) -> UserInDB | None:
+        """Get a user by verification token."""
+        try:
+            user_data = await users_collection.find_one({"verification_token": verification_token})
+            if user_data:
+                return UserInDB.model_validate(user_data)
+            return None
+        except Exception as e:
+            logger.error(f"Error getting user by verification token: {e}")
+            return None
 
     async def delete(self, user_id: str) -> bool:
         """Delete all data related to a user: businesses, sources, jobs, reviews."""

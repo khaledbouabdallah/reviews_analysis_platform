@@ -30,7 +30,7 @@ export function RegisterForm() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   // ADD: reCAPTCHA execution function
   const executeRecaptcha = (): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -75,26 +75,20 @@ export function RegisterForm() {
       const recaptchaToken = await executeRecaptcha();
 
       // MODIFY: Add recaptcha_token to registration data
-      const response = await authService.register({
+      const data = await authService.register({
         username: formData.username,
         email: formData.email,
         password: formData.password,
         recaptcha_token: recaptchaToken, // ADD this line
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-      // ✅ CHANGE: Redirect to CheckEmail instead of showing success message
       navigate('/check-email', {
         state: {
           email: formData.email,
           username: formData.username
         }
       });
-    } else {
-      setError(data.detail || 'Registration failed. Please try again.');
-    }
+
 
     } catch (err: any) {
       setError(err.message);

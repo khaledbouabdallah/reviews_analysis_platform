@@ -102,6 +102,25 @@ export class AuthService {
   }
 
 
+  async verifyEmail(token: string) {
+  const response = await fetch(`${API_URL}/api/auth/verify-email`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ token }),
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Email verification failed');
+  }
+
+  return response.json();
+}
+
+
 }
 
 export const authService = new AuthService();

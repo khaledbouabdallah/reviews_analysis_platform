@@ -17,70 +17,61 @@ export function LoginForm() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showResendVerification, setShowResendVerification] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleResendVerification = () => {
+    navigate('/resend-verification');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setShowResendVerification(false);
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          username: formData.username,
-          password: formData.password,
-        }),
+      // Use authService.login instead of direct fetch
+      const data = await authService.login({
+        username: formData.username,
+        password: formData.password,
       });
 
-    const data = await response.json();
-
-    if (response.ok) {
-      // Redirect to dashboard or intended page
+      // Login successful - redirect to dashboard
       navigate('/dashboard');
-    } else {
-      // ✅ CHANGE: Handle email verification error specifically
-      if (data.detail && data.detail.includes('verify your email')) {
-        setError(data.detail);
-        // Show a resend verification link in the error message
-        setShowResendVerification(true);
+
+    } catch (error) {
+      console.error('Login error:', error);
+      
+      if (error instanceof Error) {
+        // Handle email verification error specifically
+        if (error.message.includes('verify your email')) {
+          setError(error.message);
+          setShowResendVerification(true);
+        } else {
+          setError(error.message);
+          setShowResendVerification(false);
+        }
       } else {
-        setError(data.detail || 'Login failed. Please try again.');
+        setError('Login failed. Please try again.');
         setShowResendVerification(false);
       }
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Login error:', error);
-    setError('Network error. Please check your connection and try again.');
-    setShowResendVerification(false);
-  } finally {
-    setLoading(false);
-  }
-};
-
-    // ✅ ADD: New state for showing resend verification option
-  const [showResendVerification, setShowResendVerification] = useState(false);
-
-  // ✅ ADD: Function to handle resend verification
-  const handleResendVerification = () => {
-    navigate('/resend-verification', {
-      state: { email: formData.username } // assuming username might be email
-    });
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+
   return (
     <section className="min-h-screen relative overflow-hidden hero-bg"
     >
-
-
       {/* Animated background elements - matching landing page */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none ">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full blur-3xl animate-pulse" />

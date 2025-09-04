@@ -58,11 +58,11 @@ async def login_for_access_token(
         )
 
     # Check if email is verified (optional - you can comment this out if not required)
-    # if not user.email_verified:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail="Please verify your email address before logging in",
-    #     )
+    if not user.email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please verify your email address before logging in",
+        )
 
     # Create access token
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)

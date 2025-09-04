@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import Footer from '@/components/common/Footer'
+import { authService } from '@/services/auth';
 
 interface VerificationResult {
   success: boolean;
@@ -30,39 +31,24 @@ export function VerifyEmail() {
   }, [token]);
 
   const verifyEmail = async (verificationToken: string) => {
-    try {
-      const response = await fetch('/api/auth/verify-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token: verificationToken }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setStatus('success');
-        setResult({
-          success: true,
-          message: data.message,
-          alreadyVerified: data.message.includes('already verified')
-        });
-      } else {
-        setStatus('error');
-        setResult({
-          success: false,
-          message: data.detail || 'Email verification failed'
-        });
-      }
-    } catch (error) {
-      setStatus('error');
-      setResult({
-        success: false,
-        message: 'Network error. Please try again.'
-      });
-    }
-  };
+  try {
+    const data = await authService.verifyEmail(verificationToken);
+    
+    setStatus('success');
+    setResult({
+      success: true,
+      message: data.message,
+      alreadyVerified: data.message.includes('already verified')
+    });
+    
+  } catch (error) {
+    setStatus('error');
+    setResult({
+      success: false,
+      message: error instanceof Error ? error.message : 'Email verification failed'
+    });
+  }
+};
 
   const handleSignIn = () => {
     navigate('/signin');

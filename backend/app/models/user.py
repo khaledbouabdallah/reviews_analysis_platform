@@ -51,7 +51,15 @@ class UserInDB(UserBase):
         """Check if verification token is still valid"""
         if not self.verification_token or not self.verification_token_expires:
             return False
-        return datetime.now(timezone.utc) < self.verification_token_expires
+        
+        now = datetime.now(timezone.utc)
+        expires = self.verification_token_expires
+        
+        # If expires is naive (no timezone), assume it's UTC
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        
+        return now < expires
 
 
 # Model for creating a new user
