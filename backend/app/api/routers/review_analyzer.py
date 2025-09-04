@@ -1,5 +1,6 @@
 # backend/app/api/routers/review_analyzer.py
 
+import asyncio
 import traceback
 from typing import Literal
 
@@ -129,13 +130,14 @@ def parse_analysis_request(
 
 def estimate_tokens(review_inputs: list["ReviewInput"]) -> int:
     text = " ".join([inp.text for inp in review_inputs])
-    approx = len(text) // 4  # fast estimate
-    return int(approx * 1.2)  # safety margin
+    input_approx = (len(text) // 4)  # fast estimate
+    output_approx = input_approx * 10
+    return int(input_approx + output_approx)
 
 async def user_passed_his_limit(review_inputs: list[ReviewInput], current_user: UserInDB) -> bool:
     get_current_usage = await subscription_service.get_current_usage(str(current_user.id))
-    tokens_used = get_current_usage["tokens_used"]
-    user_limit = get_current_usage["limit"]
+    tokens_used = get_current_usage.tokens_used
+    user_limit = get_current_usage.tokens_limit
     token_estimation = estimate_tokens(review_inputs)
     logger.info(f"User {current_user.id} has used {tokens_used}/{user_limit} tokens. Estimated tokens for this request: {token_estimation}")
     return tokens_used + token_estimation > user_limit
@@ -177,20 +179,29 @@ async def analyze_entity_reviews(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No valid reviews found for analysis"
             )
-            
-        if user_passed_his_limit(batch_processor.review_inputs, current_user):
+
+        is_limit_exceeded = await user_passed_his_limit(batch_processor.review_inputs, current_user)
+        if is_limit_exceeded:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="User has exceeded their token limit"
             )
     
-        result = await batch_processor.process_all_reviews(
-            tasks=tasks,
-            target_topics=target_topics,
-            business_context=business_context,
+        # Start the analysis in the background
+        asyncio.create_task(
+            batch_processor.process_all_reviews(
+                tasks=tasks,
+                target_topics=target_topics,
+                business_context=business_context,
+            )
         )
         
-        return result
+        # Return immediately with job info
+        return {
+            "success": True,
+            "message": "Analysis job started successfully",
+            "status": "running"
+        }
         
     except HTTPException:
         raise

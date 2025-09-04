@@ -65,6 +65,9 @@ const App = () => (
             <Route path="reviews" element={<Reviews/>} />
             <Route path="documentation" element={<div className="p-6">Documentation Page (Coming Soon)</div>} />
             <Route path="settings" element={<div className="p-6">Settings Page (Coming Soon)</div>} />
+            <Route path="subscription" element={<div className="p-6">Subscription Page (Coming Soon)</div>} />
+            <Route path="account" element={<div className="p-6">Account Page (Coming Soon)</div>} />
+            <Route path="*" element={<NotFound />} />
           </Route>
 
           {/* Catch-all route */}
