@@ -7,6 +7,7 @@ from db.repositories.llm_logs import LLMLogRepository
 from db.repositories.locations import LocationRepository  
 from db.repositories.sources import SourceRepository
 from db.repositories.users import UserRepository
+from db.repositories.jobs import JobRepository
 from models.usage import CurrentUsageResponse, MonthlyUsage, UsageEvent, get_billing_cycle_dates
 from models.user import UserInDB
 
@@ -19,8 +20,9 @@ class SubscriptionService:
         self.business_repo = BusinessRepository()
         self.location_repo = LocationRepository()
         self.source_repo = SourceRepository()
+        self.job_repo = JobRepository()
         self.llm_log_repo = LLMLogRepository()
-    
+        
     async def get_current_usage(self, user_id: str) -> CurrentUsageResponse:
         """Get current usage for a user in their billing cycle"""
         
@@ -43,8 +45,8 @@ class SubscriptionService:
         sources_count = len(await self.source_repo.get_by_user(user_id))
         
         # Get usage for current billing cycle from LLM logs
-        tokens_used, reviews_used = await self._calculate_cycle_usage(user_id, cycle_start, cycle_end)
-        
+        tokens_used, _  = await self._calculate_llm_cycle_usage(user_id, cycle_start, cycle_end)
+        reviews_used = await self._calculate_scraping_cycle_usage(user_id, cycle_start, cycle_end)
         # Calculate percentages and warnings
         reviews_percentage = (reviews_used / limits.reviews_per_month * 100) if limits.reviews_per_month > 0 else 0
         tokens_percentage = (tokens_used / limits.tokens_per_month * 100) if limits.tokens_per_month > 0 else 0
@@ -81,8 +83,16 @@ class SubscriptionService:
             is_approaching_limit=is_approaching_limit,
             limit_warnings=limit_warnings
         )
-    
-    async def _calculate_cycle_usage(self, user_id: str, cycle_start: datetime, cycle_end: datetime) -> tuple[int, int]:
+        
+    async def _calculate_scraping_cycle_usage(self, user_id: str, cycle_start: datetime, cycle_end: datetime) -> int:
+        """Calculate reviews scraped in current billing cycle"""
+
+        # Get scraping logs for this billing cycle
+        scraping_jobs = await self.job_repo.get_scraping_jobs_by_user_date_range(user_id, cycle_start, cycle_end)
+        count_reviews_scraped = sum(job.reviews_handled for job in scraping_jobs if job.reviews_handled)
+        return count_reviews_scraped
+
+    async def _calculate_llm_cycle_usage(self, user_id: str, cycle_start: datetime, cycle_end: datetime) -> tuple[int, int]:
         """Calculate tokens used and reviews scraped in current billing cycle"""
         
         # Get LLM logs for this billing cycle

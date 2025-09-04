@@ -80,21 +80,21 @@ const LegalPageLayout: React.FC<LegalPageLayoutProps> = ({
 
           <div className="flex items-center gap-3">
           <Link 
-  to="/" 
-  className="flex items-center gap-3 hover:opacity-80 transition-opacity"
->
-  <img 
-    src="/logo.png" 
-    alt="Reviewoly Logo" 
-    className="w-8 h-8 object-contain"
-  />
-  <div>
-    <h1 className="text-xl font-bold text-foreground">
-      Review<span className="text-accent">oly</span>
-    </h1>
-    <p className="text-sm text-muted-foreground">{title}</p>
-  </div>
-</Link>
+            to="/" 
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+          >
+            <img 
+              src="/logo.png" 
+              alt="Reviewoly Logo" 
+              className="w-8 h-8 object-contain"
+            />
+            <div>
+              <h1 className="text-xl font-bold text-foreground">
+                Review<span className="text-accent">oly</span>
+              </h1>
+              <p className="text-sm text-muted-foreground">{title}</p>
+            </div>
+          </Link>
           </div>
 
           {/* Mobile menu button */}

@@ -146,7 +146,7 @@ class EmailService:
             html_content = template.render(
                 username=username,
                 verification_url=verification_url,
-                app_name="ReviewOli"
+                app_name="reviewoly"
             )
             
             # Text version
@@ -160,12 +160,12 @@ Thank you for signing up! Please verify your email address by clicking the link 
 If you didn't create an account, please ignore this email.
 
 Best regards,
-ReviewOli Team
+reviewoly Team
             """
             
             return await self.send_email(
                 to_email=email,
-                subject="Verify Your Email Address - ReviewOli",
+                subject="Verify Your Email Address - reviewoly",
                 html_content=html_content,
                 text_content=text_content
             )

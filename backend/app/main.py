@@ -51,8 +51,8 @@ if settings.ENVIRONMENT == "development":
     ]
 elif settings.ENVIRONMENT == "production":
     allow_origins = [
-        "https://reviewoli.com",
-        "https://www.reviewoli.com",
+        "https://reviewoly.com",
+        "https://www.reviewoly.com",
         # Keep this temporarily during transition:
         "https://reviews-frontend-317538160577.europe-west1.run.app",
     ]

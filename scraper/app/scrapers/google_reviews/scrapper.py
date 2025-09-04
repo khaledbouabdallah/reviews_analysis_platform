@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
 
-from exceptions import JobCancelledException
+from exceptions import JobCancelledException, ReviewsLimitExceededException
 
 import pandas as pd
 import undetected_chromedriver as uc
@@ -674,7 +674,7 @@ class GoogleMapsReviewScraper:
             self.logger.error(f"Failed to save data: {e}")
             raise RuntimeError(f"Data saving failed: {e}")
 
-    def scrap(self, url: str) -> list[dict[str, Any]] | None:
+    def scrap(self, url: str, reviews_used: int, reviews_limit: int) -> list[dict[str, Any]] | None:
         """Main scraping method with comprehensive logging and progress tracking.
 
         Args:
@@ -690,7 +690,7 @@ class GoogleMapsReviewScraper:
             scraping_start = time.time()
             # Connect and get total reviews
             total_reviews = self.connect(url)
-
+            logging.info(f"Total reviews found: {total_reviews}, limit {reviews_limit}, used {reviews_used}")
             if total_reviews == 0:
                 self.logger.warning("No reviews found for this location")
                 self._emit_progress(
@@ -702,7 +702,11 @@ class GoogleMapsReviewScraper:
                     },
                 )
                 return None
-
+            
+            elif reviews_used + total_reviews > reviews_limit:
+                self.logger.warning("Reviews limit exceeded")
+                raise ReviewsLimitExceededException("Reviews limit exceeded")
+            
             # Extract review data
             data = self.extract_data(total_reviews)
 

@@ -41,14 +41,7 @@ class Settings(BaseSettings):
     RECAPTCHA_MIN_SCORE: float = 0.5
     
     # Email settings (optional - will fallback gracefully)
-    SMTP_SERVER: str = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
-    SMTP_USERNAME: str = os.getenv("SMTP_USERNAME", "")
-    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
-    FROM_EMAIL: str = os.getenv("FROM_EMAIL", "")
-    
-    # SendGrid (preferred for production)
-    SENDGRID_API_KEY: str = os.getenv("SENDGRID_API_KEY", "")
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY")
     
     # Frontend URL for email links
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")

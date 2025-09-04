@@ -35,7 +35,7 @@ const TermsOfService: React.FC = () => {
         <section id="acceptance" className="space-y-4">
           <h2 className="text-2xl font-semibold text-foreground">1. Acceptance of Terms</h2>
           <p className="text-muted-foreground leading-relaxed">
-            By accessing or using Reviewoli ("Platform", "Service", "we", "us"), you ("User", "you") 
+            By accessing or using reviewoly ("Platform", "Service", "we", "us"), you ("User", "you") 
             agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, 
             do not use our Service.
           </p>
@@ -51,7 +51,7 @@ const TermsOfService: React.FC = () => {
         <section id="service-description" className="space-y-4">
           <h2 className="text-2xl font-semibold text-foreground">2. Service Description</h2>
           <p className="text-muted-foreground">
-            Reviewoli provides AI-powered review analysis services including:
+            reviewoly provides AI-powered review analysis services including:
           </p>
           
           <div className="grid md:grid-cols-2 gap-4">

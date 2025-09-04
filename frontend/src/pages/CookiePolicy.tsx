@@ -34,7 +34,7 @@ const CookiePolicy: React.FC = () => {
         <section id="introduction" className="space-y-4">
           <h2 className="text-2xl font-semibold text-foreground">1. Introduction</h2>
           <p className="text-muted-foreground leading-relaxed">
-            This Cookie Policy explains how Reviewoli ("we", "us", "our") uses cookies and similar tracking 
+            This Cookie Policy explains how reviewoly ("we", "us", "our") uses cookies and similar tracking 
             technologies on our website and platform. This policy should be read alongside our{' '}
             <a href="/privacy-policy" className="text-primary hover:underline">Privacy Policy</a> and{' '}
             <a href="/terms-of-service" className="text-primary hover:underline">Terms of Service</a>.
