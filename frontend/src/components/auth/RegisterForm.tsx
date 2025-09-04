@@ -6,7 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AuthHeader } from '@/components/auth/AuthHeader';
+import Footer from "@/components/common/Footer";
 import { authService } from '@/services/auth';
+
+// ADD: reCAPTCHA type declaration
+declare global {
+  interface Window {
+    grecaptcha: {
+      ready: (callback: () => void) => void;
+      execute: (siteKey: string, options: { action: string }) => Promise<string>;
+    };
+  }
+}
 
 export function RegisterForm() {
   const navigate = useNavigate();
@@ -15,10 +26,26 @@ export function RegisterForm() {
     email: '',
     password: '',
     confirmPassword: '',
+    acceptTerms: false, // ✅ ADD: Terms acceptance field
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+
+  // ADD: reCAPTCHA execution function
+  const executeRecaptcha = (): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      if (typeof window !== 'undefined' && window.grecaptcha) {
+        window.grecaptcha.ready(() => {
+          window.grecaptcha
+            .execute('6LcbALcrAAAAAO1nEcagBHCTxpjucAtwf7xgVOQN', { action: 'signup' })
+            .then(resolve)
+            .catch(reject);
+        });
+      } else {
+        reject(new Error('reCAPTCHA not loaded'));
+      }
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,20 +62,33 @@ export function RegisterForm() {
       return;
     }
 
+    // ✅ ADD: Terms acceptance validation
+    if (!formData.acceptTerms) {
+      setError('You must accept the Terms of Service to continue');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await authService.register({
+      // ADD: Execute reCAPTCHA before registration
+      const recaptchaToken = await executeRecaptcha();
+
+      // MODIFY: Add recaptcha_token to registration data
+      const data = await authService.register({
         username: formData.username,
         email: formData.email,
         password: formData.password,
+        recaptcha_token: recaptchaToken, // ADD this line
       });
 
-      setSuccess(true);
-      // Redirect after 2 seconds
-      setTimeout(() => {
-        navigate('/signin');
-      }, 2000);
+      navigate('/check-email', {
+        state: {
+          email: formData.email,
+          username: formData.username
+        }
+      });
+
 
     } catch (err: any) {
       setError(err.message);
@@ -58,9 +98,11 @@ export function RegisterForm() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // ✅ ADD: Handle checkbox changes
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [e.target.name]: value,
     });
   };
 
@@ -77,7 +119,6 @@ export function RegisterForm() {
       <AuthHeader />
 
       {/* Main content */}
-
       <div className="relative z-10 flex items-center justify-center min-h-screen px-4 sm:px-6 lg:px-8 -mt-20">
         <div className="max-w-md w-full space-y-8">
           {/* Header */}
@@ -166,12 +207,30 @@ export function RegisterForm() {
                     />
                   </div>
 
-                  {/* Success Message */}
-                  {success && (
-                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg animate-fade-in-up">
-                      ✅ Account created successfully! Redirecting to sign in...
+                  {/* ✅ ADD: Terms of Service Checkbox */}
+                  <div className="space-y-2">
+                    <div className="flex items-start space-x-3">
+                      <input
+                        id="acceptTerms"
+                        name="acceptTerms"
+                        type="checkbox"
+                        checked={formData.acceptTerms}
+                        onChange={handleChange}
+                        className="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary focus:ring-2 transition-all duration-200"
+                      />
+                      <label htmlFor="acceptTerms" className="text-sm text-foreground leading-relaxed">
+                        I agree to the{' '}
+                        <a
+                          href="/terms-of-service"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:text-primary/80 underline font-medium transition-colors duration-200"
+                        >
+                          Terms of Service
+                        </a>
+                      </label>
                     </div>
-                  )}
+                  </div>
 
                   {/* Error Message */}
                   {error && (
@@ -197,6 +256,19 @@ export function RegisterForm() {
                   </Button>
                 </form>
 
+                {/* ADD: reCAPTCHA notice */}
+                <div className="mt-4 text-xs text-center text-muted-foreground">
+                  This site is protected by reCAPTCHA and the Google{' '}
+                  <a href="https://policies.google.com/privacy" className="text-primary hover:underline">
+                    Privacy Policy
+                  </a>{' '}
+                  and{' '}
+                  <a href="https://policies.google.com/terms" className="text-primary hover:underline">
+                    Terms of Service
+                  </a>{' '}
+                  apply.
+                </div>
+
                 {/* Login Link */}
                 <div className="mt-6 text-center">
                   <p className="text-muted-foreground">
@@ -215,6 +287,7 @@ export function RegisterForm() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

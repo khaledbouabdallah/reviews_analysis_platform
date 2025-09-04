@@ -48,24 +48,22 @@ class UserRepository:
         )
         return [UserInDB.model_validate(user) for user in users_data]
 
-    async def create(self, user: UserCreate) -> UserInDB:
+    async def create(self, user: dict) -> UserInDB:
         """Create a new user."""
-        user_dict = user.model_dump(exclude={"password"})
-        user_dict["hashed_password"] = get_password_hash(user.password)
-        user_dict["created_at"] = datetime.now(timezone.utc)
-        user_dict["updated_at"] = datetime.now(timezone.utc)
+        user_dict = user.copy()
         
         # Initialize subscription
         user_dict["subscription"] = SubscriptionInfo(
-            tier=user.subscription_tier,
+            tier=user.get("subscription_tier"),
             billing_cycle="monthly",
             status="active"
         ).model_dump()
-        
-        result = await users_collection.insert_one(user_dict)
+               
+        user_data = UserInDB.model_validate(user_dict)
+        result = await users_collection.insert_one(user_data.model_dump(by_alias=True))
         user_dict["_id"] = result.inserted_id
-
-        return UserInDB.model_validate(user_dict)
+    
+        return user_data
 
     async def update(self, user_id: str, update_data: UserUpdate) -> UserInDB | None:
         """Update a user and return the updated document."""
@@ -89,6 +87,17 @@ class UserRepository:
         if updated_user:
             return UserInDB.model_validate(updated_user)
         return None
+    
+    async def get_by_verification_token(self, verification_token: str) -> UserInDB | None:
+        """Get a user by verification token."""
+        try:
+            user_data = await users_collection.find_one({"verification_token": verification_token})
+            if user_data:
+                return UserInDB.model_validate(user_data)
+            return None
+        except Exception as e:
+            logger.error(f"Error getting user by verification token: {e}")
+            return None
 
     async def delete(self, user_id: str) -> bool:
         """Delete all data related to a user: businesses, sources, jobs, reviews."""

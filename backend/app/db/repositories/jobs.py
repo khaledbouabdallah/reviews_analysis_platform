@@ -7,6 +7,7 @@ from models import PyObjectId
 from models.job import JobCreate, JobInDB, JobUpdate, JobUpdateInternal
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError, PyMongoError
+from datetime import datetime
 
 
 class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
@@ -191,3 +192,26 @@ class JobRepository(BaseRepository[JobCreate, JobUpdate, JobInDB]):
         except PyMongoError as e:
             logger.error(f"Database error during job deletion: {e!s}")
             raise RuntimeError("Error while deleting job data")
+        
+    async def get_scraping_jobs_by_user_date_range(self, user_id: str, start_date: datetime, end_date: datetime) -> list[JobInDB]:
+        """Get all scraping jobs of a user within a date range."""
+
+        try:
+            oid = PyObjectId(user_id)
+        except Exception:
+            raise ValueError("Invalid user_id format")
+
+        try:
+
+            jobs_data = (
+                await self.collection.find({
+                    "user_id": oid,
+                    "job_type": "scraping",
+                    "created_at": {"$gte": start_date, "$lte": end_date}
+                }).to_list(length=None) 
+            )
+
+            return [self.db_model.model_validate(job) for job in jobs_data]
+        except PyMongoError as e:
+            logger.error(f"Database error while fetching scraping jobs: {e!s}")
+            raise RuntimeError("Database error while fetching scraping jobs")

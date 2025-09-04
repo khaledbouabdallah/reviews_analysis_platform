@@ -106,7 +106,7 @@ const Locations = () => {
     // **KEPT: Form state**
     const [formData, setFormData] = useState<LocationCreate>({
         name: "",
-        adresse: "",
+        address: "",
         business_id: selectedBusiness?.id || "",
     });
 
@@ -192,7 +192,7 @@ const Locations = () => {
             // **NEW: Refresh stats after creating location**
             await loadLocationStats();
             setIsCreateDialogOpen(false);
-            setFormData({ name: "", adresse: "", business_id: selectedBusiness.id });
+            setFormData({ name: "", address: "", business_id: selectedBusiness.id });
         } catch (err) {
             console.error('Failed to create location:', err);
         }
@@ -208,7 +208,7 @@ const Locations = () => {
                 id: editingLocation.id,
                 data: {
                     name: formData.name,
-                    adresse: formData.adresse,
+                    address: formData.address,
                 }
             });
             // **NEW: Refresh stats after updating location**  
@@ -366,7 +366,7 @@ const Locations = () => {
         setEditingLocation(location);
         setFormData({
             name: location.name,
-            adresse: location.adresse,
+            address: location.address,
             business_id: location.business_id,
         });
         setIsEditDialogOpen(true);
@@ -422,7 +422,7 @@ const Locations = () => {
     // Filter locations
     const filteredLocations = locations.filter((location: any) =>
         location.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        location.adresse.toLowerCase().includes(searchTerm.toLowerCase())
+        location.address.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     // Show message when no business is selected
@@ -510,13 +510,13 @@ const Locations = () => {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label htmlFor="adresse" className="text-sm font-medium">
+                                <label htmlFor="address" className="text-sm font-medium">
                                     Address
                                 </label>
                                 <Input
-                                    id="adresse"
-                                    value={formData.adresse}
-                                    onChange={(e) => setFormData({ ...formData, adresse: e.target.value })}
+                                    id="address"
+                                    value={formData.address}
+                                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                                     placeholder="123 Main St, City, State 12345"
                                     required
                                 />
@@ -648,13 +648,13 @@ const Locations = () => {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label htmlFor="edit-adresse" className="text-sm font-medium">
+                            <label htmlFor="edit-address" className="text-sm font-medium">
                                 Address
                             </label>
                             <Input
-                                id="edit-adresse"
-                                value={formData.adresse}
-                                onChange={(e) => setFormData({ ...formData, adresse: e.target.value })}
+                                id="edit-address"
+                                value={formData.address}
+                                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                                 placeholder="123 Main St, City, State 12345"
                                 required
                             />
@@ -1004,7 +1004,7 @@ const LocationRow = ({ location, sources, stats, onEdit, onDelete, onManageSourc
                 </div>
                 <div>
                     <div>{location.name}</div>
-                    <div className="text-sm text-muted-foreground">{location.adresse}</div>
+                    <div className="text-sm text-muted-foreground">{location.address}</div>
                 </div>
             </div>
         </TableCell>

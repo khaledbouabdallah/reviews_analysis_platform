@@ -25,7 +25,7 @@ class BatchProcessor:
         self.max_retries = 3
         self.reviews = reviews
         self.user_id = user_id
-
+        
         # filter out reviews that are not valid for analysis
         self.reviews = [
             review for review in self.reviews if review.data.get("original_text")
@@ -39,7 +39,15 @@ class BatchProcessor:
                 if review.analyzed_data.get("processing_status") != "completed"
             ]
 
-        self.review_inputs = self._convert_to_review_inputs(reviews)
+        # if override_analysis is False, filter out reviews that are already analyzed
+        if not override_analysis:
+            self.reviews = [
+                review
+                for review in self.reviews
+                if review.analyzed_data.get("processing_status") != "completed"
+            ]
+
+        self.review_inputs = self._convert_to_review_inputs(self.reviews)
 
     async def process_all_reviews(
         self,
@@ -266,7 +274,7 @@ class BatchProcessor:
     ) -> list[ReviewInput]:
         """Convert ReviewInDB objects to ReviewInput objects for analysis."""
         review_inputs = []
-
+        print(f"nigga what {len(reviews)}")
         if isinstance(reviews, ReviewInDB):
             reviews = [reviews]
 
@@ -284,6 +292,8 @@ class BatchProcessor:
                     metadata={"review_id": str(review.id)},
                 )
                 review_inputs.append(review_input)
+                
+        logger.info(f"Converted {len(review_inputs)} reviews to ReviewInput format")
 
         return review_inputs
 

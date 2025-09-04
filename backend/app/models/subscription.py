@@ -6,36 +6,6 @@ from pydantic import BaseModel, Field
 SubscriptionTier = Literal["starter", "growth", "scale"]
 
 # Subscription limits configuration
-SUBSCRIPTION_LIMITS = {
-    "starter": {
-        "businesses": 2,
-        "locations": 5,
-        "sources": 10,
-        "reviews_per_month": 500,
-        "tokens_per_month": 10000,
-        "price_monthly": 0,
-        "price_yearly": 0,
-    },
-    "growth": {
-        "businesses": 10,
-        "locations": 50,
-        "sources": 100,
-        "reviews_per_month": 5000,
-        "tokens_per_month": 200000,
-        "price_monthly": 39,
-        "price_yearly": 390,  # 10 months price
-    },
-    "scale": {
-        "businesses": -1,  # -1 means unlimited
-        "locations": -1,
-        "sources": -1,
-        "reviews_per_month": 25000,
-        "tokens_per_month": 1000000,
-        "price_monthly": 129,
-        "price_yearly": 1290,  # 10 months price
-    }
-}
-
 class UsageLimits(BaseModel):
     """Current usage limits based on subscription tier"""
     businesses: int = Field(..., description="Max businesses allowed (-1 = unlimited)")
@@ -57,36 +27,52 @@ class SubscriptionPlan(BaseModel):
 
 
 # Pre-defined subscription plans for frontend
+# Revised SUBSCRIPTION_PLANS for frontend
 SUBSCRIPTION_PLANS = {
     "starter": SubscriptionPlan(
         tier="starter",
         name="Starter",
         description="Perfect for trying out review analysis",
-        limits=UsageLimits(**{k: v for k, v in SUBSCRIPTION_LIMITS["starter"].items() if k not in ["price_monthly", "price_yearly"]}),
-        price_monthly=0,
-        price_yearly=0,
+        limits=UsageLimits(
+            businesses=1,
+            locations=1,
+            sources=2,
+            reviews_per_month=100,
+            tokens_per_month=50000,
+        ),
+        price_monthly=0.00,
+        price_yearly=0.00,
         features=[
-            "2 businesses",
-            "5 locations per business", 
-            "10 review sources",
-            "500 reviews scraped/month",
-            "10K AI analysis tokens/month",
+            "1 business",
+            "1 location",
+            "2 review sources",
+            "100 reviews scraped/month",
+            "1K AI analysis tokens/month",
+            "Upload CSVs for analysis",
             "Basic analytics dashboard"
         ]
     ),
     "growth": SubscriptionPlan(
-        tier="growth", 
+        tier="growth",
         name="Growth",
         description="For growing businesses scaling their review management",
-        limits=UsageLimits(**{k: v for k, v in SUBSCRIPTION_LIMITS["growth"].items() if k not in ["price_monthly", "price_yearly"]}),
-        price_monthly=3900,  # $39.00 in cents
-        price_yearly=39000,  # $390.00 in cents  
+        limits=UsageLimits(
+            businesses=5,
+            locations=10,
+            sources=20,
+            reviews_per_month=1000,
+            tokens_per_month=1000000,
+        ),
+        price_monthly=20.00,  # €20.00 in euros
+        price_yearly=200.00,  # €200.00 in euros
         features=[
-            "10 businesses",
-            "50 locations per business",
-            "100 review sources", 
-            "5,000 reviews scraped/month",
-            "200K AI analysis tokens/month",
+            "5 businesses",
+            "10 locations",
+            "20 review sources",
+            "1,000 reviews collected/month",
+            "1M AI analysis tokens/month",
+            "Upload CSVs for analysis",
+            "Invite clients to leave reviews",
             "Advanced analytics & insights",
             "Email alerts & notifications",
             "Priority support"
@@ -94,16 +80,23 @@ SUBSCRIPTION_PLANS = {
     ),
     "scale": SubscriptionPlan(
         tier="scale",
-        name="Scale", 
+        name="Scale",
         description="For enterprises managing multiple brands and locations",
-        limits=UsageLimits(**{k: v for k, v in SUBSCRIPTION_LIMITS["scale"].items() if k not in ["price_monthly", "price_yearly"]}),
-        price_monthly=12900,  # $129.00 in cents
-        price_yearly=129000,  # $1,290.00 in cents
+        limits=UsageLimits(
+            businesses=-1,  # Unlimited
+            locations=-1,   # Unlimited
+            sources=-1,     # Unlimited
+            reviews_per_month=25000,
+            tokens_per_month=10000000, # 10M
+        ),
+        price_monthly=79.00,  # €79.00 in euros
+        price_yearly=790.00,  # €790.00 in euros
         features=[
             "Unlimited businesses & locations",
             "Unlimited review sources",
-            "25,000 reviews scraped/month", 
-            "1M AI analysis tokens/month",
+            "25,000 reviews collected/month",
+            "10M AI analysis tokens/month",
+            "Generate AI review responses (RAG)",
             "Custom analytics & reporting",
             "Real-time alerts & webhooks",
             "Custom integrations",
@@ -130,7 +123,3 @@ class SubscriptionInfo(BaseModel):
     stripe_subscription_id: str | None = Field(default=None, description="Stripe subscription ID")
     last_payment_date: datetime | None = Field(default=None, description="Last successful payment date")
     next_payment_date: datetime | None = Field(default=None, description="Next payment due date")
-
-
-
-

@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 
 class LocationBase(BaseModel):
     name: str
-    adresse: str
+    address: str
     business_id: PyObjectId
     user_id: PyObjectId
 
@@ -40,8 +40,7 @@ class LocationInDB(LocationBase):
 
 class LocationUpdate(BaseModel):
     name: str | None = None
-    adress: str | None = None
-    business_id: PyObjectId | None = None
+    address: str | None = None
 
 
 class LocationResponse(LocationBase):

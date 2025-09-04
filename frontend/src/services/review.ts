@@ -102,6 +102,10 @@ export interface ReviewFilters {
   job_id?: string;
   source_id?: string;
   location_id?: string;
+  // ADDED: New filter types
+  urgency?: UrgencyLevel;
+  rating_range?: string; // e.g., "1-2", "4-5", "5", etc.
+  topic?: string; // Filter by specific topic
 }
 
 export interface PaginatedReviewResponse {
@@ -131,25 +135,6 @@ export const getSentimentColor = (sentiment?: SentimentLabel): string => {
     }
   };
 
-// Helper function to get urgency color
-export const getUrgencyColor = (urgency?: UrgencyLevel): string => {
-    if (!urgency) return 'bg-gray-100 text-gray-700 border-gray-200';
-    
-    switch (urgency) {
-      case 'critical':
-        return 'bg-red-100 text-red-700 border-red-200';
-      case 'high':
-        return 'bg-orange-100 text-orange-700 border-orange-200';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      case 'low':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'none':
-        return 'bg-gray-100 text-gray-700 border-gray-200';
-      default:
-        return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
-  };
 
 // Helper function to get rating from review data
 export const getReviewRating = (review: Review): number | null => {
@@ -228,6 +213,80 @@ const buildQueryString = (filters: ReviewFilters = {}): string => {
   });
   
   return params.toString() ? `?${params.toString()}` : '';
+};
+
+// ADDED: Enhanced urgency color function
+export const getUrgencyColor = (urgency?: UrgencyLevel): string => {
+    if (!urgency) return 'bg-gray-100 text-gray-700 border-gray-200';
+    
+    switch (urgency) {
+      case 'critical':
+        return 'bg-red-100 text-red-700 border-red-200';
+      case 'high':
+        return 'bg-orange-100 text-orange-700 border-orange-200';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      case 'low':
+        return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'none':
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+};
+
+// ADDED: Rating range filter helper
+export const matchesRatingRange = (rating: number | null, range: string): boolean => {
+    if (!rating) return false;
+    
+    switch (range) {
+        case '5':
+            return rating === 5;
+        case '4-5':
+            return rating >= 4;
+        case '3-5':
+            return rating >= 3;
+        case '1-2':
+            return rating <= 2;
+        case '1':
+            return rating === 1;
+        default:
+            return true;
+    }
+};
+
+// ADDED: Client-side filtering helper for complex filters
+export const applyClientSideFilters = (reviews: Review[], filters: ReviewFilters): Review[] => {
+    return reviews.filter(review => {
+        // Rating range filter
+        if (filters.rating_range) {
+            const rating = getReviewRating(review);
+            if (!matchesRatingRange(rating, filters.rating_range)) {
+                return false;
+            }
+        }
+
+        // Urgency filter
+        if (filters.urgency) {
+            const urgency = getReviewUrgency(review);
+            if (urgency !== filters.urgency) {
+                return false;
+            }
+        }
+
+        // Topic filter
+        if (filters.topic) {
+            const topics = getReviewTopics(review);
+            const hasMatchingTopic = topics.some(topic => 
+                topic.topic.toLowerCase().includes(filters.topic!.toLowerCase())
+            );
+            if (!hasMatchingTopic) {
+                return false;
+            }
+        }
+
+        return true;
+    });
 };
 
 export class ReviewService {

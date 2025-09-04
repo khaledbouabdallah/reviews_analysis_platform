@@ -1,8 +1,6 @@
 // src/services/auth.ts
 // Change this line in your auth service:
 const API_URL = import.meta.env.VITE_API_URL;
-console.log('🔍 API_URL in auth service:', API_URL);
-
 export interface LoginData {
   username: string;
   password: string;
@@ -12,6 +10,7 @@ export interface RegisterData {
   username: string;
   email: string;
   password: string;
+  recaptcha_token: string;
 }
 
 export interface User {
@@ -101,6 +100,25 @@ export class AuthService {
       return false;
     }
   }
+
+
+  async verifyEmail(token: string) {
+  const response = await fetch(`${API_URL}/api/auth/verify-email`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ token }),
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Email verification failed');
+  }
+
+  return response.json();
+}
 
 
 }

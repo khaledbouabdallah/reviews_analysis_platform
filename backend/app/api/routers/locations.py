@@ -22,7 +22,7 @@ async def create_location(
         # Create location with current user's ID
         location_create = LocationCreate(
             name=location_data["name"],
-            adresse=location_data["adresse"],
+            address=location_data["address"],
             business_id=location_data["business_id"],
             user_id=str(current_user.id),
         )

@@ -3,12 +3,15 @@ import Hero from "@/components/landing/Hero";
 import Features from "@/components/landing/Features";
 import HowItWorks from "@/components/landing/HowItWorks";
 import CallToAction from "@/components/landing/CallToAction";
+import Footer from "@/components/common/Footer";
 
 const Index = () => {
   return (
     <div className="min-h-screen">
       <Navigation />
+      <div id="hero">
       <Hero />
+      </div>
       <div id="features">
         <Features />
       </div>
@@ -16,6 +19,7 @@ const Index = () => {
         <HowItWorks />
       </div>
       <CallToAction />
+      <Footer />
     </div>
   );
 };

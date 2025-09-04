@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from models.job import JobCreate, JobResponse, JobUpdate, JobUpdateInternal
 from models.user import UserInDB
 from services.csv_services import process_csv_upload
+from services.subscription_service import subscription_service
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 job_repo = JobRepository()
@@ -45,6 +46,7 @@ async def scrap_endpoint(
     """Endpoint to initiate a scraping job for the authenticated user."""
     try:
         # find source by Id
+        logger.info(f"Received scraping job data: {job_data}")
         source = await source_repo.get_by_id(job_data["source_id"])
         if not source:
             raise HTTPException(status_code=404, detail="Source not found")
@@ -63,7 +65,7 @@ async def scrap_endpoint(
 
         job_data_processed = job.model_dump(mode="json", by_alias=True)
 
-        logger.info(f"Creating job for user {current_user.id}: {job_data_processed}")
+        logger.info(f"Creating scrap job for user {current_user.id}: {job_data_processed}")
 
         # Check source type support
         if job_data_processed.get("source_type") != "google":
@@ -73,10 +75,15 @@ async def scrap_endpoint(
         created_job = await job_repo.create(job)
         job_id = str(created_job.id)
 
+        # Get limit and usage to block if surpass allowed usage
+        get_current_usage = await subscription_service.get_current_usage(str(current_user.id))
+        reviews_used, reviews_limit = get_current_usage.reviews_used, get_current_usage.reviews_limit
+
+        logger.info(f"User {current_user.id} has used {reviews_used}/{reviews_limit} reviews")
         # Queue Celery task instead of HTTP call
         task = celery_app.send_task(
             "celery_tasks.scraper_task",
-            args=[job_id, job_data_processed],
+            args=[job_id, job_data_processed, reviews_used, reviews_limit],
             queue="scraping",
         )
         

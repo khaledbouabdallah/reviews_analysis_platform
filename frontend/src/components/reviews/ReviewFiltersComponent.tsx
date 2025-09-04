@@ -1,10 +1,10 @@
-// src/pages/Reviews/components/ReviewFiltersComponent.tsx
+// frontend/src/components/reviews/ReviewFiltersComponent.tsx
 import { useState } from 'react';
-import { Search, Filter, X, ChevronDown } from 'lucide-react';
+import { Search, Filter, X, ChevronDown, Settings, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ReviewFilters } from '@/services/review';
+import { ReviewFilters, SentimentLabel, UrgencyLevel } from '@/services/review';
 import { Location } from '@/services/location';
 import { Source } from '@/services/source';
 import { Job } from '@/services/job';
@@ -21,7 +21,25 @@ interface ReviewFiltersComponentProps {
     locations: Location[];
     sources: Source[];
     jobs: Job[];
+    // ADDED: Page size and column controls
+    pageSize: number;
+    onPageSizeChange: (size: number) => void;
+    visibleColumns: string[];
+    onColumnVisibilityChange: (columns: string[]) => void;
 }
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
+const AVAILABLE_COLUMNS = [
+    { id: 'rating', label: 'Rating' },
+    { id: 'sentiment', label: 'Sentiment' },
+    { id: 'urgency', label: 'Urgency' },
+    { id: 'spam', label: 'Spam Status' },
+    { id: 'topics', label: 'Topics' },
+    { id: 'source', label: 'Source' },
+    { id: 'date', label: 'Date' },
+    { id: 'username', label: 'Username' }
+];
 
 export const ReviewFiltersComponent = ({
     filters,
@@ -34,9 +52,24 @@ export const ReviewFiltersComponent = ({
     totalCount,
     locations,
     sources,
-    jobs
+    jobs,
+    pageSize,
+    onPageSizeChange,
+    visibleColumns,
+    onColumnVisibilityChange
 }: ReviewFiltersComponentProps) => {
     const [showAdvanced, setShowAdvanced] = useState(false);
+    const [showColumnSettings, setShowColumnSettings] = useState(false);
+
+    // FIXED: Filter out analyze jobs
+    const nonAnalyzeJobs = jobs.filter(job => job.job_type !== 'analysis');
+
+    const handleColumnToggle = (columnId: string) => {
+        const newColumns = visibleColumns.includes(columnId)
+            ? visibleColumns.filter(id => id !== columnId)
+            : [...visibleColumns, columnId];
+        onColumnVisibilityChange(newColumns);
+    };
 
     return (
         <div className="relative">
@@ -56,12 +89,40 @@ export const ReviewFiltersComponent = ({
                     </div>
                     
                     <div className="flex items-center space-x-3">
+                        {/* Page Size Selector */}
+                        <div className="flex items-center space-x-2">
+                            <span className="text-sm text-gray-600">Show:</span>
+                            <Select value={pageSize.toString()} onValueChange={(value) => onPageSizeChange(Number(value))}>
+                                <SelectTrigger className="w-20 bg-white/50 backdrop-blur-sm border border-white/40">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {PAGE_SIZE_OPTIONS.map(size => (
+                                        <SelectItem key={size} value={size.toString()}>
+                                            {size}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Column Settings */}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowColumnSettings(!showColumnSettings)}
+                            className="bg-white/50 backdrop-blur-sm border border-white/40"
+                        >
+                            <Settings className="h-4 w-4 mr-1" />
+                            Columns
+                        </Button>
+
                         {hasActiveFilters && (
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={onClearFilters}
-                                className="text-red-600 hover:text-red-700"
+                                className="text-red-600 hover:text-red-700 bg-white/50 backdrop-blur-sm border border-white/40"
                             >
                                 <X className="h-3 w-3 mr-1" />
                                 Clear All
@@ -72,12 +133,33 @@ export const ReviewFiltersComponent = ({
                             variant="outline"
                             size="sm"
                             onClick={() => setShowAdvanced(!showAdvanced)}
+                            className="bg-white/50 backdrop-blur-sm border border-white/40"
                         >
                             {showAdvanced ? 'Less' : 'More'} Filters
                             <ChevronDown className={`h-4 w-4 ml-1 transition-transform duration-200 ${showAdvanced ? 'rotate-180' : ''}`} />
                         </Button>
                     </div>
                 </div>
+
+                {/* Column Settings Panel */}
+                {showColumnSettings && (
+                    <div className="mb-6 p-4 bg-white/50 backdrop-blur-sm rounded-2xl border border-white/40">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-3">Visible Columns</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            {AVAILABLE_COLUMNS.map(column => (
+                                <label key={column.id} className="flex items-center space-x-2 text-sm">
+                                    <input
+                                        type="checkbox"
+                                        checked={visibleColumns.includes(column.id)}
+                                        onChange={() => handleColumnToggle(column.id)}
+                                        className="rounded border-gray-300"
+                                    />
+                                    <span className="text-gray-700">{column.label}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Basic Filters */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -98,22 +180,22 @@ export const ReviewFiltersComponent = ({
                         onValueChange={(value) => onFilterChange('has_analysis', value)}
                     >
                         <SelectTrigger className="bg-white/50 backdrop-blur-sm border-2 border-white/40 focus:bg-white/70">
-                            <SelectValue placeholder="All Reviews" />
+                            <SelectValue placeholder="Analysis Status" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Reviews</SelectItem>
-                            <SelectItem value="yes">Analyzed</SelectItem>
+                            <SelectItem value="yes">Analyzed Only</SelectItem>
                             <SelectItem value="no">Not Analyzed</SelectItem>
                         </SelectContent>
                     </Select>
 
-                    {/* Sentiment */}
+                    {/* Sentiment Filter */}
                     <Select
                         value={filters.sentiment || 'all'}
                         onValueChange={(value) => onFilterChange('sentiment', value)}
                     >
                         <SelectTrigger className="bg-white/50 backdrop-blur-sm border-2 border-white/40 focus:bg-white/70">
-                            <SelectValue placeholder="All Sentiments" />
+                            <SelectValue placeholder="Sentiment" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Sentiments</SelectItem>
@@ -125,14 +207,14 @@ export const ReviewFiltersComponent = ({
 
                     {/* Needs Attention */}
                     <Select
-                        value={filters.needs_attention ? 'yes' : 'all'}
+                        value={filters.needs_attention === true ? 'yes' : 'all'}
                         onValueChange={(value) => onFilterChange('needs_attention', value)}
                     >
                         <SelectTrigger className="bg-white/50 backdrop-blur-sm border-2 border-white/40 focus:bg-white/70">
-                            <SelectValue placeholder="All Priority" />
+                            <SelectValue placeholder="Urgency" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All Priority</SelectItem>
+                            <SelectItem value="all">All Reviews</SelectItem>
                             <SelectItem value="yes">Needs Attention</SelectItem>
                         </SelectContent>
                     </Select>
@@ -140,7 +222,7 @@ export const ReviewFiltersComponent = ({
 
                 {/* Advanced Filters */}
                 {showAdvanced && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-6 border-t border-white/20 animate-in slide-in-from-top duration-300">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {/* Location Filter */}
                         <Select
                             value={filters.location_id || 'all'}
@@ -177,7 +259,7 @@ export const ReviewFiltersComponent = ({
                             </SelectContent>
                         </Select>
 
-                        {/* Job Filter */}
+                        {/* FIXED: Job Filter - Exclude analyze jobs */}
                         <Select
                             value={filters.job_id || 'all'}
                             onValueChange={(value) => onFilterChange('job_id', value)}
@@ -187,10 +269,9 @@ export const ReviewFiltersComponent = ({
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Jobs</SelectItem>
-                                {jobs.map((job) => (
+                                {nonAnalyzeJobs.map((job) => (
                                     <SelectItem key={job.id} value={job.id}>
-                                        {job.name} 
-                                        {/* ({job.type}) */}
+                                        {job.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -208,6 +289,42 @@ export const ReviewFiltersComponent = ({
                                 <SelectItem value="all">All Reviews</SelectItem>
                                 <SelectItem value="no">Not Spam</SelectItem>
                                 <SelectItem value="yes">Spam Only</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        {/* ADDED: Urgency Level Filter */}
+                        <Select
+                            value={filters.urgency || 'all'}
+                            onValueChange={(value) => onFilterChange('urgency', value)}
+                        >
+                            <SelectTrigger className="bg-white/50 backdrop-blur-sm border-2 border-white/40 focus:bg-white/70">
+                                <SelectValue placeholder="Urgency Level" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Urgency Levels</SelectItem>
+                                <SelectItem value="critical">Critical</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="low">Low</SelectItem>
+                                <SelectItem value="none">None</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        {/* ADDED: Rating Range Filter */}
+                        <Select
+                            value={filters.rating_range || 'all'}
+                            onValueChange={(value) => onFilterChange('rating_range', value)}
+                        >
+                            <SelectTrigger className="bg-white/50 backdrop-blur-sm border-2 border-white/40 focus:bg-white/70">
+                                <SelectValue placeholder="Rating Range" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Ratings</SelectItem>
+                                <SelectItem value="5">5 Stars</SelectItem>
+                                <SelectItem value="4-5">4-5 Stars</SelectItem>
+                                <SelectItem value="3-5">3+ Stars</SelectItem>
+                                <SelectItem value="1-2">1-2 Stars</SelectItem>
+                                <SelectItem value="1">1 Star</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

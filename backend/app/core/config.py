@@ -34,6 +34,17 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "dev-secret-key"
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 1 day
+    
+    # reCAPTCHA settings
+    RECAPTCHA_URL: str = ""
+    RECAPTCHA_SITE_KEY: str = "6LcbALcrAAAAAO1nEcagBHCTxpjucAtwf7xgVOQN"
+    RECAPTCHA_MIN_SCORE: float = 0.5
+    
+    # Email settings (optional - will fallback gracefully)
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY")
+    
+    # Frontend URL for email links
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
     class Config:
         env_file = os.path.join(Parent_DIR, ".env")

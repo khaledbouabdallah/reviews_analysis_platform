@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AuthHeader } from '@/components/auth/AuthHeader';
+import Footer from "@/components/common/Footer";
 import { authService } from '@/services/auth';
 
 export function LoginForm() {
@@ -16,33 +17,61 @@ export function LoginForm() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showResendVerification, setShowResendVerification] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleResendVerification = () => {
+    navigate('/resend-verification');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
+    setError('');
+    setShowResendVerification(false);
 
     try {
-      await authService.login(formData);
+      // Use authService.login instead of direct fetch
+      const data = await authService.login({
+        username: formData.username,
+        password: formData.password,
+      });
+
+      // Login successful - redirect to dashboard
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.message);
+
+    } catch (error) {
+      console.error('Login error:', error);
+      
+      if (error instanceof Error) {
+        // Handle email verification error specifically
+        if (error.message.includes('verify your email')) {
+          setError(error.message);
+          setShowResendVerification(true);
+        } else {
+          setError(error.message);
+          setShowResendVerification(false);
+        }
+      } else {
+        setError('Login failed. Please try again.');
+        setShowResendVerification(false);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+
   return (
     <section className="min-h-screen relative overflow-hidden hero-bg"
     >
-
-
       {/* Animated background elements - matching landing page */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none ">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full blur-3xl animate-pulse" />
@@ -111,8 +140,21 @@ export function LoginForm() {
 
                   {/* Error Message */}
                   {error && (
-                    <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg animate-fade-in-up">
-                      {error}
+                    <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg animate-fade-in-up space-y-3">
+                      <p>{error}</p>
+                      {showResendVerification && (
+                        <div className="pt-2 border-t border-destructive/20">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleResendVerification}
+                            className="text-xs"
+                          >
+                            Resend Verification Email
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -151,6 +193,7 @@ export function LoginForm() {
           </div>
         </div>
       </div>
+      <Footer />
     </section>
   );
 }

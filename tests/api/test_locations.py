@@ -38,7 +38,7 @@ class TestLocations:
         assert response.status_code == 201
         data = response.json()
         assert data["name"] == business_with_location["location_data"]["name"]
-        assert data["adresse"] == business_with_location["location_data"]["adresse"]
+        assert data["address"] == business_with_location["location_data"]["address"]
         assert "id" in data
 
     def test_list_user_locations(self, base_url, business_with_location):

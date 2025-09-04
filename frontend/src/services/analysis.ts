@@ -6,6 +6,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 export interface AnalysisRequest {
   target_topics?: string[];
   business_context?: string;
+  override_analysis?: boolean; // NEW: Add override analysis option
 }
 
 export interface AnalysisResult {
@@ -56,12 +57,21 @@ export class AnalysisService {
     return response.json();
   }
 
-  // Analyze all reviews from a specific job
+  // UPDATED: Add override_analysis parameter to all methods
   async analyzeJobReviews(jobId: string, request: AnalysisRequest = {}): Promise<AnalysisResult> {
     try {
-      return await this.fetchWithAuth(`/api/review_analyzer/batch/job/${jobId}`, {
+      // Extract override_analysis from request and pass as query param
+      const { override_analysis = false, ...analysisRequest } = request;
+      const queryParams = new URLSearchParams();
+      if (override_analysis) {
+        queryParams.append('override_analysis', 'true');
+      }
+      
+      const url = `/api/review_analyzer/batch/job/${jobId}${queryParams.toString() ? `?${queryParams}` : ''}`;
+      
+      return await this.fetchWithAuth(url, {
         method: 'POST',
-        body: JSON.stringify(request),
+        body: JSON.stringify(analysisRequest),
       });
     } catch (error) {
       console.error('Error analyzing job reviews:', error);
@@ -69,12 +79,19 @@ export class AnalysisService {
     }
   }
 
-  // Analyze all reviews from a specific source
   async analyzeSourceReviews(sourceId: string, request: AnalysisRequest = {}): Promise<AnalysisResult> {
     try {
-      return await this.fetchWithAuth(`/api/review_analyzer/batch/source/${sourceId}`, {
+      const { override_analysis = false, ...analysisRequest } = request;
+      const queryParams = new URLSearchParams();
+      if (override_analysis) {
+        queryParams.append('override_analysis', 'true');
+      }
+      
+      const url = `/api/review_analyzer/batch/source/${sourceId}${queryParams.toString() ? `?${queryParams}` : ''}`;
+      
+      return await this.fetchWithAuth(url, {
         method: 'POST',
-        body: JSON.stringify(request),
+        body: JSON.stringify(analysisRequest),
       });
     } catch (error) {
       console.error('Error analyzing source reviews:', error);
@@ -82,12 +99,19 @@ export class AnalysisService {
     }
   }
 
-  // Analyze all reviews from a specific location
   async analyzeLocationReviews(locationId: string, request: AnalysisRequest = {}): Promise<AnalysisResult> {
     try {
-      return await this.fetchWithAuth(`/api/review_analyzer/batch/location/${locationId}`, {
+      const { override_analysis = false, ...analysisRequest } = request;
+      const queryParams = new URLSearchParams();
+      if (override_analysis) {
+        queryParams.append('override_analysis', 'true');
+      }
+      
+      const url = `/api/review_analyzer/batch/location/${locationId}${queryParams.toString() ? `?${queryParams}` : ''}`;
+      
+      return await this.fetchWithAuth(url, {
         method: 'POST',
-        body: JSON.stringify(request),
+        body: JSON.stringify(analysisRequest),
       });
     } catch (error) {
       console.error('Error analyzing location reviews:', error);
@@ -95,12 +119,19 @@ export class AnalysisService {
     }
   }
 
-  // Analyze all reviews from a specific business
   async analyzeBusinessReviews(businessId: string, request: AnalysisRequest = {}): Promise<AnalysisResult> {
     try {
-      return await this.fetchWithAuth(`/api/review_analyzer/batch/business/${businessId}`, {
+      const { override_analysis = false, ...analysisRequest } = request;
+      const queryParams = new URLSearchParams();
+      if (override_analysis) {
+        queryParams.append('override_analysis', 'true');
+      }
+      
+      const url = `/api/review_analyzer/batch/business/${businessId}${queryParams.toString() ? `?${queryParams}` : ''}`;
+      
+      return await this.fetchWithAuth(url, {
         method: 'POST',
-        body: JSON.stringify(request),
+        body: JSON.stringify(analysisRequest),
       });
     } catch (error) {
       console.error('Error analyzing business reviews:', error);
@@ -111,9 +142,12 @@ export class AnalysisService {
   // Analyze a single review (for completeness, though not used in Jobs page)
   async analyzeSingleReview(reviewId: string, request: AnalysisRequest = {}): Promise<any> {
     try {
+      // Single review doesn't need override_analysis - it's always re-analyzed
+      const { override_analysis, ...analysisRequest } = request;
+      
       return await this.fetchWithAuth(`/api/review_analyzer/single/${reviewId}`, {
         method: 'POST',
-        body: JSON.stringify(request),
+        body: JSON.stringify(analysisRequest),
       });
     } catch (error) {
       console.error('Error analyzing single review:', error);

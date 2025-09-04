@@ -7,15 +7,15 @@ from celery_app import celery_app
 from db_sync import sync_db
 from scrapers.google_reviews.runner import ScrapingJobManager
 from scrapers.google_reviews.scrapper import GoogleMapsReviewScraper, ScraperConfig
-from exceptions import JobCancelledException
+from exceptions import JobCancelledException, ReviewsLimitExceededException
 
 logger = logging.getLogger(__name__)
 
 
 @celery_app.task(bind=True, name="celery_tasks.scraper_task")
-def scraper_task(self, job_id: str, job_data: dict) -> dict[str, Any]:
+def scraper_task(self, job_id: str, job_data: dict, reviews_used: int, reviews_limit: int) -> dict[str, Any]:
     """Main Celery task for scraping Google Maps reviews"""
-    logger.info(f"Starting scraper task for job {job_id}")
+    logger.info(f"Starting scraper task for job {job_id} with {reviews_used}/{reviews_limit} reviews used")
 
     # Create fresh instances for each task
     job_manager = ScrapingJobManager()
@@ -47,7 +47,7 @@ def scraper_task(self, job_id: str, job_data: dict) -> dict[str, Any]:
         )
 
         # Scrape with fresh browser
-        data = scraper.scrap(job_data["url"])
+        data = scraper.scrap(job_data["url"], reviews_used, reviews_limit)
 
         # Save results
         if data and len(data) > 0:
@@ -106,6 +106,22 @@ def scraper_task(self, job_id: str, job_data: dict) -> dict[str, Any]:
             "total_reviews": 0,
             "reviews_handled": 0,
             "error": "Job was cancelled by user"
+        }
+
+    except ReviewsLimitExceededException:
+        logger.warning(f"Job {job_id} failed: Reviews limit exceeded")
+        sync_db.update_job_status(
+            job_id=job_id,
+            status="failed",
+            ended_at=datetime.now(timezone.utc),
+            error="Reviews limit exceeded"
+        )
+        return {
+            "job_id": job_id,
+            "status": "failed",
+            "total_reviews": 0,
+            "reviews_handled": 0,
+            "error": "Reviews limit exceeded"
         }
 
     except Exception as e:
