@@ -18,6 +18,8 @@ import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
 import Analytics from "./pages/Analytics";
 import PricingPage from "./pages/Pricing";
+import { VerifyEmail } from '@/pages/VerifyEmail';
+import { CheckEmail } from '@/pages/CheckEmail';
 import { CookieConsent } from "./components/legal/CookieConsent";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AuthRedirect } from "./components/auth/AuthRedirect";
@@ -49,6 +51,9 @@ const App = () => (
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/cookie-policy" element={<CookiePolicy />} />
           <Route path="/pricing" element={<PricingPage />} />
+
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/check-email" element={<CheckEmail />} />
 
           {/* Protected dashboard routes - require authentication */}
           <Route path="/dashboard" element={

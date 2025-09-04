@@ -20,17 +20,54 @@ export function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
+    setError('');
 
     try {
-      await authService.login(formData);
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          username: formData.username,
+          password: formData.password,
+        }),
+      });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      // Redirect to dashboard or intended page
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    } else {
+      // ✅ CHANGE: Handle email verification error specifically
+      if (data.detail && data.detail.includes('verify your email')) {
+        setError(data.detail);
+        // Show a resend verification link in the error message
+        setShowResendVerification(true);
+      } else {
+        setError(data.detail || 'Login failed. Please try again.');
+        setShowResendVerification(false);
+      }
     }
+  } catch (error) {
+    console.error('Login error:', error);
+    setError('Network error. Please check your connection and try again.');
+    setShowResendVerification(false);
+  } finally {
+    setLoading(false);
+  }
+};
+
+    // ✅ ADD: New state for showing resend verification option
+  const [showResendVerification, setShowResendVerification] = useState(false);
+
+  // ✅ ADD: Function to handle resend verification
+  const handleResendVerification = () => {
+    navigate('/resend-verification', {
+      state: { email: formData.username } // assuming username might be email
+    });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,8 +149,21 @@ export function LoginForm() {
 
                   {/* Error Message */}
                   {error && (
-                    <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg animate-fade-in-up">
-                      {error}
+                    <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg animate-fade-in-up space-y-3">
+                      <p>{error}</p>
+                      {showResendVerification && (
+                        <div className="pt-2 border-t border-destructive/20">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleResendVerification}
+                            className="text-xs"
+                          >
+                            Resend Verification Email
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
 

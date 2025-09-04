@@ -30,8 +30,7 @@ export function RegisterForm() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-
+  
   // ADD: reCAPTCHA execution function
   const executeRecaptcha = (): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -76,18 +75,26 @@ export function RegisterForm() {
       const recaptchaToken = await executeRecaptcha();
 
       // MODIFY: Add recaptcha_token to registration data
-      await authService.register({
+      const response = await authService.register({
         username: formData.username,
         email: formData.email,
         password: formData.password,
         recaptcha_token: recaptchaToken, // ADD this line
       });
 
-      setSuccess(true);
-      // Redirect after 2 seconds
-      setTimeout(() => {
-        navigate('/signin');
-      }, 2000);
+      const data = await response.json();
+
+      if (response.ok) {
+      // ✅ CHANGE: Redirect to CheckEmail instead of showing success message
+      navigate('/check-email', {
+        state: {
+          email: formData.email,
+          username: formData.username
+        }
+      });
+    } else {
+      setError(data.detail || 'Registration failed. Please try again.');
+    }
 
     } catch (err: any) {
       setError(err.message);
@@ -230,13 +237,6 @@ export function RegisterForm() {
                       </label>
                     </div>
                   </div>
-
-                  {/* Success Message - MODIFY: Update message to mention email verification */}
-                  {success && (
-                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg animate-fade-in-up">
-                      ✅ Account created successfully! Please check your email to verify your account, then sign in.
-                    </div>
-                  )}
 
                   {/* Error Message */}
                   {error && (
