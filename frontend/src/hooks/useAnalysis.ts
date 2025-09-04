@@ -2,7 +2,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { analysisService, AnalysisRequest, AnalysisResult } from '../services/analysis'
 
-// Analyze job reviews
+// UPDATED: Add override_analysis support to all analysis hooks
 export const useAnalyzeJobReviews = () => {
   const queryClient = useQueryClient()
   
@@ -19,7 +19,6 @@ export const useAnalyzeJobReviews = () => {
   })
 }
 
-// Analyze source reviews
 export const useAnalyzeSourceReviews = () => {
   const queryClient = useQueryClient()
   
@@ -33,7 +32,6 @@ export const useAnalyzeSourceReviews = () => {
   })
 }
 
-// Analyze location reviews
 export const useAnalyzeLocationReviews = () => {
   const queryClient = useQueryClient()
   
@@ -47,7 +45,6 @@ export const useAnalyzeLocationReviews = () => {
   })
 }
 
-// Analyze business reviews
 export const useAnalyzeBusinessReviews = () => {
   const queryClient = useQueryClient()
   
@@ -61,7 +58,6 @@ export const useAnalyzeBusinessReviews = () => {
   })
 }
 
-// Analyze single review (for completeness)
 export const useAnalyzeSingleReview = () => {
   const queryClient = useQueryClient()
   
