@@ -98,12 +98,21 @@ async def login_for_access_token(
 @router.post("/logout")
 async def logout(response: Response):
     """Logout endpoint that clears the httpOnly cookie"""
-    response.delete_cookie(
-        key="token",
-        httponly=True,
-        secure=True,
-        samesite="strict",
-    )
+    if settings.ENVIRONMENT == "development":
+        response.delete_cookie(
+            key="token",
+            httponly=True,
+            secure=True,
+            samesite="strict",
+        )
+    elif settings.ENVIRONMENT == "production":
+        response.delete_cookie(
+            key="token",
+            httponly=True,
+            secure=True,
+            samesite="none",
+        )
+        
     return {"message": "Logout successful"}
 
 
