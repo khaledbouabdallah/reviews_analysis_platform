@@ -30,11 +30,25 @@ const Hero = () => {
         <div className="text-center max-w-4xl mx-auto">
           {/* Logo/Brand */}
           <div className="mb-8 flex flex-col items-center">
-  <img 
-    src="/logo.png" 
-    alt="Reviewoly" 
-    className="w-24 h-24 md:w-32 md:h-32 mb-4 object-contain animate-fade-in-up"
-  />
+<video
+  src="/logo_animated.mp4"
+  autoPlay
+  muted
+  loop
+  playsInline
+  className="max-w-96 max-h-96 md:max-w-128 md:max-h-128 mb-6 object-contain animate-fade-in-up"
+  onError={(e) => {
+    const target = e.currentTarget as HTMLVideoElement;
+    const fallback = target.nextElementSibling as HTMLImageElement;
+    target.style.display = 'none';
+    if (fallback) fallback.style.display = 'block';
+  }}
+/>
+<img 
+  src="/logo.png" 
+  alt="Reviewoly" 
+  className="w-24 h-24 md:w-32 md:h-32 mb-4 object-contain animate-fade-in-up hidden"
+/>
   <h1 className="text-6xl md:text-8xl font-bold text-white mb-4 animate-fade-in-up">
     Review<span className="text-accent">oly</span>
   </h1>

@@ -9,7 +9,7 @@ httpx==0.28.1
 python-multipart>=0.0.20
 
 # Authentication and authorization
-passlib[bcrypt]>=1.7.4
+bcrypt>= 5.0.0
 python-jose[cryptography]>=3.3.0
 
 # NLP and ML libraries
