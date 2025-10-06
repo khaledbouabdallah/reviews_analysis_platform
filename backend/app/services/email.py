@@ -1,36 +1,40 @@
 # backend/app/services/email.py
-import os
 import base64
-from typing import Optional
+import os
+
 import resend
-import httpx
+from core.config import logger, settings
 from jinja2 import Environment, FileSystemLoader
-from core.config import settings, logger
-from core.security import create_verification_token
 
 
 class EmailService:
     """Service for sending emails using Resend API"""
-    
+
     def __init__(self):
         # Resend settings
         self.resend_api_key = settings.RESEND_API_KEY
         resend.api_key = self.resend_api_key
         self.from_email = "no-reply@reviewoly.com"
-        self.frontend_url = "http://localhost:3000" if settings.ENVIRONMENT == "development" else "https://www.reviewoly.com"
+        self.frontend_url = (
+            "http://localhost:3000"
+            if settings.ENVIRONMENT == "development"
+            else "https://reviewoly.com"
+        )
 
         # Setup Jinja2 for email templates - point to correct directory
         current_dir = os.path.dirname(__file__)  # backend/app/services/
-        app_dir = os.path.dirname(current_dir)   # backend/app/
-        backend_dir = os.path.dirname(app_dir)   # backend/
+        app_dir = os.path.dirname(current_dir)  # backend/app/
+        backend_dir = os.path.dirname(app_dir)  # backend/
         template_dir = os.path.join(backend_dir, "static", "email_templates")
-        
+
         if not os.path.exists(template_dir):
             logger.error(f"Email template directory not found: {template_dir}")
-            raise FileNotFoundError(f"Email template directory not found: {template_dir}")
-            
+            raise FileNotFoundError(
+                f"Email template directory not found: {template_dir}"
+            )
+
         self.jinja_env = Environment(loader=FileSystemLoader(template_dir))
-        
+
         # Load and encode logo once at startup
         self.logo_base64 = self._load_logo_as_base64()
 
@@ -39,19 +43,19 @@ class EmailService:
         try:
             # Path to your logo file
             current_dir = os.path.dirname(__file__)  # backend/app/services/
-            app_dir = os.path.dirname(current_dir)   # backend/app/
-            backend_dir = os.path.dirname(app_dir)   # backend/
+            app_dir = os.path.dirname(current_dir)  # backend/app/
+            backend_dir = os.path.dirname(app_dir)  # backend/
             logo_path = os.path.join(backend_dir, "static", "images", "logo.png")
-            
+
             if os.path.exists(logo_path):
                 with open(logo_path, "rb") as image_file:
-                    encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+                    encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
                     logger.info(f"Logo loaded successfully from {logo_path}")
                     return f"data:image/png;base64,{encoded_string}"
             else:
                 logger.warning(f"Logo not found at {logo_path}")
                 return ""  # Fallback to no logo
-                
+
         except Exception as e:
             logger.error(f"Failed to load logo: {e}")
             return ""
@@ -76,23 +80,26 @@ class EmailService:
                 "html": html_content,
             }
 
-
             email = resend.Emails.send(params)
 
             if email and email.get("id"):
-                logger.info(f"Email sent successfully via Resend to {to_email}, ID: {email.get('id')}")
+                logger.info(
+                    f"Email sent successfully via Resend to {to_email}, ID: {email.get('id')}"
+                )
                 return True
-            logger.error(f"Failed to send email via Resend to {to_email}: {getattr(email, 'error', 'Unknown error')}")
+            logger.error(
+                f"Failed to send email via Resend to {to_email}: {getattr(email, 'error', 'Unknown error')}"
+            )
             return False
 
         except Exception as e:
             logger.error(f"Failed to send email via Resend to {to_email}: {e}")
             return False
-        
+
     async def send_email(
-        self, 
-        to_email: str, 
-        subject: str, 
+        self,
+        to_email: str,
+        subject: str,
         html_content: str,
     ) -> bool:
         """Send email using best available method"""
@@ -102,15 +109,19 @@ class EmailService:
             success = await self.send_email_Resend(to_email, subject, html_content)
             if success:
                 return True
-        
+
         logger.error(f"All email sending methods failed for {to_email}")
         return False
 
-    async def send_verification_email(self, email: str, username: str, verification_token: str) -> bool:
+    async def send_verification_email(
+        self, email: str, username: str, verification_token: str
+    ) -> bool:
         """Send email verification email"""
         try:
             # Create verification URL
-            verification_url = f"{self.frontend_url}/verify-email?token={verification_token}"
+            verification_url = (
+                f"{self.frontend_url}/verify-email?token={verification_token}"
+            )
 
             # Render template with all variables including logo
             template = self.jinja_env.get_template("email_verification.html")
@@ -118,7 +129,7 @@ class EmailService:
                 username=username,
                 verification_url=verification_url,
                 app_name="Reviewoly",
-                logo_base64=self.logo_base64
+                logo_base64=self.logo_base64,
             )
 
             success = await self.send_email(
@@ -126,19 +137,21 @@ class EmailService:
                 subject="Verify Your Email Address - Reviewoly",
                 html_content=html_content,
             )
-            
+
             if success:
                 logger.info(f"Verification email sent successfully to {email}")
             else:
                 logger.error(f"Failed to send verification email to {email}")
-                
+
             return success
-            
+
         except Exception as e:
             logger.error(f"Failed to send verification email to {email}: {e}")
             return False
 
-    async def send_password_reset_email(self, email: str, username: str, reset_token: str) -> bool:
+    async def send_password_reset_email(
+        self, email: str, username: str, reset_token: str
+    ) -> bool:
         """Send password reset email (for future use)"""
         try:
             # Create reset URL
@@ -150,7 +163,7 @@ class EmailService:
                 username=username,
                 reset_url=reset_url,
                 app_name="Reviewoly",
-                logo_base64=self.logo_base64
+                logo_base64=self.logo_base64,
             )
 
             success = await self.send_email(
@@ -158,14 +171,14 @@ class EmailService:
                 subject="Reset Your Password - Reviewoly",
                 html_content=html_content,
             )
-            
+
             if success:
                 logger.info(f"Password reset email sent successfully to {email}")
             else:
                 logger.error(f"Failed to send password reset email to {email}")
-                
+
             return success
-            
+
         except Exception as e:
             logger.error(f"Failed to send password reset email to {email}: {e}")
             return False
